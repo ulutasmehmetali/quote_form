@@ -8,6 +8,7 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
 }
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+export { supabase };
 
 export async function logSubmission(payload) {
   await supabase.from('submissions').insert(payload);

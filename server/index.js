@@ -10,13 +10,17 @@ import { dirname, join } from 'path';
 import uploadRoutes from './routes/upload.js';
 import suggestRoutes from './routes/suggest.js';
 import adminRoutes from './adminRoutes.js';
+import adminWebhooksRouter from './adminWebhooks.js';
+import adminDashboard from './adminDashboard.js';
+import adminStatsRouter from './adminStats.js';
 
 import { db } from './db.js';
 import { submissions } from '../shared/schema.js';
 
-import { parseUserAgent, getGeoFromIP, getClientIP } from './utils/geoip.js';
+import { parseUserAgent, getClientIP } from './utils/geoip.js';
 import crypto from 'crypto';
-import { logSubmission, logActivity } from './helpers/supabase.js';
+import { lookupIp } from './helpers/geo.js';
+import { logSubmission, logActivity, supabase } from './helpers/supabase.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -160,6 +164,10 @@ const uploadLimiter = rateLimit({
 
 app.use('/api/', generalLimiter);
 app.use('/api/admin/login', authLimiter);
+app.use('/api/admin/webhooks', adminWebhooksRouter);
+app.use('/api/admin/dashboard', adminDashboard);
+app.use('/api/admin/stats', adminStatsRouter);
+app.use('/api/admin', adminRoutes);
 
 /* -------------------------------------------
    STATIC UPLOADS
@@ -471,7 +479,7 @@ app.post('/api/submit', submitLimiter, async (req, res) => {
       email,
       phone,
       country: geoInfo.country,
-      country_code: geoInfo.countryCode,
+      country_code: geoInfo.country_code,
       city: geoInfo.city,
       region: geoInfo.region,
       timezone: geoInfo.timezone,
@@ -496,9 +504,53 @@ app.post('/api/submit', submitLimiter, async (req, res) => {
       ipAddress,
       userAgent,
       browser: uaInfo.browser,
+      browserVersion: uaInfo.browserVersion || null,
+      osVersion: uaInfo.osVersion || null,
       device: uaInfo.device,
+      deviceType: uaInfo.deviceType || null,
       meta,
     };
+
+    const { error: supabaseError } = await supabase
+      .from('submissions')
+      .insert([
+        {
+          service_type: normalized.serviceType,
+          zip_code: normalized.zipCode,
+          name: normalized.customerName,
+          email: meta.email,
+          phone: meta.phone,
+          answers: normalized.answers,
+          photo_urls: normalized.photos,
+          status: normalized.status,
+          ip_address: normalized.ipAddress,
+          country: geoInfo.country,
+          country_code: geoInfo.country_code,
+          city: geoInfo.city,
+          region: geoInfo.region,
+          timezone: geoInfo.timezone,
+          user_agent: normalized.userAgent,
+          browser: normalized.browser,
+          browser_version: normalized.browserVersion,
+          os: normalized.os,
+          os_version: normalized.osVersion,
+          device: normalized.device,
+          device_type: normalized.deviceType,
+          referrer: meta?.referrer,
+          utm_source: meta?.utm_source,
+          utm_medium: meta?.utm_medium,
+          utm_campaign: meta?.utm_campaign,
+          session_duration: meta?.session_duration,
+          page_views: meta?.page_views,
+          created_at: new Date(),
+        },
+      ])
+      .select()
+      .single();
+
+    if (supabaseError) {
+      throw supabaseError;
+    }
 
     const [submission] = await db.insert(submissions).values(normalized).returning();
 

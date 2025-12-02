@@ -1839,4 +1839,5 @@ router.get('/distribution-stats', requireAuth, async (req, res) => {
   }
 });
 
+export { requireAuth, requireRole, requireCSRF };
 export default router;
