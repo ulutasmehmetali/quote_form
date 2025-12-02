@@ -19,7 +19,7 @@ import { submissions } from '../shared/schema.js';
 
 import { parseUserAgent, getClientIP } from './utils/geoip.js';
 import crypto from 'crypto';
-import { lookupIp } from './helpers/geo.js';
+import { getGeoFromIP } from './helpers/geo.js';
 import { logSubmission, logActivity, supabase } from './helpers/supabase.js';
 
 const __filename = fileURLToPath(import.meta.url);
