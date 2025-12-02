@@ -91,7 +91,7 @@ app.use(
 
 // Express 5 için doğru olan:
 app.options(
-  '*',
+  '/api/*',
   cors({
     origin: FRONTEND,
     credentials: true,
