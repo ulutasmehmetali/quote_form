@@ -77,8 +77,10 @@ app.use(cookieParser(COOKIE_SECRET));
    CORS (EXPRESS 5 UYUMLU)
 ------------------------------------------- */
 
+const FRONTEND = process.env.FRONTEND_URL || 'https://quote-form.vercel.app';
+
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'https://quote-form.vercel.app',
+  origin: FRONTEND,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
