@@ -74,35 +74,23 @@ const COOKIE_SECRET =
 app.use(cookieParser(COOKIE_SECRET));
 
 /* -------------------------------------------
-   CORS (FIXED)
+   CORS (EXPRESS 5 UYUMLU)
 ------------------------------------------- */
 
-const FRONTEND =
-  process.env.FRONTEND_URL || 'https://quote-form.vercel.app';
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'https://quote-form.vercel.app',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+};
 
-app.use(
-  cors({
-    origin: FRONTEND,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
-
-// Express 5 için doğru olan:
-app.options(
-  '/api/*',
-  cors({
-    origin: FRONTEND,
-    credentials: true,
-  })
-);
+app.use(cors(corsOptions));
 
 /* LOG CORS */
 app.use((req, res, next) => {
   console.log('cors check', {
     origin: req.headers.origin,
-    allowedOrigins: FRONTEND,
+    allowedOrigins: corsOptions.origin,
     method: req.method,
     path: req.path,
   });
