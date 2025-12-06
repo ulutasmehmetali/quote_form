@@ -552,11 +552,16 @@ router.post('/login', async (req, res) => {
         createdAt: adminUsers.createdAt,
       }).from(adminUsers).where(eq(adminUsers.username, username));
     } catch (error) {
+      const detailMessage =
+        error?.cause?.message ||
+        error?.cause?.detail ||
+        error?.cause?.description ||
+        error?.message;
       if (
-        error?.message?.includes('partner_users') ||
-        error?.message?.includes('partner_api_id') ||
-        error?.message?.includes('column') ||
-        error?.message?.includes('missing')
+        detailMessage?.toLowerCase().includes('partner_api_id') ||
+        detailMessage?.toLowerCase().includes('column') ||
+        detailMessage?.toLowerCase().includes('missing') ||
+        detailMessage?.toLowerCase().includes('does not exist')
       ) {
         // Fallback for databases that haven't been migrated yet.
         [user] = await db.select().from(adminUsers).where(eq(adminUsers.username, username));
