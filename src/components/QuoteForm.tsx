@@ -9,9 +9,31 @@ import ThankYou from './ThankYou';
 import SectionCard from './SectionCard';
 import HeroSection from './HeroSection';
 import StepIndicator from './StepIndicator';
+import { apiUrl } from '../lib/api';
 
 const GOOGLE_SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycby6Q-m6fOcNrCwwe8cyuG4cIL_JSbEgnnEvrTUcO8l1HFA_XFabECXZCjF1NUrP2XWFsg/exec';
 const STORAGE_KEY = 'miyomint_form_draft';
+const DRAFT_ENDPOINT = apiUrl('/api/draft');
+const INCOMPLETE_ENDPOINT = apiUrl('/api/incomplete');
+
+const createDraftId = () => {
+  if (typeof globalThis !== 'undefined' && typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+const readStoredDraftId = () => {
+  if (typeof window === 'undefined') return '';
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return '';
+    const parsed: SavedFormState = JSON.parse(saved);
+    return parsed?.draftId || '';
+  } catch {
+    return '';
+  }
+};
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000;
 
@@ -19,6 +41,7 @@ interface SavedFormState {
   formData: Omit<QuoteFormData, 'uploadedPhotos'>;
   currentStep: number;
   savedAt: number;
+  draftId: string;
 }
 
 interface QuoteFormProps {
@@ -34,6 +57,10 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [draftId, setDraftId] = useState(() => {
+    const stored = readStoredDraftId();
+    return stored || createDraftId();
+  });
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [showDraftRestored, setShowDraftRestored] = useState(false);
@@ -44,6 +71,11 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
   );
 
   const totalSteps = formData.serviceType ? questions.length + 2 : 1;
+  const progressValue = useMemo(() => {
+    if (currentStep === 0) return 0;
+    const maxSteps = Math.max(totalSteps, 1);
+    return Math.min(100, Math.max(0, Math.round((currentStep / maxSteps) * 100)));
+  }, [currentStep, totalSteps]);
   const isWizardActive = currentStep > 0 && !isComplete;
   const formShellRef = useRef<HTMLDivElement | null>(null);
 
@@ -54,12 +86,83 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
         formData: dataWithoutPhotos,
         currentStep: step,
         savedAt: Date.now(),
+        draftId,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (e) {
       console.warn('Could not save form draft:', e);
     }
+  }, [draftId]);
+
+  const deleteDraftOnServer = useCallback(async (id?: string) => {
+    if (!id) return;
+    try {
+      await fetch(DRAFT_ENDPOINT, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draftId: id }),
+      });
+    } catch (error) {
+      console.warn('Failed to delete draft record:', error);
+    }
   }, []);
+
+  const saveDraftToServer = useCallback(async () => {
+    if (!draftId || !formData.serviceType || currentStep === 0 || isComplete) return;
+
+    const payload = {
+      draftId,
+      serviceType: formData.serviceType,
+      zipCode: formData.zipCode || null,
+      responses: formData.responses || {},
+      currentStep,
+      progress: progressValue,
+      meta: {
+        savedAt: new Date().toISOString(),
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+      },
+    };
+
+    try {
+      await fetch(DRAFT_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (error) {
+      console.warn('Failed to persist draft:', error);
+    }
+  }, [currentStep, draftId, formData.responses, formData.serviceType, formData.zipCode, isComplete, totalSteps, progressValue]);
+
+  const sendIncompleteReport = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    if (!draftId || isComplete || currentStep === 0 || !formData.serviceType) return;
+
+    const payload = {
+      draftId,
+      serviceType: formData.serviceType,
+      zipCode: formData.zipCode || null,
+      responses: formData.responses || {},
+      progress: progressValue,
+      meta: {
+        step: currentStep,
+        reportedAt: new Date().toISOString(),
+      },
+    };
+
+    const serialized = JSON.stringify(payload);
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      const blob = new Blob([serialized], { type: 'application/json' });
+      navigator.sendBeacon(INCOMPLETE_ENDPOINT, blob);
+      return;
+    }
+
+    void fetch(INCOMPLETE_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: serialized,
+    }).catch(() => {});
+  }, [currentStep, draftId, formData.responses, formData.serviceType, formData.zipCode, isComplete, progressValue]);
 
   const clearStorage = useCallback(() => {
     try {
@@ -67,6 +170,7 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
     } catch (e) {
       console.warn('Could not clear form draft:', e);
     }
+    setDraftId(createDraftId());
   }, []);
 
   useEffect(() => {
@@ -78,24 +182,54 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
         if (hoursSinceSave < 24 && state.formData.serviceType) {
           setFormData({ ...state.formData, uploadedPhotos: undefined });
           setCurrentStep(state.currentStep);
+          if (state.draftId) {
+            setDraftId(state.draftId);
+          }
           setShowDraftRestored(true);
           setTimeout(() => setShowDraftRestored(false), 4000);
         } else {
           clearStorage();
+          void deleteDraftOnServer(state.draftId);
         }
       }
     } catch (e) {
       console.warn('Could not restore form draft:', e);
       clearStorage();
+      void deleteDraftOnServer(draftId);
     }
-  }, [clearStorage]);
+  }, [clearStorage, deleteDraftOnServer, draftId]);
 
   useEffect(() => {
     const photoStep = questions.length + 1;
     if (formData.serviceType && currentStep > 0 && currentStep < photoStep) {
       saveToStorage(formData, currentStep);
+      void saveDraftToServer();
     }
-  }, [formData, currentStep, saveToStorage, questions.length]);
+  }, [formData, currentStep, saveToStorage, questions.length, saveDraftToServer]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        sendIncompleteReport();
+      }
+    };
+
+    const handleUnload = () => {
+      sendIncompleteReport();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('pagehide', handleUnload);
+    window.addEventListener('beforeunload', handleUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('pagehide', handleUnload);
+      window.removeEventListener('beforeunload', handleUnload);
+    };
+  }, [sendIncompleteReport]);
 
   const handleServiceAndZip = (serviceType: ServiceType, zipCode: string) => {
     setFormData({ ...formData, serviceType, zipCode });
@@ -107,6 +241,20 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
       ...formData,
       responses: { ...formData.responses, [questionId]: answer },
     });
+  };
+
+  const isProbablyMobileDevice = () => {
+    if (typeof navigator === 'undefined') return false;
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  };
+
+  const navigateToThankYou = () => {
+    if (typeof window === 'undefined') return;
+    if (isProbablyMobileDevice()) {
+      window.location.href = '/thank-you';
+    } else {
+      window.history.replaceState(null, '', '/thank-you');
+    }
   };
 
   const handleNext = () => {
@@ -200,14 +348,16 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
       zipCode: formData.zipCode,
       answers: formData.responses,
       photoUrls: formData.uploadedPhotos?.map(p => p.url) || [],
+      draftId,
     };
 
     try {
-      const submitEndpoint = import.meta.env.VITE_SUBMIT_URL || '/api/submit';
+        const submitEndpoint = import.meta.env.VITE_SUBMIT_URL || '/api/submit';
+        const resolvedSubmitEndpoint = apiUrl(submitEndpoint);
 
-      const results = await Promise.allSettled([
-        submitWithRetry(sheetPayload),
-        fetch(submitEndpoint, {
+        const results = await Promise.allSettled([
+          submitWithRetry(sheetPayload),
+          fetch(resolvedSubmitEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(dbPayload),
@@ -232,8 +382,10 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
         throw sheetResult.reason;
       }
       
+      await deleteDraftOnServer(draftId);
       clearStorage();
       setIsComplete(true);
+      navigateToThankYou();
     } catch (error) {
       console.error('Error submitting quote:', error);
       setSubmitError(
@@ -250,11 +402,14 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
   };
 
   const handleStartOver = () => {
-    clearStorage();
+    void deleteDraftOnServer(draftId);
     setFormData({ serviceType: '', zipCode: '', responses: {} });
     setCurrentStep(0);
     setIsComplete(false);
     setSubmitError(null);
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', '/');
+    }
   };
 
   useEffect(() => {
@@ -275,6 +430,13 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
   useEffect(() => {
     onWizardModeChange?.(hideExternalSections);
   }, [hideExternalSections, onWizardModeChange]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.location.pathname === '/thank-you') {
+      setIsComplete(true);
+    }
+  }, []);
 
   if (isComplete) {
     return <ThankYou />;

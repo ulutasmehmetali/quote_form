@@ -200,6 +200,38 @@ input:focus, textarea:focus, select:focus {
   color: #0369a1;
 }
 
+.chart-card {
+  background: #0f1624;
+  padding: 25px;
+  border-radius: 14px;
+  border: 1px solid #1d2a3a;
+  margin-top: 20px;
+}
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  margin-bottom: 15px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  background: #4dabf7;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.chart-subinfo {
+  color: #9fb2c8;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
 @keyframes scroll-left {
   0% {
     transform: translateX(0);

@@ -209,6 +209,9 @@ _Note: Conservative limits ensure reliable uploads on Vercel Edge runtime (which
 | `OPENAI_API_KEY` | Yes | OpenAI API key for AI suggestions |
 | `VITE_SUPABASE_URL` | No | Supabase project URL (optional) |
 | `VITE_SUPABASE_ANON_KEY` | No | Supabase anon key (optional) |
+| `VITE_API_BASE` | No | Optional backend host for API calls (defaults to same origin). |
+
+If you host the frontend and backend on different origins (e.g., frontend on Vercel, backend on a separate domain), set `VITE_API_BASE` to the backend base URL so the admin UI reaches the correct API. Leave it empty for same-origin deployments or when relying on the Vite dev proxy.
 
 ## 💰 Cost Estimate
 

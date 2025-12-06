@@ -1,19 +1,228 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import geoip from 'geoip-lite';
 import { db } from './db.ts';
-import { submissions, adminUsers, submissionNotes, activityLogs } from '../shared/schema.ts';
-import { eq, desc, sql, count, gte, and, like, or, asc } from 'drizzle-orm';
+import { submissions, adminUsers, submissionNotes, activityLogs, partialForms, adminIpBlacklist } from '../shared/schema.js';
+import { eq, desc, sql, count, gte, and, like, or, asc, lt } from 'drizzle-orm';
 import { getClientIP } from './utils/geoip.js';
+import { getGeoFromIP } from './helpers/geo.js';
+import { supabase } from './helpers/supabase.js';
+
+function parseNumber(value) {
+  if (value === undefined || value === null) return 0;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+async function fetchSupabaseFallbackStats() {
+  try {
+    const [
+      { data: totalRows },
+      { data: todayRows },
+      { data: weekRows },
+      { data: monthRows },
+      { data: statusData },
+      { data: countryData },
+      { data: browserData },
+      { data: deviceData },
+      { data: osData },
+      { data: dailyTrendData },
+      { data: hourlyData },
+      { data: weekdayData },
+    ] = await Promise.all([
+      supabase.rpc('count_submissions'),
+      supabase.rpc('count_submissions_today'),
+      supabase.rpc('count_submissions_week'),
+      supabase.rpc('count_submissions_month'),
+      supabase.rpc('stats_by_status'),
+      supabase.rpc('stats_by_country'),
+      supabase.rpc('stats_by_browser'),
+      supabase.rpc('stats_by_device'),
+      supabase.rpc('stats_by_os'),
+      supabase.rpc('stats_daily_trend'),
+      supabase.rpc('stats_hourly'),
+      supabase.rpc('stats_weekday'),
+    ]);
+
+    const overview = {
+      total: parseNumber(totalRows?.count),
+      today: parseNumber(todayRows?.count),
+      thisWeek: parseNumber(weekRows?.count),
+      thisMonth: parseNumber(monthRows?.count),
+    };
+
+    const reduceToObject = (items = [], keyField = 'status') => {
+      const iterable = Array.isArray(items) ? items : [];
+      return iterable.reduce((acc, entry) => {
+        if (!entry) return acc;
+        const key = entry[keyField];
+        if (!key) return acc;
+        acc[key] = parseNumber(entry.count);
+        return acc;
+      }, {});
+    };
+
+    const toArray = (items = [], mapper = () => ({})) => {
+      const iterable = Array.isArray(items) ? items : [];
+      return iterable
+        .filter(Boolean)
+        .map((entry) => ({
+          ...entry,
+          count: parseNumber(entry.count),
+          ...mapper(entry),
+        }));
+    };
+
+    const supabaseStats = {
+      overview,
+      byStatus: reduceToObject(statusData, 'status'),
+      byCountry: toArray(countryData, (entry) => ({
+        countryCode: entry.country_code || entry.countryCode,
+      })),
+      byBrowser: toArray(browserData, (entry) => ({ browser: entry.browser })),
+      byDeviceType: toArray(deviceData, (entry) => ({
+        deviceType: entry.device_type || entry.deviceType || entry.device,
+      })),
+      byOS: toArray(osData, (entry) => ({ os: entry.os })),
+      dailyTrend: Array.isArray(dailyTrendData) ? dailyTrendData.map((entry) => ({
+        date: entry?.date,
+        count: parseNumber(entry?.count),
+      })) : [],
+      hourlyActivity: Array.isArray(hourlyData) ? hourlyData.map((entry) => ({
+        hour: parseNumber(entry?.hour),
+        count: parseNumber(entry?.count),
+        avg_session_duration: entry?.avg_session_duration ?? entry?.avgSessionDuration ?? null,
+      })) : [],
+      weekdayDistribution: Array.isArray(weekdayData) ? weekdayData.map((entry) => ({
+        weekday: parseNumber(entry?.weekday),
+        count: parseNumber(entry?.count),
+      })) : [],
+    };
+
+    return supabaseStats;
+  } catch (error) {
+    console.warn('Supabase fallback error:', error?.message || error);
+    return null;
+  }
+}
 
 const router = express.Router();
 
 const sessions = new Map();
-const SESSION_DURATION = 8 * 60 * 60 * 1000;
+// Admin session süresi (30 dakika)
+const SESSION_DURATION = 30 * 60 * 1000;
 const MAX_SESSIONS_PER_USER = 3;
 const failedAttempts = new Map();
 const LOCKOUT_DURATION = 15 * 60 * 1000;
-const MAX_FAILED_ATTEMPTS = 5;
+const MAX_FAILED_ATTEMPTS = 3;
+const ipCountryCache = new Map();
+const ipBanCache = new Map();
+const IP_BAN_REASON = 'Exceeded admin login attempts';
+const regionNameFormatter = new Intl.DisplayNames(['en'], { type: 'region' });
+
+function formatRegionName(code) {
+  if (!code) return 'Unknown';
+  try {
+    const resolved = regionNameFormatter.of(code);
+    if (resolved && resolved !== 'Unknown') return resolved;
+  } catch {
+    // ignore
+  }
+  return code;
+}
+
+const COUNTRY_CODE_OVERRIDES = {
+  'UNITED STATES': 'US',
+  'UNITED STATES OF AMERICA': 'US',
+  'U.S.': 'US',
+  'USA': 'US',
+  'AMERICA': 'US',
+  'US': 'US',
+  'UNITED KINGDOM': 'GB',
+  'GREAT BRITAIN': 'GB',
+  'UK': 'GB',
+  'BRITAIN': 'GB',
+  'TURKEY': 'TR',
+  'TURKIYE': 'TR',
+  'TÜRKİYE': 'TR',
+  'RUSSIA': 'RU',
+  'SOUTH KOREA': 'KR',
+  'KOREA, SOUTH': 'KR',
+  'NORTH KOREA': 'KP',
+  'KOREA, NORTH': 'KP',
+  'UAE': 'AE',
+  'UNITED ARAB EMIRATES': 'AE',
+  'SAUDI ARABIA': 'SA',
+  'VIETNAM': 'VN',
+  'UKRAINE': 'UA',
+};
+
+function normalizeCountryCode(countryCode, countryName) {
+  const normalizeCandidate = (value) => (typeof value === 'string' ? value.trim().toUpperCase() : '');
+  const codeCandidate = normalizeCandidate(countryCode);
+  if (codeCandidate) {
+    if (/^[A-Z]{2}$/.test(codeCandidate)) {
+      return codeCandidate;
+    }
+    if (COUNTRY_CODE_OVERRIDES[codeCandidate]) {
+      return COUNTRY_CODE_OVERRIDES[codeCandidate];
+    }
+  }
+
+  const nameCandidate = normalizeCandidate(countryName);
+  if (nameCandidate) {
+    if (COUNTRY_CODE_OVERRIDES[nameCandidate]) {
+      return COUNTRY_CODE_OVERRIDES[nameCandidate];
+    }
+    if (/^[A-Z]{2}$/.test(nameCandidate)) {
+      return nameCandidate;
+    }
+  }
+
+  return null;
+}
+
+function formatCountryLabel(countryCode, countryName) {
+  if (countryName && countryName !== 'Unknown') return countryName;
+  if (countryCode && /^[A-Z]{2}$/.test(countryCode)) {
+    try {
+      const resolved = regionNameFormatter.of(countryCode);
+      if (resolved && resolved !== 'Unknown') return resolved;
+    } catch {
+      // ignore
+    }
+  }
+  return countryName || countryCode || 'Unknown';
+}
+
+async function resolveGeoForIP(ip) {
+  if (!ip) return null;
+  const offline = geoip.lookup(ip);
+  if (offline?.country) {
+    return {
+      country: formatRegionName(offline.country),
+      country_code: offline.country,
+    };
+  }
+  const online = await getGeoFromIP(ip);
+  if (online?.country_code && (!online.country || online.country === 'Unknown')) {
+    online.country = formatRegionName(online.country_code);
+  }
+  return online;
+}
+
+async function getGeoForIP(ip) {
+  if (!ip) return null;
+  if (ipCountryCache.has(ip)) {
+    return ipCountryCache.get(ip);
+  }
+  const geo = await resolveGeoForIP(ip);
+  if (geo) {
+    ipCountryCache.set(ip, geo);
+  }
+  return geo;
+}
 
 function generateSecureSessionId() {
   return crypto.randomBytes(32).toString('hex');
@@ -67,46 +276,124 @@ setInterval(cleanupExpiredSessions, 5 * 60 * 1000);
 
 async function logActivity(action, entityType, entityId, adminUser, req, details = {}) {
   try {
-    await db.insert(activityLogs).values({
+    const normalizedDetails = (details && typeof details === 'object') ? details : null;
+    const safeDetails = normalizedDetails && Object.keys(normalizedDetails).length ? normalizedDetails : null;
+    const payload = {
       action,
       entityType,
       entityId,
       adminId: adminUser?.id,
       adminUsername: adminUser?.username,
-      details,
+      details: safeDetails,
       ipAddress: getClientIP(req),
       userAgent: req.headers['user-agent']?.substring(0, 500),
-    });
+    };
+
+    await db.insert(activityLogs).values(payload);
   } catch (error) {
     console.error('Failed to log activity:', error.message);
   }
 }
 
-function isAccountLocked(ip) {
+async function isAccountLocked(ip) {
+  if (!ip) return false;
+  if (await isIpBanned(ip)) return true;
+
   const attempts = failedAttempts.get(ip);
   if (!attempts) return false;
-  
+
   if (Date.now() > attempts.lockoutUntil) {
     failedAttempts.delete(ip);
     return false;
   }
-  
+
   return attempts.count >= MAX_FAILED_ATTEMPTS;
 }
 
-function recordFailedAttempt(ip) {
+async function recordFailedAttempt(ip) {
+  if (!ip) return false;
   const attempts = failedAttempts.get(ip) || { count: 0, lockoutUntil: 0 };
   attempts.count++;
-  
+
   if (attempts.count >= MAX_FAILED_ATTEMPTS) {
-    attempts.lockoutUntil = Date.now() + LOCKOUT_DURATION;
+    await banIpAddress(ip, IP_BAN_REASON, 'system');
+    return true;
   }
-  
+
+  attempts.lockoutUntil = Date.now() + LOCKOUT_DURATION;
   failedAttempts.set(ip, attempts);
+  return false;
 }
 
 function clearFailedAttempts(ip) {
   failedAttempts.delete(ip);
+}
+
+async function loadIpBanEntry(ip) {
+  if (!ip) return null;
+  if (ipBanCache.has(ip)) {
+    return ipBanCache.get(ip);
+  }
+  const [entry] = await db.select({
+    id: adminIpBlacklist.id,
+    ipAddress: adminIpBlacklist.ipAddress,
+    reason: adminIpBlacklist.reason,
+    createdBy: adminIpBlacklist.createdBy,
+    createdAt: adminIpBlacklist.createdAt,
+  }).from(adminIpBlacklist).where(eq(adminIpBlacklist.ipAddress, ip)).limit(1);
+  ipBanCache.set(ip, entry || null);
+  return entry || null;
+}
+
+async function isIpBanned(ip) {
+  const entry = await loadIpBanEntry(ip);
+  return !!entry;
+}
+
+async function banIpAddress(ip, reason = IP_BAN_REASON, createdBy = 'system') {
+  if (!ip) return;
+  try {
+    await db.execute(sql`
+      INSERT INTO public.admin_ip_blacklist (ip_address, reason, created_by)
+      VALUES (${ip}, ${reason}, ${createdBy})
+      ON CONFLICT (ip_address) DO UPDATE
+      SET reason = EXCLUDED.reason,
+          created_by = EXCLUDED.created_by,
+          created_at = now();
+    `);
+  } catch (error) {
+    console.error('Failed to write IP blacklist entry:', error);
+  } finally {
+    failedAttempts.delete(ip);
+    ipBanCache.set(ip, { ipAddress: ip, reason, createdBy, createdAt: new Date() });
+  }
+}
+
+async function unbanIpAddress(ip) {
+  if (!ip) return;
+  try {
+    await db.execute(sql`
+      DELETE FROM public.admin_ip_blacklist
+      WHERE ip_address = ${ip}
+    `);
+  } catch (error) {
+    console.error('Failed to remove IP blacklist entry:', error);
+  } finally {
+    failedAttempts.delete(ip);
+    ipBanCache.delete(ip);
+  }
+}
+
+async function fetchBlacklistEntries() {
+  return db.select({
+    id: adminIpBlacklist.id,
+    ipAddress: adminIpBlacklist.ipAddress,
+    reason: adminIpBlacklist.reason,
+    createdBy: adminIpBlacklist.createdBy,
+    createdAt: adminIpBlacklist.createdAt,
+  })
+  .from(adminIpBlacklist)
+  .orderBy(desc(adminIpBlacklist.createdAt));
 }
 
 async function requireAuth(req, res, next) {
@@ -234,7 +521,7 @@ router.post('/login', async (req, res) => {
   try {
     const clientIP = getClientIP(req);
     
-    if (isAccountLocked(clientIP)) {
+    if (await isAccountLocked(clientIP)) {
       return res.status(429).json({ 
         error: 'Too many failed attempts. Please try again in 15 minutes.' 
       });
@@ -255,8 +542,12 @@ router.post('/login', async (req, res) => {
     const [user] = await db.select().from(adminUsers).where(eq(adminUsers.username, username));
     
     if (!user) {
-      recordFailedAttempt(clientIP);
+      const bannedNow = await recordFailedAttempt(clientIP);
       await logActivity('login_failed', 'admin', null, null, req, { username, reason: 'user_not_found' });
+      if (bannedNow) {
+        await logActivity('ip_banned', 'security', null, null, req, { ipAddress: clientIP, reason: IP_BAN_REASON });
+        return res.status(403).json({ error: 'Too many failed attempts. Your IP has been blocked.' });
+      }
       await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500));
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -264,8 +555,12 @@ router.post('/login', async (req, res) => {
     const isValid = await bcrypt.compare(password, user.passwordHash);
     
     if (!isValid) {
-      recordFailedAttempt(clientIP);
+      const bannedNow = await recordFailedAttempt(clientIP);
       await logActivity('login_failed', 'admin', user.id, null, req, { username, reason: 'wrong_password' });
+      if (bannedNow) {
+        await logActivity('ip_banned', 'security', user.id, null, req, { ipAddress: clientIP, reason: IP_BAN_REASON });
+        return res.status(403).json({ error: 'Too many failed attempts. Your IP has been blocked.' });
+      }
       await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500));
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -302,21 +597,19 @@ router.post('/login', async (req, res) => {
     
     await logActivity('login_success', 'admin', user.id, { id: user.id, username: user.username }, req, {});
     
-    const isProduction = process.env.NODE_ENV === 'production';
-    
     res.cookie('adminSession', sessionId, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: 'strict',
+      secure: true,
+      sameSite: 'none',
       maxAge: SESSION_DURATION,
-      path: '/api/admin',
+      path: '/',
     });
-    
-    res.json({ 
-      success: true, 
+
+    return res.json({
+      success: true,
       sessionId,
       csrfToken,
-      user: { id: user.id, username: user.username, role: user.role }
+      user: { id: user.id, username: user.username, role: user.role },
     });
   } catch (error) {
     console.error('Login error:', error.message);
@@ -327,7 +620,7 @@ router.post('/login', async (req, res) => {
 router.post('/logout', requireAuth, requireCSRF, async (req, res) => {
   await logActivity('logout', 'admin', req.adminUser.id, req.adminUser, req, {});
   sessions.delete(req.sessionId);
-  res.clearCookie('adminSession', { path: '/api/admin' });
+  res.clearCookie('adminSession', { path: '/' });
   res.json({ success: true });
 });
 
@@ -339,22 +632,94 @@ router.get('/me', requireAuth, (req, res) => {
   });
 });
 
-router.get('/submissions', requireAuth, async (req, res) => {
+router.get('/blacklist', requireAuth, async (req, res) => {
   try {
-    let { status, country, serviceType, search, dateFrom, dateTo, page = 1, limit = 20, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
-    
-    page = Math.max(1, Math.min(parseInt(page) || 1, 1000));
-    limit = Math.max(1, Math.min(parseInt(limit) || 20, 100));
+    const entries = await fetchBlacklistEntries();
+    res.json({ blacklist: entries });
+  } catch (error) {
+    console.error('Blacklist fetch error:', error.message);
+    res.status(500).json({ error: 'Failed to load blacklist' });
+  }
+});
+
+router.post('/blacklist', requireAuth, requireRole('admin'), requireCSRF, async (req, res) => {
+  try {
+    const ipAddressRaw = req.body?.ipAddress;
+    const reasonRaw = req.body?.reason;
+    const ipAddress = ipAddressRaw ? sanitizeInput(String(ipAddressRaw)) : '';
+    const reason = reasonRaw ? sanitizeInput(String(reasonRaw)) : 'Manual block';
+
+    if (!ipAddress) {
+      return res.status(400).json({ error: 'IP address is required' });
+    }
+
+    await banIpAddress(ipAddress, reason, req.adminUser?.username || 'admin');
+    await logActivity('ip_banned', 'security', req.adminUser.id, req.adminUser, req, { ipAddress, reason });
+
+    const entries = await fetchBlacklistEntries();
+    res.json({ success: true, blacklist: entries });
+  } catch (error) {
+    console.error('Blacklist create error:', error.message);
+    res.status(500).json({ error: 'Failed to add blacklist entry' });
+  }
+});
+
+router.delete('/blacklist/:ip', requireAuth, requireRole('admin'), requireCSRF, async (req, res) => {
+  try {
+    const ipAddress = req.params?.ip ? sanitizeInput(String(req.params.ip)) : '';
+    if (!ipAddress) {
+      return res.status(400).json({ error: 'IP address is required' });
+    }
+
+    await unbanIpAddress(ipAddress);
+    await logActivity('ip_unbanned', 'security', req.adminUser.id, req.adminUser, req, { ipAddress });
+
+    const entries = await fetchBlacklistEntries();
+    res.json({ success: true, blacklist: entries });
+  } catch (error) {
+    console.error('Blacklist delete error:', error.message);
+    res.status(500).json({ error: 'Failed to remove blacklist entry' });
+  }
+});
+
+router.get('/submissions', requireAuth, async (req, res) => {
+  let page = 1;
+  let limit = 20;
+  try {
+    let {
+      status,
+      country,
+      serviceType,
+      search,
+      dateFrom,
+      dateTo,
+      page: pageQuery = 1,
+      limit: limitQuery = 20,
+      sortBy = 'created_at',
+      sortOrder = 'desc',
+    } = req.query;
+
+    page = Math.max(1, Math.min(parseInt(pageQuery) || 1, 1000));
+    limit = Math.max(1, Math.min(parseInt(limitQuery) || 20, 100));
     const offset = (page - 1) * limit;
-    
-    const allowedSortColumns = ['createdAt', 'name', 'email', 'serviceType', 'status', 'zipCode'];
-    sortBy = allowedSortColumns.includes(sortBy) ? sortBy : 'createdAt';
+
+    const sortMap = {
+      createdAt: submissions.createdAt,
+      created_at: submissions.createdAt,
+      name: submissions.customerName,
+      email: submissions.email,
+      serviceType: submissions.serviceType,
+      status: submissions.status,
+      zipCode: submissions.zipCode,
+    };
+
+    const normalizedSortBy = sortMap[sortBy] ? sortBy : 'created_at';
     sortOrder = sortOrder === 'asc' ? 'asc' : 'desc';
-    
+
     search = search ? sanitizeInput(search) : null;
-    
-    let conditions = [];
-    
+
+    const conditions = [];
+
     if (status && status !== 'all') {
       const allowedStatuses = ['new', 'contacted', 'in_progress', 'completed', 'cancelled'];
       if (allowedStatuses.includes(status)) {
@@ -389,32 +754,96 @@ router.get('/submissions', requireAuth, async (req, res) => {
         like(submissions.zipCode, searchPattern)
       ));
     }
-    
+
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-    
-    const orderColumn = submissions[sortBy] || submissions.createdAt;
+
+    const orderColumn = sortMap[normalizedSortBy];
     const orderDirection = sortOrder === 'asc' ? asc(orderColumn) : desc(orderColumn);
-    
-    let query = db.select().from(submissions);
+
+    const submissionSelect = {
+      id: submissions.id,
+      serviceType: submissions.serviceType,
+      zipCode: submissions.zipCode,
+      name: submissions.name,
+      email: submissions.email,
+      phone: submissions.phone,
+      answers: submissions.answers,
+      photoUrls: submissions.photos,
+      status: submissions.status,
+      ipAddress: submissions.ipAddress,
+      country: submissions.country,
+      countryCode: submissions.countryCode,
+      city: submissions.city,
+      region: submissions.region,
+      timezone: submissions.timezone,
+      userAgent: submissions.userAgent,
+      browser: submissions.browser,
+      browserVersion: submissions.browserVersion,
+      os: submissions.os,
+      osVersion: submissions.osVersion,
+      device: submissions.device,
+      deviceType: submissions.deviceType,
+      referrer: submissions.referrer,
+      utmSource: submissions.utmSource,
+      utmMedium: submissions.utmMedium,
+      utmCampaign: submissions.utmCampaign,
+      sessionDuration: submissions.sessionDuration,
+      pageViews: submissions.pageViews,
+      createdAt: submissions.createdAt,
+      updatedAt: submissions.updatedAt,
+    };
+
+    let query = db.select(submissionSelect).from(submissions);
     if (whereClause) query = query.where(whereClause);
     const results = await query.orderBy(orderDirection).limit(limit).offset(offset);
-    
+    const submissionsList = Array.isArray(results) ? results : [];
+
+    const enrichedSubmissions = [];
+    for (const submission of submissionsList) {
+      if (submission.country && submission.country !== 'Unknown') {
+        enrichedSubmissions.push(submission);
+        continue;
+      }
+
+      const ip = submission.ipAddress;
+      if (!ip) {
+        enrichedSubmissions.push(submission);
+        continue;
+      }
+
+      const geo = await getGeoForIP(ip);
+      if (geo?.country && geo.country !== 'Unknown') {
+        submission.country = geo.country;
+        submission.countryCode = geo.country_code;
+      }
+      enrichedSubmissions.push(submission);
+    }
+
     let countQuery = db.select({ total: count() }).from(submissions);
     if (whereClause) countQuery = countQuery.where(whereClause);
-    const [{ total }] = await countQuery;
-    
-    res.json({
-      submissions: results,
+    const countResult = await countQuery;
+    const total = Number(countResult[0]?.total ?? 0);
+
+    return res.json({
+      submissions: submissionsList,
+      total,
       pagination: {
         page,
         limit,
-        total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: total ? Math.ceil(total / limit) : 0,
       },
     });
   } catch (error) {
     console.error('Submissions error:', error.message);
-    res.status(500).json({ error: 'Failed to fetch submissions' });
+    return res.json({
+      submissions: [],
+      total: 0,
+      pagination: {
+        page,
+        limit,
+        totalPages: 0,
+      },
+    });
   }
 });
 
@@ -541,46 +970,137 @@ router.post('/submissions/:id/notes', requireAuth, requireCSRF, async (req, res)
 router.get('/stats', requireAuth, async (req, res) => {
   try {
     const now = new Date();
+    const threeHoursAgo = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const twoDaysAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
     const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-    
-    const [{ total }] = await db.select({ total: count() }).from(submissions);
-    const [{ todayCount }] = await db.select({ todayCount: count() }).from(submissions).where(gte(submissions.createdAt, today));
-    const [{ weekCount }] = await db.select({ weekCount: count() }).from(submissions).where(gte(submissions.createdAt, weekAgo));
-    const [{ monthCount }] = await db.select({ monthCount: count() }).from(submissions).where(gte(submissions.createdAt, monthAgo));
-    
+
+    const totalRows = await db.select({ total: count() }).from(submissions);
+    const todayRows = await db.select({ todayCount: count() }).from(submissions).where(gte(submissions.createdAt, today));
+    const weekRows = await db.select({ weekCount: count() }).from(submissions).where(gte(submissions.createdAt, weekAgo));
+    const monthRows = await db.select({ monthCount: count() }).from(submissions).where(gte(submissions.createdAt, monthAgo));
+    const total = Number(totalRows[0]?.total ?? 0);
+    const todayCount = Number(todayRows[0]?.todayCount ?? 0);
+    const weekCount = Number(weekRows[0]?.weekCount ?? 0);
+    const monthCount = Number(monthRows[0]?.monthCount ?? 0);
+
+    const newFreshRows = await db.select({ count: count() }).from(submissions)
+      .where(and(eq(submissions.status, 'new'), gte(submissions.createdAt, threeHoursAgo)));
+    const newTodayRows = await db.select({ count: count() }).from(submissions)
+      .where(and(eq(submissions.status, 'new'), gte(submissions.createdAt, oneDayAgo), lt(submissions.createdAt, threeHoursAgo)));
+    const newYesterdayRows = await db.select({ count: count() }).from(submissions)
+      .where(and(eq(submissions.status, 'new'), gte(submissions.createdAt, twoDaysAgo), lt(submissions.createdAt, oneDayAgo)));
+    const newOlderRows = await db.select({ count: count() }).from(submissions)
+      .where(and(eq(submissions.status, 'new'), lt(submissions.createdAt, twoDaysAgo)));
+    const newStatusBuckets = {
+      fresh: Number(newFreshRows[0]?.count ?? 0),
+      today: Number(newTodayRows[0]?.count ?? 0),
+      yesterday: Number(newYesterdayRows[0]?.count ?? 0),
+      older: Number(newOlderRows[0]?.count ?? 0),
+    };
+
+    const earliestRows = await db.select({ earliestCreatedAt: sql`MIN(${submissions.createdAt})` }).from(submissions);
+    const earliestCreatedAt = earliestRows[0]?.earliestCreatedAt ?? null;
+    const earliestDate = earliestCreatedAt ? new Date(earliestCreatedAt) : null;
+    const daySpan = earliestDate ? Math.max(1, Math.floor((now.getTime() - earliestDate.getTime()) / (1000 * 60 * 60 * 24))) : 1;
+    const avgPerDay = total ? Number((total / daySpan).toFixed(1)) : 0;
+
     const statusCounts = await db.select({
       status: submissions.status,
       count: count(),
     }).from(submissions).groupBy(submissions.status);
-    
+
+    const completedCount = statusCounts.find(s => s.status === 'completed')?.count || 0;
+    const completionRate = total > 0 ? Number(((completedCount / total) * 100).toFixed(1)) : 0;
+
     const serviceTypeCounts = await db.select({
       serviceType: submissions.serviceType,
       count: count(),
     }).from(submissions).groupBy(submissions.serviceType).orderBy(desc(count())).limit(10);
-    
+
+    const weeklyService = await db.select({
+      serviceType: submissions.serviceType,
+      count: count(),
+    }).from(submissions)
+      .where(gte(submissions.createdAt, weekAgo))
+      .groupBy(submissions.serviceType)
+      .orderBy(desc(count()))
+      .limit(1);
+    const weeklyTrendService = weeklyService[0] ? {
+      serviceType: weeklyService[0].serviceType,
+      count: weeklyService[0].count,
+    } : null;
+
     const countryCounts = await db.select({
       country: submissions.country,
       countryCode: submissions.countryCode,
       count: count(),
-    }).from(submissions).where(sql`${submissions.country} IS NOT NULL`).groupBy(submissions.country, submissions.countryCode).orderBy(desc(count())).limit(15);
-    
+    }).from(submissions)
+      .where(sql`${submissions.country} IS NOT NULL AND ${submissions.country} <> '' AND ${submissions.country} <> 'Unknown'`)
+      .groupBy(submissions.country, submissions.countryCode)
+      .orderBy(desc(count()))
+      .limit(15);
+
+    const missingCountryCondition = sql`${submissions.country} IS NULL OR ${submissions.country} = '' OR ${submissions.country} = 'Unknown'`;
+    const missingCountryRowsCount = await db.select({ missingCountryCount: count() }).from(submissions).where(missingCountryCondition);
+    const missingCountryCount = Number(missingCountryRowsCount[0]?.missingCountryCount ?? 0);
+    const inferredCountries = [];
+    const seenIps = new Set();
+    const missingCountryRows = await db.select({
+      ipAddress: submissions.ipAddress,
+    }).from(submissions)
+      .where(missingCountryCondition)
+      .orderBy(desc(submissions.createdAt))
+      .limit(50);
+
+    let inferredCountTotal = 0;
+    for (const row of missingCountryRows) {
+      if (!row.ipAddress || seenIps.has(row.ipAddress)) continue;
+      seenIps.add(row.ipAddress);
+      try {
+        const geo = await getGeoForIP(row.ipAddress);
+        if (geo?.country && geo.country !== 'Unknown') {
+          inferredCountries.push({
+            country: geo.country,
+            countryCode: geo.country_code,
+            count: 1,
+          });
+          inferredCountTotal++;
+        }
+      } catch (geoError) {
+        console.warn('Failed to infer country for IP', row.ipAddress, geoError?.message);
+      }
+      if (seenIps.size >= 25) {
+        break;
+      }
+    }
+
     const browserCounts = await db.select({
       browser: submissions.browser,
       count: count(),
     }).from(submissions).where(sql`${submissions.browser} IS NOT NULL`).groupBy(submissions.browser).orderBy(desc(count()));
-    
+
     const deviceTypeCounts = await db.select({
       deviceType: submissions.deviceType,
       count: count(),
-    }).from(submissions).where(sql`${submissions.device_type} IS NOT NULL`).groupBy(submissions.deviceType).orderBy(desc(count()));
-    
+    }).from(submissions).where(sql`${submissions.deviceType} IS NOT NULL`).groupBy(submissions.deviceType).orderBy(desc(count()));
+
+    const deviceModelRows = await db.select({
+      deviceType: submissions.deviceType,
+      deviceModel: submissions.device,
+      count: count(),
+    }).from(submissions)
+      .where(sql`${submissions.device} IS NOT NULL AND ${submissions.device} <> ''`)
+      .groupBy(submissions.deviceType, submissions.device)
+      .orderBy(desc(count()));
+
     const osCounts = await db.select({
       os: submissions.os,
       count: count(),
     }).from(submissions).where(sql`${submissions.os} IS NOT NULL`).groupBy(submissions.os).orderBy(desc(count()));
-    
+
     const dailySubmissions = await db.select({
       date: sql`DATE(${submissions.createdAt})`.as('date'),
       count: count(),
@@ -588,52 +1108,150 @@ router.get('/stats', requireAuth, async (req, res) => {
       .where(gte(submissions.createdAt, monthAgo))
       .groupBy(sql`DATE(${submissions.createdAt})`)
       .orderBy(sql`DATE(${submissions.createdAt})`);
-    
-    const hourlyDistribution = await db.select({
-      hour: sql`EXTRACT(HOUR FROM ${submissions.createdAt})`.as('hour'),
+
+    const trendMap = new Map(dailySubmissions.map((entry) => {
+      const key = entry.date instanceof Date ? entry.date.toISOString().split('T')[0] : `${entry.date}`;
+      return [key, entry.count];
+    }));
+
+    const dailyTrend = [];
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(now.getDate() - i);
+      const key = date.toISOString().split('T')[0];
+      dailyTrend.push({ date: key, count: trendMap.get(key) ?? 0 });
+    }
+
+    const hourlyActivity = await db.select({
+      hour: sql`EXTRACT(HOUR FROM (${submissions.createdAt} AT TIME ZONE 'America/New_York'))`.as('hour'),
       count: count(),
+      avg_session_duration: sql`AVG(${submissions.sessionDuration})`.as('avg_session_duration'),
     }).from(submissions)
-      .groupBy(sql`EXTRACT(HOUR FROM ${submissions.createdAt})`)
-      .orderBy(sql`EXTRACT(HOUR FROM ${submissions.createdAt})`);
-    
+      .groupBy(sql`EXTRACT(HOUR FROM (${submissions.createdAt} AT TIME ZONE 'America/New_York'))`)
+      .orderBy(sql`EXTRACT(HOUR FROM (${submissions.createdAt} AT TIME ZONE 'America/New_York'))`);
+
     const weekdayDistribution = await db.select({
       weekday: sql`EXTRACT(DOW FROM ${submissions.createdAt})`.as('weekday'),
       count: count(),
     }).from(submissions)
       .groupBy(sql`EXTRACT(DOW FROM ${submissions.createdAt})`)
       .orderBy(sql`EXTRACT(DOW FROM ${submissions.createdAt})`);
-    
+
+    const usCountryCondition = sql`
+      (
+        ${submissions.countryCode} IN ('US', 'UNITED STATES', 'USA', 'U.S.')
+        OR LOWER(${submissions.country}) = 'united states'
+      )
+    `;
+
     const usStateCounts = await db.select({
       state: submissions.region,
       count: count(),
     }).from(submissions)
       .where(and(
-        eq(submissions.countryCode, 'US'),
+        usCountryCondition,
         sql`${submissions.region} IS NOT NULL`
       ))
       .groupBy(submissions.region)
       .orderBy(desc(count()));
-    
+
+    const partialDraftRows = await db.select({ partialDraftCount: count() }).from(partialForms);
+    const finalPartialDrafts = Number(partialDraftRows[0]?.partialDraftCount ?? 0);
+
+    const countryTotals = new Map();
+    const addCountryEntry = (entry) => {
+      const count = Number(entry.count || 0);
+      if (count <= 0) return;
+      const normalizedCode = normalizeCountryCode(entry.countryCode, entry.country);
+      const label = formatCountryLabel(normalizedCode, entry.country);
+      const key = normalizedCode || label || 'Unknown';
+      const existing = countryTotals.get(key);
+      countryTotals.set(key, {
+        country: label,
+        countryCode: normalizedCode || existing?.countryCode || key,
+        count: (existing?.count || 0) + count,
+      });
+    };
+
+    countryCounts.forEach(addCountryEntry);
+    inferredCountries.forEach((entry) => addCountryEntry({ ...entry, count: entry.count || 1 }));
+    const leftoverUnknown = Math.max(0, (missingCountryCount || 0) - inferredCountTotal);
+    if (leftoverUnknown > 0) {
+      addCountryEntry({ country: 'Unknown', countryCode: 'XX', count: leftoverUnknown });
+    }
+    const mergedCountries = Array.from(countryTotals.values()).sort((a, b) => b.count - a.count);
+
+    const localByStatus = statusCounts.reduce((acc, { status, count }) => {
+      acc[status] = count;
+      return acc;
+    }, {});
+    const fallbackNeeded =
+      total === 0 ||
+      Object.keys(localByStatus).length === 0 ||
+      mergedCountries.length === 0 ||
+      browserCounts.length === 0 ||
+      deviceTypeCounts.length === 0 ||
+      osCounts.length === 0 ||
+      dailyTrend.length === 0 ||
+      hourlyActivity.length === 0 ||
+      weekdayDistribution.length === 0;
+    const supsStats = fallbackNeeded ? await fetchSupabaseFallbackStats() : null;
+
+    const finalOverview = {
+      total: total || supsStats?.overview?.total || 0,
+      today: todayCount || supsStats?.overview?.today || 0,
+      thisWeek: weekCount || supsStats?.overview?.thisWeek || 0,
+      thisMonth: monthCount || supsStats?.overview?.thisMonth || 0,
+      avgPerDay,
+    };
+
+    const calculateFallbackCompletion = (statsObj, totalValue) => {
+      if (!statsObj || !totalValue) return 0;
+      const completedFromSup = statsObj.completed || 0;
+      return Number(((completedFromSup / totalValue) * 100).toFixed(1));
+    };
+    const fallbackCompletionRate = supsStats ? calculateFallbackCompletion(supsStats.byStatus, supsStats.overview.total) : 0;
+    const finalCompletionRate = total > 0 ? completionRate : fallbackCompletionRate;
+    const finalByStatus = Object.keys(localByStatus).length ? localByStatus : supsStats?.byStatus || {};
+    const finalByCountry = mergedCountries.length ? mergedCountries : supsStats?.byCountry || [];
+    const finalByBrowser = browserCounts.length ? browserCounts : supsStats?.byBrowser || [];
+    const finalByDeviceType = deviceTypeCounts.length ? deviceTypeCounts : supsStats?.byDeviceType || [];
+    const finalByOS = osCounts.length ? osCounts : supsStats?.byOS || [];
+    const finalDailyTrend = dailyTrend.length ? dailyTrend : supsStats?.dailyTrend || [];
+    const finalHourlyActivity = hourlyActivity.length ? hourlyActivity : supsStats?.hourlyActivity || [];
+    const finalWeekdayDistribution = weekdayDistribution.length ? weekdayDistribution : supsStats?.weekdayDistribution || [];
+
+    const topDeviceModels = {};
+    deviceModelRows.forEach((row) => {
+      if (!row.deviceType || !row.deviceModel) return;
+      const key = row.deviceType;
+      if (!topDeviceModels[key] || (row.count || 0) > (topDeviceModels[key].count || 0)) {
+        topDeviceModels[key] = {
+          model: row.deviceModel,
+          count: Number(row.count || 0),
+        };
+      }
+    });
+
     res.json({
       overview: {
-        total,
-        today: todayCount,
-        thisWeek: weekCount,
-        thisMonth: monthCount,
+        ...finalOverview,
       },
-      byStatus: statusCounts.reduce((acc, { status, count }) => {
-        acc[status] = count;
-        return acc;
-      }, {}),
+      weeklyTrendService,
+      completionRate: finalCompletionRate,
+      byStatus: finalByStatus,
       byServiceType: serviceTypeCounts,
-      byCountry: countryCounts,
-      byBrowser: browserCounts,
-      byDeviceType: deviceTypeCounts,
-      byOS: osCounts,
-      dailyTrend: dailySubmissions,
-      hourlyDistribution,
-      weekdayDistribution,
+      byCountry: finalByCountry,
+      byBrowser: finalByBrowser,
+      byDeviceType: finalByDeviceType,
+      byOS: finalByOS,
+      dailyTrend: finalDailyTrend,
+      hourlyActivity: finalHourlyActivity,
+      weekdayDistribution: finalWeekdayDistribution,
       byUSState: usStateCounts,
+      partialDrafts: finalPartialDrafts,
+      newStatusBuckets,
+      topDeviceModels,
     });
   } catch (error) {
     console.error('Stats error:', error.message);
@@ -672,7 +1290,8 @@ router.get('/logs', requireAuth, async (req, res) => {
     
     let countQuery = db.select({ total: count() }).from(activityLogs);
     if (whereClause) countQuery = countQuery.where(whereClause);
-    const [{ total }] = await countQuery;
+    const countResult = await countQuery;
+    const total = Number(countResult[0]?.total ?? 0);
     
     res.json({
       logs,
@@ -1803,6 +2422,29 @@ router.post('/distribution-logs/:id/retry', requireAuth, requireRole('admin', 'e
   } catch (error) {
     console.error('Retry distribution error:', error.message);
     res.status(500).json({ error: 'Failed to retry distribution' });
+  }
+});
+
+router.get('/stats/daily-top-categories', requireAuth, async (req, res) => {
+  try {
+    const rows = await db.execute(sql`
+      SELECT day, category, count FROM (
+        SELECT 
+          DATE(${submissions.createdAt}) AS day,
+          ${submissions.serviceType} AS category,
+          COUNT(*) AS count,
+          ROW_NUMBER() OVER (PARTITION BY DATE(${submissions.createdAt}) ORDER BY COUNT(*) DESC) AS rn
+        FROM ${submissions}
+        GROUP BY DATE(${submissions.createdAt}), ${submissions.serviceType}
+      ) t
+      WHERE rn = 1
+      ORDER BY day ASC
+      LIMIT 30;
+    `);
+    res.json(rows);
+  } catch (error) {
+    console.error('Daily top categories error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch daily top categories' });
   }
 });
 

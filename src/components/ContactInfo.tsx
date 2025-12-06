@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import Button from './Button';
+import ArrowLeftIcon from './icons/ArrowLeft';
 
 interface ContactInfoProps {
   onSubmit: (name: string, email: string, phone: string) => void;
@@ -120,8 +121,8 @@ export default function ContactInfo({ onSubmit, onBack, isSubmitting, retryCount
   };
 
   return (
-    <section className="animate-slideInRight">
-      <div className="max-w-2xl mx-auto">
+    <section className="animate-slideInRight pb-6">
+      <div className="max-w-2xl mx-auto px-1">
         <div className="space-y-4">
           <div className="mb-3">
             <div className="flex items-center justify-between mb-2">
@@ -247,32 +248,28 @@ export default function ContactInfo({ onSubmit, onBack, isSubmitting, retryCount
                 Your information is encrypted and secure. We'll connect you with up to four trusted, verified professionals. Your details are never sold.
               </p>
             </div>
-  
-  
-            <div className="flex flex-col-reverse sm:flex-row gap-2.5 pt-1">
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-2 items-stretch">
               <Button
                 type="button"
                 onClick={onBack}
                 disabled={isSubmitting}
                 variant="secondary"
                 size="lg"
-                className="flex-1 h-12 text-base"
+                className="w-full sm:flex-1 h-12 text-base flex items-center justify-center gap-2 rounded-2xl shadow-sm"
+                icon={<ArrowLeftIcon className="h-4 w-4 text-slate-500" />}
               >
-                ← Back
+                Back
               </Button>
               <Button
                 type="submit"
                 isLoading={isSubmitting}
-                className={`flex-1 h-12 text-base transition-all ${allValid ? 'animate-pulse-subtle' : ''}`}
+                className={`w-full sm:flex-1 h-12 text-base rounded-2xl transition-all ${allValid ? 'animate-pulse-subtle' : ''}`}
                 size="lg"
               >
-                {isSubmitting && retryCount > 0
-                  ? `Retrying (${retryCount}/3)...`
-                  : allValid 
-                    ? 'Get My Free Quotes →' 
-                    : 'Complete All Fields'}
+                {isSubmitting ? 'Submitting...' : allValid ? 'Get My Free Quotes' : 'Complete All Fields'}
               </Button>
             </div>
+
           </form>
         </div>
       </div>

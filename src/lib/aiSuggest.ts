@@ -1,4 +1,5 @@
 import type { ServiceType } from '../types/quote';
+import { apiUrl } from './api';
 
 export type ServiceSuggestion = { service: ServiceType; reason: string };
 
@@ -9,6 +10,7 @@ export async function suggestServicesWithAI(
   if (!query.trim()) return [];
 
   const endpoint = import.meta.env.VITE_SUGGEST_URL || '/api/suggest';
+  const resolvedEndpoint = apiUrl(endpoint);
   const vercelBypass = import.meta.env.VITE_VERCEL_PROTECTION_BYPASS?.trim();
 
   const headers: Record<string, string> = {
@@ -23,7 +25,7 @@ export async function suggestServicesWithAI(
   const timeoutId = setTimeout(() => controller.abort(), 15000);
 
   try {
-    const res = await fetch(endpoint, {
+    const res = await fetch(resolvedEndpoint, {
       method: 'POST',
       headers,
       body: JSON.stringify({ query }),

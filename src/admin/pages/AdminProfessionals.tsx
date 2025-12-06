@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { apiUrl } from '../../lib/api';
 
 interface Professional {
   id: number;
@@ -60,7 +61,7 @@ export default function AdminProfessionals({ onNavigate }: AdminProfessionalsPro
       if (status !== 'all') params.append('status', status);
       if (search) params.append('search', search);
 
-      const res = await fetch(`/api/admin/professionals?${params}`, {
+      const res = await fetch(apiUrl(`/api/admin/professionals?${params}`), {
         headers: getAuthHeaders(),
         credentials: 'include',
       });
@@ -81,7 +82,7 @@ export default function AdminProfessionals({ onNavigate }: AdminProfessionalsPro
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const url = editingPro ? `/api/admin/professionals/${editingPro.id}` : '/api/admin/professionals';
+      const url = editingPro ? apiUrl(`/api/admin/professionals/${editingPro.id}`) : apiUrl('/api/admin/professionals');
       const method = editingPro ? 'PATCH' : 'POST';
 
       const res = await fetch(url, {
@@ -107,7 +108,7 @@ export default function AdminProfessionals({ onNavigate }: AdminProfessionalsPro
 
   const handleStatusChange = async (id: number, newStatus: string) => {
     try {
-      await fetch(`/api/admin/professionals/${id}`, {
+      await fetch(apiUrl(`/api/admin/professionals/${id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         credentials: 'include',
@@ -122,7 +123,7 @@ export default function AdminProfessionals({ onNavigate }: AdminProfessionalsPro
   const handleDelete = async (id: number) => {
     if (!confirm('Bu profesyoneli silmek istediğinize emin misiniz?')) return;
     try {
-      await fetch(`/api/admin/professionals/${id}`, {
+      await fetch(apiUrl(`/api/admin/professionals/${id}`), {
         method: 'DELETE',
         headers: getAuthHeaders(),
         credentials: 'include',

@@ -9,18 +9,21 @@ import { dirname, join } from 'path';
 
 import uploadRoutes from './routes/upload.js';
 import suggestRoutes from './routes/suggest.js';
+import statsRoutes from './routes/stats.js';
 import adminRoutes from './adminRoutes.js';
 import adminWebhooksRouter from './adminWebhooks.js';
 import adminDashboard from './adminDashboard.js';
-import adminStatsRouter from './adminStats.js';
+import automationRoutes from './automationRoutes.js';
+import { runAutomations } from './automationRuntime.js';
 
 import { db } from './db.js';
-import { submissions } from '../shared/schema.js';
+import { partialForms, submissions, accessLogs } from '../shared/schema.js';
+import { eq, desc, sql } from 'drizzle-orm';
 
 import { parseUserAgent, getClientIP } from './utils/geoip.js';
 import crypto from 'crypto';
 import { getGeoFromIP } from './helpers/geo.js';
-import { logSubmission, logActivity, supabase } from './helpers/supabase.js';
+import { logSubmission, logActivity } from './helpers/supabase.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -28,6 +31,75 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3001;
 const isProduction = process.env.NODE_ENV === 'production';
+const ACCESS_LOG_COOKIE = 'access_session_id';
+const ACCESS_LOG_COOKIE_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
+
+const ACCESS_LOG_COLUMNS = [
+  { name: 'user_agent', definition: 'TEXT' },
+  { name: 'browser', definition: 'TEXT' },
+  { name: 'device_type', definition: 'TEXT' },
+  { name: 'device_brand', definition: 'TEXT' },
+  { name: 'device_model', definition: 'TEXT' },
+  { name: 'country', definition: 'TEXT' },
+  { name: 'city', definition: 'TEXT' },
+  { name: 'path', definition: 'TEXT' },
+  { name: 'method', definition: 'TEXT' },
+  { name: 'referer', definition: 'TEXT' },
+  { name: 'status_code', definition: 'INTEGER' },
+  { name: 'latency_ms', definition: 'INTEGER' },
+  { name: 'meta', definition: "JSONB DEFAULT '{}'::jsonb" },
+];
+
+const ACCESS_LOG_SCHEMA_STEPS = [
+  sql`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`,
+  sql`
+    CREATE TABLE IF NOT EXISTS public.access_logs (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      session_id UUID,
+      user_ip INET,
+      user_agent TEXT,
+      browser TEXT,
+      device_type TEXT,
+      device_brand TEXT,
+      device_model TEXT,
+      country TEXT,
+      city TEXT,
+      path TEXT,
+      method TEXT,
+      referer TEXT,
+      status_code INTEGER,
+      latency_ms INTEGER,
+      meta JSONB DEFAULT '{}'::jsonb,
+      entered_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      left_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `,
+  sql`
+    CREATE OR REPLACE FUNCTION public.trigger_set_updated_at()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      NEW.updated_at = now();
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql SECURITY DEFINER;
+  `,
+  sql`
+    CREATE TRIGGER IF NOT EXISTS set_updated_at
+    BEFORE UPDATE ON public.access_logs
+    FOR EACH ROW EXECUTE FUNCTION public.trigger_set_updated_at();
+  `,
+  sql`
+    CREATE INDEX IF NOT EXISTS idx_access_logs_entered_at ON public.access_logs (entered_at);
+  `,
+  sql`
+    CREATE INDEX IF NOT EXISTS idx_access_logs_user_ip ON public.access_logs (user_ip);
+  `,
+  sql`
+    CREATE INDEX IF NOT EXISTS idx_access_logs_session_id ON public.access_logs (session_id);
+  `,
+];
 
 /* -------------------------------------------
    HELMET / SECURITY
@@ -86,33 +158,12 @@ const FRONTEND = process.env.FRONTEND_URL || 'https://quote-form.vercel.app';
 const corsOptions = {
   origin: FRONTEND,
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-csrf-token', 'x-session-id'],
 };
 
 app.use(cors(corsOptions));
-
-/* LOG CORS */
-app.use((req, res, next) => {
-  console.log('cors check', {
-    origin: req.headers.origin,
-    allowedOrigins: corsOptions.origin,
-    method: req.method,
-    path: req.path,
-  });
-  next();
-});
-
-app.use((req, res, next) => {
-  res.on('finish', () => {
-    console.log('cors response headers', {
-      originHeader: res.getHeader('Access-Control-Allow-Origin'),
-      requestMethod: req.method,
-      status: res.statusCode,
-    });
-  });
-  next();
-});
+app.options(/.*/, cors(corsOptions), (req, res) => res.sendStatus(200));
 
 /* -------------------------------------------
    BODY PARSING
@@ -120,6 +171,84 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use(async (req, res, next) => {
+  const sessionCookie = req.cookies?.[ACCESS_LOG_COOKIE];
+  const sessionId = sessionCookie || crypto.randomUUID();
+
+  if (!sessionCookie) {
+    res.cookie(ACCESS_LOG_COOKIE, sessionId, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: ACCESS_LOG_COOKIE_MAX_AGE,
+    });
+  }
+
+  const userIp = getClientIP(req);
+  const userAgent = req.get('User-Agent') || '';
+  const referer = req.get('referer') || null;
+  const uaDetails = parseUserAgent(userAgent);
+  const geoInfo = await getGeoFromIP(userIp);
+  const metaPayload = {
+    query: cloneForMeta(req.query),
+    params: cloneForMeta(req.params),
+    originalUrl: req.originalUrl,
+    hostname: req.hostname,
+  };
+
+  const accessPayload = {
+    sessionId,
+    userIp,
+    userAgent,
+    browser: normalizeTextField(uaDetails.browser),
+    deviceType: uaDetails.deviceType || 'desktop',
+    deviceBrand: normalizeTextField(uaDetails.device),
+    deviceModel: normalizeTextField(uaDetails.device),
+    country: normalizeTextField(geoInfo?.country),
+    city: normalizeTextField(geoInfo?.city),
+    path: req.path,
+    method: req.method,
+    referer: normalizeTextField(referer),
+    meta: metaPayload,
+  };
+
+  try {
+    const [existing] = await db
+      .select({ id: accessLogs.id })
+      .from(accessLogs)
+      .where(eq(accessLogs.sessionId, sessionId))
+      .orderBy(desc(accessLogs.enteredAt))
+      .limit(1);
+
+    if (existing) {
+      await db.update(accessLogs).set(accessPayload).where(eq(accessLogs.id, existing.id));
+    } else {
+      await db.insert(accessLogs).values(accessPayload);
+    }
+  } catch (error) {
+    console.error('Access log middleware failed:', error);
+  }
+
+  const startTime = Date.now();
+  res.once('finish', () => {
+    const latencyMs = Date.now() - startTime;
+    void db
+      .update(accessLogs)
+      .set({
+        leftAt: new Date(),
+        statusCode: res.statusCode,
+        latencyMs,
+      })
+      .where(eq(accessLogs.sessionId, sessionId))
+      .catch((error) => {
+        console.error('Failed to update access log exit time:', error);
+      });
+  });
+
+  return next();
+});
 
 /* -------------------------------------------
    RATE LIMITERS
@@ -166,8 +295,9 @@ app.use('/api/', generalLimiter);
 app.use('/api/admin/login', authLimiter);
 app.use('/api/admin/webhooks', adminWebhooksRouter);
 app.use('/api/admin/dashboard', adminDashboard);
-app.use('/api/admin/stats', adminStatsRouter);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/automations', automationRoutes);
+app.use('/api/stats', statsRoutes);
 
 /* -------------------------------------------
    STATIC UPLOADS
@@ -224,12 +354,56 @@ function validateEmail(email) {
   return r.test(email) && email.length <= 254;
 }
 
+function cloneForMeta(value) {
+  try {
+    if (!value || typeof value !== 'object') {
+      return {};
+    }
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return {};
+  }
+}
+
+function normalizeTextField(value) {
+  if (typeof value !== 'string') {
+    return value ?? null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const lowered = trimmed.toLowerCase();
+  if (['unknown', 'local', 'localhost', 'nil'].includes(lowered)) {
+    return null;
+  }
+  return trimmed;
+}
+
 function validatePhone(phone) {
   return /^[\d\s\-\+\(\)]{7,20}$/.test(phone);
 }
 
 function validateZipCode(zip) {
   return /^[a-zA-Z0-9\s\-]{3,15}$/.test(zip);
+}
+
+async function ensureAccessLogSchema({ forceSync = false } = {}) {
+  if (!forceSync && process.env.SKIP_ACCESS_LOG_SCHEMA_SYNC === 'true') {
+    return;
+  }
+
+  for (const statement of ACCESS_LOG_SCHEMA_STEPS) {
+    try {
+      await db.execute(statement);
+    } catch (error) {
+      console.warn(
+        'Access log schema sync skipped (starting server without forcing schema updates):',
+        error?.message || error,
+      );
+      return;
+    }
+  }
+
+  console.log('Access log schema is ready.');
 }
 
 /* -------------------------------------------
@@ -432,10 +606,131 @@ async function distributeToPartners(submission) {
 /* --------------------------------------------------------
    MAIN SUBMIT ROUTE
 --------------------------------------------------------- */
+app.post('/api/draft', async (req, res) => {
+  try {
+    const {
+      draftId,
+      serviceType,
+      zipCode,
+      responses,
+      currentStep,
+      progress,
+      meta,
+      email,
+      phone,
+    } = req.body || {};
+
+    if (!draftId) {
+      return res.status(400).json({ error: 'draftId is required' });
+    }
+
+    const sanitizedProgress = Number.isFinite(Number(progress)) ? Number(progress) : 0;
+    const sanitizedStep = Number.isFinite(Number(currentStep)) ? Number(currentStep) : 0;
+
+    await db.execute(sql`
+      INSERT INTO partial_forms
+        (draft_id, service_type, zip_code, email, phone, responses, progress, current_step, meta, last_saved_at, created_at)
+      VALUES
+        (${draftId}, ${serviceType || null}, ${zipCode || null}, ${email || null}, ${phone || null},
+         ${JSON.stringify(responses || {})}, ${sanitizedProgress}, ${sanitizedStep}, ${JSON.stringify(meta || {})},
+         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ON CONFLICT (draft_id)
+      DO UPDATE SET
+        service_type = EXCLUDED.service_type,
+        zip_code = EXCLUDED.zip_code,
+        email = EXCLUDED.email,
+        phone = EXCLUDED.phone,
+        responses = EXCLUDED.responses,
+        progress = EXCLUDED.progress,
+        current_step = EXCLUDED.current_step,
+        meta = EXCLUDED.meta,
+        last_saved_at = CURRENT_TIMESTAMP
+    `);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Draft save error:', error);
+    res.status(500).json({ error: 'Failed to save draft' });
+  }
+});
+
+app.delete('/api/draft', async (req, res) => {
+  try {
+    const { draftId } = req.body || {};
+    if (!draftId) {
+      return res.status(400).json({ error: 'draftId is required' });
+    }
+    await db.execute(sql`DELETE FROM partial_forms WHERE draft_id = ${draftId}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Draft delete error:', error);
+    res.status(500).json({ error: 'Failed to delete draft' });
+  }
+});
+
+app.post('/api/incomplete', async (req, res) => {
+  try {
+    const {
+      draftId,
+      serviceType,
+      email,
+      phone,
+      responses,
+      progress,
+      meta,
+      createdBy,
+    } = req.body || {};
+
+    if (!draftId) {
+      return res.status(400).json({ error: 'draftId is required' });
+    }
+
+    const clientIP = getClientIP(req);
+    const userAgent = req.headers['user-agent']?.toString().substring(0, 500) || null;
+    const normalizedResponses = typeof responses === 'object' && responses ? responses : {};
+    const normalizedMeta = typeof meta === 'object' && meta ? meta : {};
+    const sanitizedProgress = Number.isFinite(Number(progress)) ? Math.min(100, Math.max(0, Number(progress))) : 0;
+
+    await db.execute(sql`
+      INSERT INTO incomplete_forms
+        (draft_id, created_by, service_type, email, phone, responses, progress, meta, user_agent, ip_address, created_at, last_seen_at)
+      VALUES
+        (${draftId},
+         ${sanitizeInput(createdBy) || null},
+         ${serviceType || null},
+         ${email || null},
+         ${phone || null},
+         ${JSON.stringify(normalizedResponses)},
+         ${sanitizedProgress},
+         ${JSON.stringify(normalizedMeta)},
+         ${userAgent},
+         ${clientIP},
+         CURRENT_TIMESTAMP,
+         CURRENT_TIMESTAMP)
+      ON CONFLICT (draft_id)
+      DO UPDATE SET
+        service_type = EXCLUDED.service_type,
+        email = EXCLUDED.email,
+        phone = EXCLUDED.phone,
+        responses = EXCLUDED.responses,
+        progress = EXCLUDED.progress,
+        meta = EXCLUDED.meta,
+        user_agent = EXCLUDED.user_agent,
+        ip_address = EXCLUDED.ip_address,
+        last_seen_at = EXCLUDED.last_seen_at
+    `);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Incomplete form save error:', error);
+    res.status(500).json({ error: 'Failed to record incomplete form' });
+  }
+});
 
 app.post('/api/submit', submitLimiter, async (req, res) => {
   try {
     let {
+      draftId,
       serviceType,
       zipCode,
       name,
@@ -460,6 +755,7 @@ app.post('/api/submit', submitLimiter, async (req, res) => {
     if (!serviceType || !zipCode || !name || !email || !phone) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+
     if (!validateEmail(email)) return res.status(400).json({ error: 'Invalid email format' });
     if (!validatePhone(phone)) return res.status(400).json({ error: 'Invalid phone format' });
     if (!validateZipCode(zipCode)) return res.status(400).json({ error: 'Invalid ZIP code format' });
@@ -471,7 +767,7 @@ app.post('/api/submit', submitLimiter, async (req, res) => {
       .slice(0, 6);
 
     const ipAddress = getClientIP(req);
-    const userAgent = req.headers['user-agent'] || null;
+    const userAgent = req.headers['user-agent'] || '';
     const uaInfo = parseUserAgent(userAgent);
     const geoInfo = await getGeoFromIP(ipAddress);
 
@@ -487,116 +783,141 @@ app.post('/api/submit', submitLimiter, async (req, res) => {
       os_version: uaInfo.osVersion,
       device_type: uaInfo.deviceType,
       referrer: sanitizeInput(referrer || req.headers['referer'] || null),
-      utm_source: sanitizeInput(utmSource || null),
-      utm_medium: sanitizeInput(utmMedium || null),
-      utm_campaign: sanitizeInput(utmCampaign || null),
-      session_duration: typeof sessionDuration === 'number' ? sessionDuration : null,
-      page_views: typeof pageViews === 'number' ? pageViews : null,
+      utm_source: sanitizeInput(utmSource),
+      utm_medium: sanitizeInput(utmMedium),
+      utm_campaign: sanitizeInput(utmCampaign),
+      session_duration: sessionDuration || null,
+      page_views: pageViews || null,
     };
+
+    const answersPayload = typeof answers === 'string' ? JSON.parse(answers) : answers || {};
 
     const normalized = {
       serviceType,
       zipCode,
       customerName: name,
-      answers: typeof answers === 'string' ? JSON.parse(answers) : answers || {},
+      answers: answersPayload,
       photos: photoUrls,
       status: 'new',
       ipAddress,
       userAgent,
       browser: uaInfo.browser,
       browserVersion: uaInfo.browserVersion || null,
+      os: uaInfo.os,
       osVersion: uaInfo.osVersion || null,
       device: uaInfo.device,
       deviceType: uaInfo.deviceType || null,
-      meta,
+      meta: {
+        ...meta,
+        os: uaInfo.os,
+        browser: uaInfo.browser,
+      },
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
-    const { error: supabaseError } = await supabase
-      .from('submissions')
-      .insert([
-        {
-          service_type: normalized.serviceType,
-          zip_code: normalized.zipCode,
-          name: normalized.customerName,
-          email: meta.email,
-          phone: meta.phone,
-          answers: normalized.answers,
-          photo_urls: normalized.photos,
-          status: normalized.status,
-          ip_address: normalized.ipAddress,
-          country: geoInfo.country,
-          country_code: geoInfo.country_code,
-          city: geoInfo.city,
-          region: geoInfo.region,
-          timezone: geoInfo.timezone,
-          user_agent: normalized.userAgent,
-          browser: normalized.browser,
-          browser_version: normalized.browserVersion,
-          os: normalized.os,
-          os_version: normalized.osVersion,
-          device: normalized.device,
-          device_type: normalized.deviceType,
-          referrer: meta?.referrer,
-          utm_source: meta?.utm_source,
-          utm_medium: meta?.utm_medium,
-          utm_campaign: meta?.utm_campaign,
-          session_duration: meta?.session_duration,
-          page_views: meta?.page_views,
-          created_at: new Date(),
-        },
-      ])
-      .select()
-      .single();
+    const [submission] = await db
+      .insert(submissions)
+      .values({
+        serviceType: normalized.serviceType,
+        zipCode: normalized.zipCode,
+        customerName: normalized.customerName,
+        answers: normalized.answers,
+        photos: normalized.photos || [],
+        status: normalized.status,
 
-    if (supabaseError) {
-      throw supabaseError;
-    }
+        ipAddress: normalized.ipAddress,
+        userAgent: normalized.userAgent,
+        browser: uaInfo.browser,
+        browserVersion: uaInfo.browserVersion,
+        os: uaInfo.osVersion,
+        osVersion: uaInfo.osVersion,
+        device: uaInfo.device,
+        deviceType: uaInfo.deviceType,
 
-    const [submission] = await db.insert(submissions).values(normalized).returning();
+        name: normalized.customerName,
+        email: meta.email,
+        phone: meta.phone,
+        country: geoInfo.country,
+        countryCode: geoInfo.country_code,
+        city: geoInfo.city,
+        region: geoInfo.region,
+        timezone: geoInfo.timezone,
 
-    const submissionMeta = submission?.meta ?? normalized.meta;
+        referrer: meta.referrer,
+        utmSource: meta.utm_source,
+        utmMedium: meta.utm_medium,
+        utmCampaign: meta.utm_campaign,
+        sessionDuration: meta.session_duration,
+        pageViews: meta.page_views,
 
-    const getField = (obj, camel, snake, fallback) =>
-      obj?.[camel] ?? obj?.[snake] ?? fallback;
-
-    distributeToPartners({
-      ...submission,
-      name: getField(submission, 'customerName', 'customer_name', normalized.customerName),
-      email: submissionMeta.email,
-      phone: submissionMeta.phone,
-      region: submissionMeta.region,
-      city: submissionMeta.city,
-      country: submissionMeta.country,
-    }).catch((err) => console.error('[Partner Distribution] Async error:', err));
+        meta: meta,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
 
     await logSubmission({
       submission_id: submission.id,
-      customer_name: submission.customerName,
-      service_type: submission.serviceType,
-      zip_code: submission.zipCode,
-      status: submission.status,
-      answers: submission.answers,
-      photos: submission.photos,
-      device: submission.device,
-      browser: submission.browser,
-      ip_address: submission.ipAddress,
-      user_agent: submission.userAgent,
-      meta: submissionMeta,
-      created_at: submission.createdAt,
-    }).catch((err) => console.error('Supabase log failed:', err));
+      customer_name: normalized.customerName,
+      service_type: normalized.serviceType,
+      zip_code: normalized.zipCode,
+      status: normalized.status,
+      answers: normalized.answers,
+      photos: normalized.photos,
+      device: normalized.device,
+      browser: normalized.browser,
+      ip_address: normalized.ipAddress,
+      user_agent: normalized.userAgent,
+      meta: normalized.meta,
+      created_at: normalized.createdAt,
+    });
 
     await logActivity({
       admin_username: null,
       event_type: 'submission_created',
-      payload: { submissionId: submission.id, serviceType: submission.serviceType },
-      ip_address: submission.ipAddress,
-      user_agent: submission.userAgent,
+      payload: { submissionId: submission.id, serviceType: normalized.serviceType },
+      ip_address: normalized.ipAddress,
+      user_agent: normalized.userAgent,
       result: 'success',
-      created_at: submission.createdAt,
-    }).catch((err) => console.error('Activity log failed:', err));
+      created_at: normalized.createdAt,
+    });
 
+    distributeToPartners({
+      id: submission.id,
+      serviceType: normalized.serviceType,
+      zipCode: normalized.zipCode,
+      name: normalized.customerName,
+      email,
+      phone,
+      city: normalized.meta.city,
+      region: normalized.meta.region,
+      country: normalized.meta.country,
+      answers: normalized.answers,
+    });
+
+    if (draftId) {
+      try {
+        await db.execute(sql`DELETE FROM partial_forms WHERE draft_id = ${draftId}`);
+      } catch (deleteError) {
+        console.warn('Failed to delete draft record:', deleteError);
+      }
+    }
+    // Trigger automations (non-blocking)
+    void runAutomations({
+      id: submission.id,
+      serviceType: normalized.serviceType,
+      zipCode: normalized.zipCode,
+      customerName: normalized.customerName,
+      email,
+      phone,
+      country: normalized.meta.country,
+      region: normalized.meta.region,
+      city: normalized.meta.city,
+      createdAt: normalized.createdAt,
+      status: normalized.status,
+    });
     return res.json({ success: true, submissionId: submission.id });
-
   } catch (error) {
     console.error('Insert error:', error);
     return res.status(500).json({ error: 'Failed to save submission' });
@@ -641,6 +962,23 @@ app.use((req, res) => {
    START SERVER
 --------------------------------------------------------- */
 
-app.listen(PORT, '0.0.0.0', async () => {
-  console.log(`Backend server running on port ${PORT}`);
+function startServer() {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Backend server running on port ${PORT}`);
+  });
+}
+
+async function bootstrapServer() {
+  await ensureAccessLogSchema().catch((error) => {
+    console.warn(
+      'Access log schema sync skipped (starting server without forcing schema updates):',
+      error?.message || error,
+    );
+  });
+  startServer();
+}
+
+bootstrapServer().catch((error) => {
+  console.error('Server bootstrap failed:', error);
+  process.exit(1);
 });

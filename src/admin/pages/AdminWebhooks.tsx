@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { apiUrl } from '../../lib/api';
 
 interface Webhook {
   id: number;
@@ -37,7 +38,7 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
   const fetchWebhooks = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/webhooks', {
+      const res = await fetch(apiUrl('/api/admin/webhooks'), {
         headers: getAuthHeaders(),
         credentials: 'include',
       });
@@ -57,7 +58,7 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const url = editingWebhook ? `/api/admin/webhooks/${editingWebhook.id}` : '/api/admin/webhooks';
+      const url = editingWebhook ? apiUrl(`/api/admin/webhooks/${editingWebhook.id}`) : apiUrl('/api/admin/webhooks');
       const method = editingWebhook ? 'PATCH' : 'POST';
 
       const res = await fetch(url, {
@@ -86,7 +87,7 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
 
   const handleToggle = async (id: number, isActive: boolean) => {
     try {
-      await fetch(`/api/admin/webhooks/${id}`, {
+      await fetch(apiUrl(`/api/admin/webhooks/${id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         credentials: 'include',
@@ -101,7 +102,7 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
   const handleDelete = async (id: number) => {
     if (!confirm('Bu webhook\'u silmek istediğinize emin misiniz?')) return;
     try {
-      await fetch(`/api/admin/webhooks/${id}`, {
+      await fetch(apiUrl(`/api/admin/webhooks/${id}`), {
         method: 'DELETE',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -115,7 +116,7 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
   const handleTest = async (id: number) => {
     setTestingId(id);
     try {
-      const res = await fetch(`/api/admin/webhooks/${id}/test`, {
+      const res = await fetch(apiUrl(`/api/admin/webhooks/${id}/test`), {
         method: 'POST',
         headers: getAuthHeaders(),
         credentials: 'include',

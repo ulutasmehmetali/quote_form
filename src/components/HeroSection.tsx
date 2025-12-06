@@ -14,6 +14,20 @@ import remodelingImg from '@assets/remodeling_1764336249973.webp';
 import roofingImg from '@assets/roofing services_1764336251048.webp';
 import airConditionerImg from '@assets/air conditioner_1764336252466.webp';
 
+const BrandLogo = ({ className = 'w-4.5 h-4.5 text-white' }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 64 64" fill="none">
+    <circle cx="32" cy="32" r="14" stroke="currentColor" strokeWidth="2.5" />
+    <path d="M32 18v28m-10-22h20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path d="M18 22c5.523-2 11-2 14 0 3 2 7.5 6 10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path d="M22 12c-5 4-6 10-5 18s4 12 6 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path d="M46 12c5 4 6 10 5 18s-4 12-6 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path d="M34 44l7.5 4-7.5 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M20 44l-7.5 4 7.5 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="14" cy="44" r="4" fill="currentColor" />
+    <circle cx="50" cy="44" r="4" fill="currentColor" />
+  </svg>
+);
+
 const topRowServices = [
   { img: roofingImg, name: 'Roofing', color: 'bg-sky-500' },
   { img: electricianImg, name: 'Electrical', color: 'bg-amber-500' },
@@ -74,9 +88,7 @@ export default function HeroSection() {
           <div className="flex justify-center animate-fadeIn">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-sky-400 via-cyan-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-sky-500/25">
-                <svg className="w-4.5 h-4.5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 3L4 9v12h16V9l-8-6zm0 2.236L18 9.708V19H6V9.708l6-4.472zM12 12a2 2 0 100 4 2 2 0 000-4z"/>
-                </svg>
+                <BrandLogo className="w-4.5 h-4.5 text-white" />
               </div>
               <span className="text-2xl font-black tracking-tight bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 bg-clip-text text-transparent">
                 MIYOMINT
@@ -219,9 +231,7 @@ export default function HeroSection() {
           {/* Brand Logo - Premium with icon */}
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 via-cyan-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-sky-500/25">
-              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 3L4 9v12h16V9l-8-6zm0 2.236L18 9.708V19H6V9.708l6-4.472zM12 12a2 2 0 100 4 2 2 0 000-4z"/>
-              </svg>
+              <BrandLogo className="w-5 h-5 text-white" />
             </div>
             <span className="text-3xl font-black tracking-tight bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 bg-clip-text text-transparent">
               MIYOMINT

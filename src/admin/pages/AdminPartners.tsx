@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Edit2, Trash2, Play, Check, X, AlertCircle, Link, Key, Clock, RefreshCw, Activity, Eye, EyeOff } from 'lucide-react';
+import { apiUrl } from '../../lib/api';
+import { useAuth } from '../context/AuthContext';
 
 interface Partner {
   id: number;
@@ -50,6 +52,7 @@ interface AdminPartnersProps {
 }
 
 export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
+  const { getAuthHeaders } = useAuth();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -71,7 +74,10 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
 
   const fetchPartners = async () => {
     try {
-      const res = await fetch('/api/admin/partners', { credentials: 'include' });
+      const res = await fetch(apiUrl('/api/admin/partners'), {
+        credentials: 'include',
+        headers: getAuthHeaders(),
+      });
       const data = await res.json();
       setPartners(data.partners || []);
     } catch (error) {
@@ -85,23 +91,19 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
     fetchPartners();
   }, []);
 
-  const getCSRFToken = () => {
-    return document.cookie.split('; ').find(row => row.startsWith('csrf_token='))?.split('=')[1] || '';
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
       const url = editingPartner 
-        ? `/api/admin/partners/${editingPartner.id}` 
-        : '/api/admin/partners';
+        ? apiUrl(`/api/admin/partners/${editingPartner.id}`) 
+        : apiUrl('/api/admin/partners');
       
       const res = await fetch(url, {
         method: editingPartner ? 'PATCH' : 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'X-CSRF-Token': getCSRFToken(),
+          ...getAuthHeaders(),
         },
         credentials: 'include',
         body: JSON.stringify(formData),
@@ -125,9 +127,9 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
     if (!confirm('Bu partner API\'yi silmek istediğinizden emin misiniz?')) return;
     
     try {
-      const res = await fetch(`/api/admin/partners/${id}`, {
+      const res = await fetch(apiUrl(`/api/admin/partners/${id}`), {
         method: 'DELETE',
-        headers: { 'X-CSRF-Token': getCSRFToken() },
+        headers: getAuthHeaders(),
         credentials: 'include',
       });
 
@@ -144,11 +146,11 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
 
   const handleToggleActive = async (partner: Partner) => {
     try {
-      const res = await fetch(`/api/admin/partners/${partner.id}`, {
+      const res = await fetch(apiUrl(`/api/admin/partners/${partner.id}`), {
         method: 'PATCH',
         headers: { 
           'Content-Type': 'application/json',
-          'X-CSRF-Token': getCSRFToken(),
+          ...getAuthHeaders(),
         },
         credentials: 'include',
         body: JSON.stringify({ isActive: !partner.is_active }),
@@ -167,9 +169,9 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
     setTestResult(null);
     
     try {
-      const res = await fetch(`/api/admin/partners/${id}/test`, {
+      const res = await fetch(apiUrl(`/api/admin/partners/${id}/test`), {
         method: 'POST',
-        headers: { 'X-CSRF-Token': getCSRFToken() },
+        headers: getAuthHeaders(),
         credentials: 'include',
       });
 

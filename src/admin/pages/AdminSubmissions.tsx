@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { apiUrl } from '../../lib/api';
+
+const getInitial = (value?: string, fallback = 'S') => {
+  const text = (value || fallback).trim();
+  return text ? text.charAt(0).toUpperCase() : fallback;
+};
 
 interface Submission {
   id: number;
@@ -68,6 +74,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
+  const [usedFallback, setUsedFallback] = useState(false);
 
   useEffect(() => {
     fetchFilters();
@@ -79,7 +86,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
 
   const fetchFilters = async () => {
     try {
-      const res = await fetch('/api/admin/filters', {
+      const res = await fetch(apiUrl('/api/admin/filters'), {
         headers: getAuthHeaders(),
         credentials: 'include',
       });
@@ -104,24 +111,63 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
         dateTo: filterDateTo,
       });
       
-      const res = await fetch(`/api/admin/submissions?${params}`, {
+      const res = await fetch(apiUrl(`/api/admin/submissions?${params}`), {
         headers: getAuthHeaders(),
         credentials: 'include',
       });
-      const data = await res.json();
-      setSubmissions(data.submissions);
-      setTotalPages(data.pagination.totalPages);
-      setTotal(data.pagination.total);
+      const data = (await res.json()) || {};
+      const rows = Array.isArray(data.submissions) ? data.submissions : [];
+      if (rows.length === 0) {
+        const fallback = await loadFallbackSubmissions();
+        if (fallback.length > 0) {
+          setSubmissions(fallback);
+          setTotalPages(1);
+          setTotal(fallback.length);
+          setUsedFallback(true);
+          return;
+        }
+      }
+      setUsedFallback(false);
+      setSubmissions(rows);
+      setTotalPages(data.pagination?.totalPages || 1);
+      setTotal(data.pagination?.total || rows.length);
     } catch (error) {
       console.error('Failed to fetch submissions:', error);
+      const fallback = await loadFallbackSubmissions();
+      if (fallback.length > 0) {
+        setSubmissions(fallback);
+        setTotalPages(1);
+        setTotal(fallback.length);
+        setUsedFallback(true);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
+  const loadFallbackSubmissions = async () => {
+    try {
+      const params = new URLSearchParams({
+        limit: '5',
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
+      });
+      const res = await fetch(apiUrl(`/api/admin/submissions?${params}`), {
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      if (!res.ok) return [];
+      const payload = await res.json();
+      return Array.isArray(payload?.submissions) ? payload.submissions : [];
+    } catch (error) {
+      console.warn('Failed to load fallback submissions:', error);
+      return [];
+    }
+  };
+
   const fetchSubmissionDetails = async (id: number) => {
     try {
-      const res = await fetch(`/api/admin/submissions/${id}`, {
+      const res = await fetch(apiUrl(`/api/admin/submissions/${id}`), {
         headers: getAuthHeaders(),
         credentials: 'include',
       });
@@ -134,7 +180,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
 
   const updateStatus = async (id: number, newStatus: string) => {
     try {
-      await fetch(`/api/admin/submissions/${id}`, {
+      await fetch(apiUrl(`/api/admin/submissions/${id}`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -155,7 +201,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
   const bulkUpdateStatus = async (newStatus: string) => {
     try {
       await Promise.all(selectedIds.map(id =>
-        fetch(`/api/admin/submissions/${id}`, {
+        fetch(apiUrl(`/api/admin/submissions/${id}`), {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -175,7 +221,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
   const addNote = async () => {
     if (!selectedSubmission || !noteText.trim()) return;
     try {
-      await fetch(`/api/admin/submissions/${selectedSubmission.id}/notes`, {
+      await fetch(apiUrl(`/api/admin/submissions/${selectedSubmission.id}/notes`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -320,7 +366,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
             <h2 className="text-3xl font-bold text-white flex items-center gap-3">
               📋 Başvurular
             </h2>
-            <p className="text-slate-400 mt-1">{total} kayıt bulundu</p>
+            <p className="text-slate-400 mt-1">{usedFallback ? 'Son başvurular gösteriliyor (filtre boş veya veri yok).' : `${total} kayıt bulundu`}</p>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -505,8 +551,26 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {submissions.map((sub) => (
-                    <tr key={sub.id} className={`hover:bg-white/5 transition-colors ${selectedIds.includes(sub.id) ? 'bg-sky-500/10' : ''}`}>
+                  {submissions.map((sub) => {
+                    const createdDate = new Date(sub.createdAt);
+                    const hasValidDate = !Number.isNaN(createdDate.getTime());
+                    const dateLabel = hasValidDate
+                      ? createdDate.toLocaleDateString('tr-TR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                        })
+                      : '-';
+                    const timeLabel = hasValidDate
+                      ? createdDate.toLocaleTimeString('tr-TR', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                          hour12: false,
+                        })
+                      : '-';
+                    return (
+                      <tr key={sub.id} className={`hover:bg-white/5 transition-colors ${selectedIds.includes(sub.id) ? 'bg-sky-500/10' : ''}`}>
                       <td className="px-4 py-4">
                         <input
                           type="checkbox"
@@ -517,9 +581,9 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
-                            {sub.name.charAt(0).toUpperCase()}
-                          </div>
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
+                              {getInitial(sub.name, 'S')}
+                            </div>
                           <div>
                             <p className="font-medium text-white">{sub.name}</p>
                             <p className="text-xs text-slate-400">{sub.email}</p>
@@ -561,8 +625,8 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                         </select>
                       </td>
                       <td className="px-4 py-4">
-                        <p className="text-sm text-white">{new Date(sub.createdAt).toLocaleDateString('tr-TR')}</p>
-                        <p className="text-xs text-slate-500">{new Date(sub.createdAt).toLocaleTimeString('tr-TR')}</p>
+                        <p className="text-sm text-white">{dateLabel}</p>
+                        <p className="text-xs text-slate-500 mt-1">{timeLabel}</p>
                       </td>
                       <td className="px-4 py-4">
                         <button
@@ -573,7 +637,8 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                         </button>
                       </td>
                     </tr>
-                  ))}
+                  );
+                  })}
                   {submissions.length === 0 && (
                     <tr>
                       <td colSpan={8} className="px-6 py-16 text-center">
@@ -620,7 +685,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
             <div className="p-6 border-b border-white/10 flex items-center justify-between sticky top-0 bg-slate-800 z-10">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl">
-                  {selectedSubmission.name.charAt(0).toUpperCase()}
+                  {getInitial(selectedSubmission.name, 'S')}
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-white">{selectedSubmission.name}</h3>

@@ -159,6 +159,7 @@ Add these in Vercel Dashboard → Settings → Environment Variables:
 ### Optional
 - **`VITE_SUPABASE_URL`**: Supabase project URL (if using database)
 - **`VITE_SUPABASE_ANON_KEY`**: Supabase anonymous key (if using database)
+- **`VITE_API_BASE`**: Optional backend base URL for API requests when the frontend is hosted on a different origin.
 
 ## 🎨 Custom Domain (Optional)
 

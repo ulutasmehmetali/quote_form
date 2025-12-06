@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, RefreshCw, CheckCircle, XCircle, Clock, AlertCircle, Filter, ChevronLeft, ChevronRight, Eye, RotateCcw } from 'lucide-react';
+import { apiUrl } from '../../lib/api';
 
 interface DistributionLog {
   id: number;
@@ -73,7 +74,7 @@ export default function AdminDistributionLogs({ onNavigate }: AdminDistributionL
         ...(filters.dateTo && { dateTo: filters.dateTo }),
       });
 
-      const res = await fetch(`/api/admin/distribution-logs?${params}`, { credentials: 'include' });
+      const res = await fetch(apiUrl(`/api/admin/distribution-logs?${params}`), { credentials: 'include' });
       const data = await res.json();
       setLogs(data.logs || []);
       setPagination(prev => ({ ...prev, ...data.pagination }));
@@ -86,7 +87,7 @@ export default function AdminDistributionLogs({ onNavigate }: AdminDistributionL
 
   const fetchPartners = async () => {
     try {
-      const res = await fetch('/api/admin/partners', { credentials: 'include' });
+      const res = await fetch(apiUrl('/api/admin/partners'), { credentials: 'include' });
       const data = await res.json();
       setPartners(data.partners || []);
     } catch (error) {
@@ -96,7 +97,7 @@ export default function AdminDistributionLogs({ onNavigate }: AdminDistributionL
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('/api/admin/distribution-stats', { credentials: 'include' });
+      const res = await fetch(apiUrl('/api/admin/distribution-stats'), { credentials: 'include' });
       const data = await res.json();
       setStats(data);
     } catch (error) {
@@ -121,7 +122,7 @@ export default function AdminDistributionLogs({ onNavigate }: AdminDistributionL
   const handleRetry = async (id: number) => {
     setRetrying(id);
     try {
-      const res = await fetch(`/api/admin/distribution-logs/${id}/retry`, {
+      const res = await fetch(apiUrl(`/api/admin/distribution-logs/${id}/retry`), {
         method: 'POST',
         headers: { 'X-CSRF-Token': getCSRFToken() },
         credentials: 'include',

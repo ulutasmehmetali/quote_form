@@ -15,6 +15,7 @@
     "@neondatabase/serverless": "^1.0.2",
     "@replit/object-storage": "^1.0.0",
     "@supabase/supabase-js": "^2.86.0",
+    "@svg-maps/usa": "^2.0.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vercel/blob": "^2.0.0",
@@ -27,15 +28,18 @@
     "express": "^5.1.0",
     "express-rate-limit": "^8.2.1",
     "express-validator": "^7.3.1",
+    "geoip-lite": "^1.4.10",
     "helmet": "^8.1.0",
     "lucide-react": "^0.555.0",
     "multer": "^2.0.2",
     "pg": "^8.16.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "recharts": "^3.5.1",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "ws": "^8.18.3"
+    "ws": "^8.18.3",
+    "reactflow": "^11.11.2"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.17",

@@ -1,6 +1,8 @@
 import { useState, useRef, useMemo, useEffect, type ChangeEvent } from 'react';
 import Button from './Button';
+import ArrowRightIcon from './icons/ArrowRight';
 import type { UploadedPhoto } from '../types/quote';
+import { apiUrl } from '../lib/api';
 
 interface PhotoUploadProps {
   onSubmit: (uploadedPhotos: UploadedPhoto[]) => void;
@@ -93,7 +95,7 @@ export default function PhotoUpload({ onSubmit, onBack, onNext, currentStep, tot
         formData.append('photos', photo);
       });
 
-      const response = await fetch('/api/upload/photos', {
+      const response = await fetch(apiUrl('/api/upload/photos'), {
         method: 'POST',
         body: formData,
       });
@@ -233,48 +235,103 @@ export default function PhotoUpload({ onSubmit, onBack, onNext, currentStep, tot
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row gap-2.5 pt-1">
+
             <Button
+
               type="button"
+
               onClick={onBack}
+
               variant="secondary"
+
               size="lg"
+
               className="flex-1 h-12 text-base"
+
               disabled={uploading}
+
             >
-              ← Back
+
+              Back
+
             </Button>
+
             {photos.length > 0 ? (
+
               <Button
+
                 type="button"
+
                 onClick={handleSubmit}
+
                 size="lg"
-                className="flex-1 h-12 text-base"
+
+                className="flex-1 h-12 text-base gap-2 justify-center"
+
                 disabled={uploading}
+
               >
+
                 {uploading ? (
+
                   <>
+
                     <svg className="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+
                     </svg>
+
                     Uploading...
+
                   </>
+
                 ) : (
-                  <>Continue with {photos.length} photo{photos.length > 1 ? 's' : ''} →</>
+
+                  <>
+
+                    <span className="flex-1 text-center">
+
+                      Continue with {photos.length} photo{photos.length > 1 ? 's' : ''}
+
+                    </span>
+
+                    <ArrowRightIcon />
+
+                  </>
+
                 )}
+
               </Button>
+
             ) : (
+
               <Button
+
                 type="button"
+
                 onClick={handleSkip}
+
                 variant="secondary"
+
                 size="lg"
-                className="flex-1 h-12 text-base"
+
+                className="flex-1 h-12 text-base gap-2 justify-center"
+
               >
-                Skip & Continue →
+
+                <span className="flex-1 text-center">Skip & Continue</span>
+
+                <ArrowRightIcon />
+
               </Button>
+
             )}
+
           </div>
+
         </div>
       </div>
     </section>

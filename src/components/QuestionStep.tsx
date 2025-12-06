@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { QuestionConfig, QuestionAnswer } from '../types/quote';
 import Button from './Button';
+import ArrowLeftIcon from './icons/ArrowLeft';
+import ArrowRightIcon from './icons/ArrowRight';
 
 interface QuestionStepProps {
   question: QuestionConfig;
@@ -17,10 +19,20 @@ export default function QuestionStep({ question, answer, onAnswer, onNext, onBac
     answer || (question.type === 'multiselect' ? [] : '')
   );
   const [error, setError] = useState('');
+  const nextButtonRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setLocalAnswer(answer || (question.type === 'multiselect' ? [] : ''));
   }, [question.id, answer, question.type]);
+
+  useEffect(() => {
+    const hasChoiceAnswer =
+      (question.type === 'choice' && Boolean(localAnswer)) ||
+      (question.type === 'multiselect' && Array.isArray(localAnswer) && localAnswer.length > 0);
+    if (hasChoiceAnswer && nextButtonRef.current) {
+      nextButtonRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [localAnswer, question.type]);
 
   const handleNext = () => {
     setError('');
@@ -177,22 +189,46 @@ export default function QuestionStep({ question, answer, onAnswer, onNext, onBac
 
       <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 pt-1 sm:pt-2">
         <Button
+
           type="button"
+
           onClick={onBack}
+
           variant="secondary"
+
           size="lg"
-          className="flex-1 h-12 text-base"
+
+          className="flex-1 h-12 text-base flex items-center justify-center gap-2"
+
         >
-          ← Back
+
+          <ArrowLeftIcon />
+
+          Back
+
         </Button>
-        <Button
-          type="button"
-          onClick={handleNext}
-          size="lg"
-          className="flex-1 h-12 text-base"
-        >
-          Continue →
-        </Button>
+
+        <div ref={nextButtonRef} className="flex-1">
+
+          <Button
+
+            type="button"
+
+            onClick={handleNext}
+
+            size="lg"
+
+            className="w-full h-12 text-base gap-2 justify-center"
+
+          >
+
+            <span>Continue</span>
+
+            <ArrowRightIcon />
+
+          </Button>
+
+        </div>
       </div>
     </div>
   );

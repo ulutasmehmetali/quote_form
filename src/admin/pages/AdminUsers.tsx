@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { apiUrl } from '../../lib/api';
 
 interface AdminUser {
   id: number;
@@ -31,7 +32,7 @@ export default function AdminUsers({ onNavigate }: AdminUsersProps) {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/admin-users', {
+      const res = await fetch(apiUrl('/api/admin/admin-users'), {
         headers: getAuthHeaders(),
         credentials: 'include',
       });
@@ -69,7 +70,7 @@ export default function AdminUsers({ onNavigate }: AdminUsersProps) {
     }
 
     try {
-      const res = await fetch('/api/admin/admin-users', {
+      const res = await fetch(apiUrl('/api/admin/admin-users'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         credentials: 'include',
@@ -98,7 +99,7 @@ export default function AdminUsers({ onNavigate }: AdminUsersProps) {
     if (!confirm(`"${username}" kullanıcısını silmek istediğinize emin misiniz?`)) return;
     
     try {
-      const res = await fetch(`/api/admin/admin-users/${id}`, {
+      const res = await fetch(apiUrl(`/api/admin/admin-users/${id}`), {
         method: 'DELETE',
         headers: getAuthHeaders(),
         credentials: 'include',

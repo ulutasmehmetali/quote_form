@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { apiUrl } from '../../lib/api';
 
 interface AdminSettingsProps {
   onNavigate: (page: string) => void;
@@ -37,7 +38,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
     setMessage(null);
     
     try {
-      const res = await fetch('/api/admin/change-password', {
+      const res = await fetch(apiUrl('/api/admin/change-password'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -225,7 +226,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
             <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
               <span className="text-lg">🔧</span> Yönetim Araçları
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <button onClick={() => onNavigate('professionals')} className="p-4 rounded-xl bg-gradient-to-br from-sky-500/10 to-indigo-500/10 border border-sky-500/20 hover:border-sky-500/40 transition-all text-left group">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-sky-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">👷</div>
@@ -250,6 +251,15 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
                   <div>
                     <p className="font-medium text-white">Webhooks</p>
                     <p className="text-xs text-slate-400">Harici entegrasyonlar</p>
+                  </div>
+                </div>
+              </button>
+              <button onClick={() => onNavigate('automations')} className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-500/20 hover:border-emerald-500/40 transition-all text-left group">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">⚙️</div>
+                  <div>
+                    <p className="font-medium text-white">Otomasyonlar</p>
+                    <p className="text-xs text-slate-400">Akis tasarimcisi</p>
                   </div>
                 </div>
               </button>

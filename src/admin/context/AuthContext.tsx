@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
+import { apiUrl } from '../../lib/api';
 
 interface AdminUser {
   id: number;
@@ -25,7 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const validateSession = async () => {
       try {
-        const res = await fetch('/api/admin/me', {
+        const res = await fetch(apiUrl('/api/admin/me'), {
           credentials: 'include',
           headers: sessionIdRef.current ? { 'x-session-id': sessionIdRef.current } : {},
         });
@@ -71,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: 'Invalid credentials' };
       }
 
-      const res = await fetch('/api/admin/login', {
+      const res = await fetch(apiUrl('/api/admin/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -104,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      await fetch('/api/admin/logout', {
+      await fetch(apiUrl('/api/admin/logout'), {
         method: 'POST',
         headers: getAuthHeaders(),
         credentials: 'include',

@@ -112,6 +112,7 @@ Server runs on port 5000.
 - `COOKIE_SECRET` - **Recommended** for production cookie signing (secret, auto-generated if missing)
 - `VITE_SUPABASE_URL` - Supabase project URL (optional)
 - `VITE_SUPABASE_ANON_KEY` - Supabase anonymous key (optional)
+- `VITE_API_BASE` - Optional backend base URL for API requests when the frontend is hosted separately.
 - `VITE_SUGGEST_URL` - AI suggestion API endpoint override (optional, defaults to `/api/suggest`)
 
 ## Backend Architecture

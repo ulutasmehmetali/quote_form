@@ -77,6 +77,37 @@ export const submissionNotesRelations = relations(submissionNotes, ({ one }) => 
   }),
 }));
 
+export const partialForms = pgTable('partial_forms', {
+  id: serial('id').primaryKey(),
+  draftId: varchar('draft_id', { length: 80 }).notNull().unique(),
+  serviceType: varchar('service_type', { length: 100 }),
+  zipCode: varchar('zip_code', { length: 10 }),
+  email: varchar('email', { length: 320 }),
+  phone: varchar('phone', { length: 45 }),
+  responses: jsonb('responses').default('{}'),
+  progress: integer('progress').default(0),
+  currentStep: integer('current_step'),
+  meta: jsonb('meta').default('{}'),
+  lastSavedAt: timestamp('last_saved_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const incompleteForms = pgTable('incomplete_forms', {
+  id: serial('id').primaryKey(),
+  draftId: varchar('draft_id', { length: 80 }).notNull().unique(),
+  createdBy: varchar('created_by', { length: 255 }),
+  serviceType: varchar('service_type', { length: 100 }),
+  email: varchar('email', { length: 320 }),
+  phone: varchar('phone', { length: 45 }),
+  responses: jsonb('responses').default('{}'),
+  progress: integer('progress').default(0),
+  meta: jsonb('meta').default('{}'),
+  userAgent: text('user_agent'),
+  ipAddress: varchar('ip_address', { length: 45 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  lastSeenAt: timestamp('last_seen_at').defaultNow().notNull(),
+});
+
 export type Submission = typeof submissions.$inferSelect;
 export type InsertSubmission = typeof submissions.$inferInsert;
 export type AdminUser = typeof adminUsers.$inferSelect;

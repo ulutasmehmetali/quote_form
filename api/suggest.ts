@@ -39,7 +39,7 @@ Rules:
 - Output ONLY a pure JSON array.
 - Example: [{"service":"Roofing","reason":"The roof is damaged"}]
 - 1 to 4 items.
-- "reason" must be short.
+- "reason" must be a friendly single sentence (not a fragment) that explains why this service fits the issue, and it should feel descriptive rather than too short—aim for 15 to 120 characters.
 - If query is NOT related to home services: RETURN:
   [{"service":"None","reason":"I can only help match home services."}]
 - Never output "Handyman" unless ABSOLUTELY impossible to classify.
