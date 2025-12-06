@@ -20,6 +20,7 @@ interface Partner {
   notes: string;
   created_at: string;
   updated_at: string;
+  workflow?: { id: string; name: string; isActive: boolean } | null;
 }
 
 interface PartnerFormData {
@@ -214,6 +215,14 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
     }
   };
 
+  const handleOpenWorkflow = (workflowId?: string | null) => {
+    if (!workflowId) return;
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('focusWorkflowId', workflowId);
+    }
+    onNavigate('automations');
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -382,6 +391,24 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
                           {type}
                         </span>
                       ))}
+                    </div>
+                  )}
+
+                  {partner.workflow ? (
+                    <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-slate-200">
+                      <span className="font-semibold text-white">Workflow</span>
+                      <span className="px-2 py-1 rounded-full bg-slate-900/70 text-white text-[11px]">{partner.workflow.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenWorkflow(partner.workflow?.id)}
+                        className="px-3 py-1 rounded-full border border-white/10 text-[11px] text-slate-200 hover:border-slate-400 hover:text-white transition"
+                      >
+                        Workflow'a Git
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mb-3 text-xs text-slate-400">
+                      Workflow ile bağlantı bulunmuyor. Yeni partner eklediğinizde otomatik workflow oluşturulur.
                     </div>
                   )}
 

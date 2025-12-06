@@ -2,7 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import geoip from 'geoip-lite';
-import { db } from './db.ts';
+import { db, pool } from './db.js';
 import { submissions, adminUsers, submissionNotes, activityLogs, partialForms, adminIpBlacklist } from '../shared/schema.js';
 import { eq, desc, sql, count, gte, and, like, or, asc, lt } from 'drizzle-orm';
 import { getClientIP } from './utils/geoip.js';
@@ -581,8 +581,15 @@ router.post('/login', async (req, res) => {
     const sessionId = generateSecureSessionId();
     const csrfToken = generateCSRFToken();
     
+    const sessionUser = {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      partnerApiId: user.partnerApiId || null,
+    };
+
     sessions.set(sessionId, {
-      user: { id: user.id, username: user.username, role: user.role },
+      user: sessionUser,
       expiresAt: Date.now() + SESSION_DURATION,
       createdAt: Date.now(),
       lastActivity: Date.now(),
@@ -595,7 +602,7 @@ router.post('/login', async (req, res) => {
       .set({ lastLoginAt: new Date(), lastLoginIp: clientIP })
       .where(eq(adminUsers.id, user.id));
     
-    await logActivity('login_success', 'admin', user.id, { id: user.id, username: user.username }, req, {});
+    await logActivity('login_success', 'admin', user.id, sessionUser, req, {});
     
     res.cookie('adminSession', sessionId, {
       httpOnly: true,
@@ -609,7 +616,7 @@ router.post('/login', async (req, res) => {
       success: true,
       sessionId,
       csrfToken,
-      user: { id: user.id, username: user.username, role: user.role },
+      user: sessionUser,
     });
   } catch (error) {
     console.error('Login error:', error.message);
@@ -1853,17 +1860,33 @@ router.post('/webhooks/:id/test', requireAuth, requireRole('admin'), requireCSRF
 
 router.get('/admin-users', requireAuth, requireRole('admin'), async (req, res) => {
   try {
-    
-    const result = await db.select({
-      id: adminUsers.id,
-      username: adminUsers.username,
-      role: adminUsers.role,
-      createdAt: adminUsers.createdAt,
-      lastLoginAt: adminUsers.lastLoginAt,
-      lastLoginIp: adminUsers.lastLoginIp,
-    }).from(adminUsers).orderBy(desc(adminUsers.createdAt));
-    
-    res.json({ users: result });
+    const result = await db.execute(sql`
+      SELECT 
+        au.id,
+        au.username,
+        au.role,
+        au.created_at,
+        au.last_login_at,
+        au.last_login_ip,
+        au.partner_api_id,
+        pa.name as partner_name
+      FROM admin_users au
+      LEFT JOIN partner_apis pa ON au.partner_api_id = pa.id
+      ORDER BY au.created_at DESC
+    `);
+
+    const users = (result.rows || []).map((row) => ({
+      id: row.id,
+      username: row.username,
+      role: row.role,
+      createdAt: row.created_at,
+      lastLoginAt: row.last_login_at,
+      lastLoginIp: row.last_login_ip,
+      partnerApiId: row.partner_api_id,
+      partnerName: row.partner_name,
+    }));
+
+    res.json({ users });
   } catch (error) {
     console.error('Admin users error:', error.message);
     res.status(500).json({ error: 'Failed to fetch admin users' });
@@ -1872,45 +1895,70 @@ router.get('/admin-users', requireAuth, requireRole('admin'), async (req, res) =
 
 router.post('/admin-users', requireAuth, requireRole('admin'), requireCSRF, async (req, res) => {
   try {
-    
-    let { username, password, role } = req.body;
-    
+    let { username, password, role, partnerApiId } = req.body;
+
     username = sanitizeInput(username);
-    
+
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password are required' });
     }
-    
+
     if (username.length < 3 || username.length > 50) {
       return res.status(400).json({ error: 'Username must be 3-50 characters' });
     }
-    
+
     if (password.length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
-    
+
     const passwordStrength = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}$/;
     if (!passwordStrength.test(password)) {
-      return res.status(400).json({ 
-        error: 'Password must contain uppercase, lowercase, number, and special character' 
+      return res.status(400).json({
+        error: 'Password must contain uppercase, lowercase, number, and special character',
       });
     }
-    
-    const allowedRoles = ['admin', 'editor', 'viewer'];
+
+    const allowedRoles = ['admin', 'editor', 'viewer', 'partner_owner'];
     if (!allowedRoles.includes(role)) {
       role = 'viewer';
     }
-    
+
+    let assignedPartnerId = null;
+    if (role === 'partner_owner') {
+      const parsedPartnerId = Number.parseInt(partnerApiId, 10);
+      if (!Number.isFinite(parsedPartnerId) || parsedPartnerId < 1) {
+        return res.status(400).json({ error: 'Partner selection is required for partner owners' });
+      }
+      const partnerExists = await db.execute(sql`
+        SELECT id FROM partner_apis WHERE id = ${parsedPartnerId}
+      `);
+      if (!partnerExists.rows?.[0]) {
+        return res.status(400).json({ error: 'Selected partner was not found' });
+      }
+      assignedPartnerId = parsedPartnerId;
+    }
+
     const passwordHash = await bcrypt.hash(password, 12);
-    
+
     const [newUser] = await db.insert(adminUsers).values({
       username,
       passwordHash,
       role,
-    }).returning({ id: adminUsers.id, username: adminUsers.username, role: adminUsers.role, createdAt: adminUsers.createdAt });
-    
-    await logActivity('create_admin_user', 'admin', newUser.id, req.adminUser, req, { username, role });
-    
+      partnerApiId: assignedPartnerId,
+    }).returning({
+      id: adminUsers.id,
+      username: adminUsers.username,
+      role: adminUsers.role,
+      createdAt: adminUsers.createdAt,
+      partnerApiId: adminUsers.partnerApiId,
+    });
+
+    await logActivity('create_admin_user', 'admin', newUser.id, req.adminUser, req, {
+      username,
+      role,
+      partnerApiId: assignedPartnerId,
+    });
+
     res.json({ user: newUser });
   } catch (error) {
     console.error('Create admin user error:', error.message);
@@ -2029,13 +2077,33 @@ router.get('/system-info', requireAuth, async (req, res) => {
 router.get('/partners', requireAuth, async (req, res) => {
   try {
     const result = await db.execute(sql`
-      SELECT id, name, endpoint_url, http_method, auth_method, is_active, service_types, 
-             timeout_ms, retry_count, success_count, failure_count, last_success_at, last_failure_at, 
-             notes, created_at, updated_at
-      FROM partner_apis 
-      ORDER BY created_at DESC
+      SELECT 
+        p.*,
+        aw.id AS workflow_id,
+        aw.name AS workflow_name,
+        aw.is_active AS workflow_active
+      FROM partner_apis p
+      LEFT JOIN partner_workflows pw ON pw.partner_api_id = p.id
+      LEFT JOIN automation_workflows aw ON aw.id = pw.workflow_id
+      ORDER BY p.created_at DESC
     `);
-    res.json({ partners: result.rows || [] });
+
+    const partners = (result.rows || []).map((row) => {
+      const {
+        workflow_id,
+        workflow_name,
+        workflow_active,
+        ...base
+      } = row;
+      return {
+        ...base,
+        workflow: workflow_id
+          ? { id: workflow_id, name: workflow_name, isActive: Boolean(workflow_active) }
+          : null,
+      };
+    });
+
+    res.json({ partners });
   } catch (error) {
     console.error('Partners error:', error.message);
     res.status(500).json({ error: 'Failed to fetch partners' });
@@ -2093,9 +2161,29 @@ router.post('/partners', requireAuth, requireRole('admin'), requireCSRF, async (
       RETURNING id, name, endpoint_url, http_method, auth_method, is_active, service_types, timeout_ms, retry_count, notes, created_at
     `);
     
-    await logActivity('create_partner', 'partner', result.rows[0].id, req.adminUser, req, { name });
-    
-    res.json({ partner: result.rows[0] });
+    const [partner] = result.rows || [];
+    if (partner) {
+      try {
+        const workflowId = crypto.randomUUID();
+        const workflowName = `Partner: ${name}`;
+        await pool.query(
+          `INSERT INTO automation_workflows (id, name, is_active, nodes, edges) VALUES ($1, $2, TRUE, '[]'::jsonb, '[]'::jsonb)`,
+          [workflowId, workflowName],
+        );
+        await pool.query(
+          `INSERT INTO partner_workflows (partner_api_id, workflow_id) VALUES ($1, $2)`,
+          [partner.id, workflowId],
+        );
+        partner.workflow = { id: workflowId, name: workflowName, isActive: true };
+      } catch (workflowError) {
+        console.warn('Failed to create workflow for partner:', workflowError?.message || workflowError);
+      }
+      await logActivity('create_partner', 'partner', partner.id, req.adminUser, req, { name });
+      res.json({ partner });
+      return;
+    }
+
+    res.status(500).json({ error: 'Failed to create partner' });
   } catch (error) {
     console.error('Create partner error:', error.message);
     res.status(500).json({ error: 'Failed to create partner' });
@@ -2265,16 +2353,26 @@ router.post('/partners/:id/test', requireAuth, requireRole('admin'), requireCSRF
 router.get('/distribution-logs', requireAuth, async (req, res) => {
   try {
     let { partnerId, status, submissionId, dateFrom, dateTo, page = 1, limit = 50 } = req.query;
-    
+
     page = Math.max(1, Math.min(parseInt(page) || 1, 1000));
     limit = Math.max(1, Math.min(parseInt(limit) || 50, 100));
     const offset = (page - 1) * limit;
-    
-    let conditions = [];
+
+    const conditions = [];
     const params = [];
-    
-    if (partnerId && partnerId !== 'all') {
-      params.push(parseInt(partnerId));
+
+    const isPartnerBound = Boolean(req.adminUser?.partnerApiId);
+    const requestedPartnerId = partnerId && partnerId !== 'all' ? Number.parseInt(partnerId, 10) : null;
+    let effectivePartnerId = null;
+
+    if (isPartnerBound) {
+      effectivePartnerId = req.adminUser.partnerApiId;
+    } else if (requestedPartnerId) {
+      effectivePartnerId = requestedPartnerId;
+    }
+
+    if (effectivePartnerId) {
+      params.push(effectivePartnerId);
       conditions.push(`pd.partner_api_id = $${params.length}`);
     }
     if (status && status !== 'all') {
@@ -2450,6 +2548,10 @@ router.get('/stats/daily-top-categories', requireAuth, async (req, res) => {
 
 router.get('/distribution-stats', requireAuth, async (req, res) => {
   try {
+    const partnerFilter = req.adminUser?.partnerApiId
+      ? sql`WHERE pd.partner_api_id = ${req.adminUser.partnerApiId}`
+      : sql``;
+
     const stats = await db.execute(sql`
       SELECT 
         COUNT(*) as total,
@@ -2457,20 +2559,36 @@ router.get('/distribution-stats', requireAuth, async (req, res) => {
         COUNT(*) FILTER (WHERE status = 'failed') as failed,
         COUNT(*) FILTER (WHERE status = 'pending') as pending,
         COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) as today
-      FROM partner_distributions
+      FROM partner_distributions pd
+      ${partnerFilter}
     `);
-    
-    const byPartner = await db.execute(sql`
-      SELECT pa.id, pa.name, 
-        COUNT(pd.id) as total,
-        COUNT(*) FILTER (WHERE pd.status = 'success') as success,
-        COUNT(*) FILTER (WHERE pd.status = 'failed') as failed
-      FROM partner_apis pa
-      LEFT JOIN partner_distributions pd ON pa.id = pd.partner_api_id
-      GROUP BY pa.id, pa.name
-      ORDER BY total DESC
-    `);
-    
+
+    let byPartner;
+    if (req.adminUser?.partnerApiId) {
+      byPartner = await db.execute(sql`
+        SELECT pa.id, pa.name, 
+          COUNT(pd.id) as total,
+          COUNT(*) FILTER (WHERE pd.status = 'success') as success,
+          COUNT(*) FILTER (WHERE pd.status = 'failed') as failed
+        FROM partner_apis pa
+        LEFT JOIN partner_distributions pd ON pa.id = pd.partner_api_id AND pa.id = ${req.adminUser.partnerApiId}
+        WHERE pa.id = ${req.adminUser.partnerApiId}
+        GROUP BY pa.id, pa.name
+        ORDER BY total DESC
+      `);
+    } else {
+      byPartner = await db.execute(sql`
+        SELECT pa.id, pa.name, 
+          COUNT(pd.id) as total,
+          COUNT(*) FILTER (WHERE pd.status = 'success') as success,
+          COUNT(*) FILTER (WHERE pd.status = 'failed') as failed
+        FROM partner_apis pa
+        LEFT JOIN partner_distributions pd ON pa.id = pd.partner_api_id
+        GROUP BY pa.id, pa.name
+        ORDER BY total DESC
+      `);
+    }
+
     res.json({
       overview: stats.rows?.[0] || { total: 0, success: 0, failed: 0, pending: 0, today: 0 },
       byPartner: byPartner.rows || [],

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
@@ -156,6 +157,16 @@ function AdminContent() {
 
   return (
     <div className="relative min-h-screen bg-slate-950 text-white pb-28">
+      {currentPage !== 'dashboard' && (
+        <button
+          type="button"
+          onClick={handleBack}
+          className="hidden lg:flex items-center gap-2 fixed top-6 left-6 z-50 rounded-full bg-slate-900/80 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-black/40 backdrop-blur"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Geri
+        </button>
+      )}
       {currentPage !== 'dashboard' && (
         <button
           type="button"

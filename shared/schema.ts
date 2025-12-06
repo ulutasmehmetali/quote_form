@@ -40,6 +40,7 @@ export const adminUsers = pgTable('admin_users', {
   username: varchar('username', { length: 100 }).notNull().unique(),
   passwordHash: varchar('password_hash', { length: 255 }).notNull(),
   role: varchar('role', { length: 50 }).notNull().default('admin'),
+  partnerApiId: integer('partner_api_id'),
   lastLoginAt: timestamp('last_login_at'),
   lastLoginIp: varchar('last_login_ip', { length: 45 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),

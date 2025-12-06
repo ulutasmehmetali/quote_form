@@ -118,6 +118,7 @@ function Editor() {
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const [expandedFlowId, setExpandedFlowId] = useState<string | null>(null);
   const logsEndRef = useRef<HTMLDivElement | null>(null);
+  const focusWorkflowRef = useRef<string | null>(null);
 
   const appendLog = useCallback((entry: Omit<LogEntry, 'id' | 'timestamp'>) => {
     const now = new Date().toISOString();
@@ -129,6 +130,15 @@ function Editor() {
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs, logFilter]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const focusWorkflowId = sessionStorage.getItem('focusWorkflowId');
+    if (focusWorkflowId) {
+      focusWorkflowRef.current = focusWorkflowId;
+      sessionStorage.removeItem('focusWorkflowId');
+    }
+  }, []);
 
   const buildPreset = useCallback(() => {
     const base = (id: string, type: string, x: number, y: number, label: string, description?: string, extra: Record<string, unknown> = {}) => ({
@@ -194,18 +204,28 @@ function Editor() {
     [appendLog, getAuthHeaders, syncFromWorkflow],
   );
 
-  const loadWorkflows = useCallback(async () => {
+  const loadWorkflows = useCallback(async ({ syncNodes = true } = {}) => {
     setLoading(true);
     try {
       const res = await fetch(apiUrl('/api/admin/automations'), { credentials: 'include', headers: getAuthHeaders() });
       const json = await res.json();
       const list: Workflow[] = json.workflows || [];
       setWorkflows(list);
-      if (list[0]) {
-        setActiveId(list[0].id);
-        syncFromWorkflow(list[0]);
-      } else {
-        await createWorkflow('Varsayilan Workflow');
+      if (syncNodes) {
+        if (list[0]) {
+          const focusId = focusWorkflowRef.current;
+          const target = focusId ? list.find((w) => w.id === focusId) : null;
+          if (target) {
+            focusWorkflowRef.current = null;
+            setActiveId(target.id);
+            syncFromWorkflow(target);
+          } else {
+            setActiveId(list[0].id);
+            syncFromWorkflow(list[0]);
+          }
+        } else {
+          await createWorkflow('Varsayilan Workflow');
+        }
       }
     } catch (error) {
       console.error('Load automations failed', error);
@@ -280,6 +300,8 @@ function Editor() {
     if (!res.ok) {
       appendLog({ nodeName: 'Toggle', eventType: 'error', payload: { status: res.status }, status: 'error' });
       alert('Aktif/pasif güncellenemedi. Oturumu kontrol edin.');
+    } else {
+      await loadWorkflows({ syncNodes: false });
     }
   };
 
@@ -546,10 +568,6 @@ function Editor() {
                 ))}
               </select>
             </div>
-            <label className="flex items-center gap-2 text-sm text-slate-200">
-              <input type="checkbox" checked={!!activeWorkflow?.isActive} onChange={(e) => toggleActive(e.target.checked)} />
-              Aktif
-            </label>
             <div className="text-xs text-slate-500">{activeWorkflow?.nodes?.length || 0} blok • {activeWorkflow?.edges?.length || 0} bağlantı</div>
           </div>
 
@@ -753,5 +771,3 @@ export default function AdminAutomations(props: { onNavigate: (page: string) => 
     </ReactFlowProvider>
   );
 }
-
-

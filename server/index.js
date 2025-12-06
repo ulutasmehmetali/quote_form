@@ -164,7 +164,7 @@ const FRONTEND = process.env.FRONTEND_URL || 'https://quote-form.vercel.app';
 const corsOptions = {
   origin: FRONTEND,
   credentials: true,
-  methods: ['GET', 'POST', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-csrf-token', 'x-session-id'],
 };
 
