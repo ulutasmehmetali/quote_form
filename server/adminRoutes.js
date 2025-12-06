@@ -539,7 +539,31 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
     
-    const [user] = await db.select().from(adminUsers).where(eq(adminUsers.username, username));
+    let user;
+    try {
+      [user] = await db.select({
+        id: adminUsers.id,
+        username: adminUsers.username,
+        passwordHash: adminUsers.passwordHash,
+        role: adminUsers.role,
+        partnerApiId: adminUsers.partnerApiId,
+        lastLoginAt: adminUsers.lastLoginAt,
+        lastLoginIp: adminUsers.lastLoginIp,
+        createdAt: adminUsers.createdAt,
+      }).from(adminUsers).where(eq(adminUsers.username, username));
+    } catch (error) {
+      if (
+        error?.message?.includes('partner_users') ||
+        error?.message?.includes('partner_api_id') ||
+        error?.message?.includes('column') ||
+        error?.message?.includes('missing')
+      ) {
+        // Fallback for databases that haven't been migrated yet.
+        [user] = await db.select().from(adminUsers).where(eq(adminUsers.username, username));
+      } else {
+        throw error;
+      }
+    }
     
     if (!user) {
       const bannedNow = await recordFailedAttempt(clientIP);
