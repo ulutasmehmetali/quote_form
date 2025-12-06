@@ -539,8 +539,16 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
     
+    const columnCheck = await db.execute(sql`
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_name = 'admin_users' AND column_name = 'partner_api_id'
+      LIMIT 1
+    `);
+    const hasPartnerColumn = !!columnCheck.rows?.length;
+
     let user;
-    try {
+    if (hasPartnerColumn) {
       [user] = await db.select({
         id: adminUsers.id,
         username: adminUsers.username,
@@ -551,23 +559,16 @@ router.post('/login', async (req, res) => {
         lastLoginIp: adminUsers.lastLoginIp,
         createdAt: adminUsers.createdAt,
       }).from(adminUsers).where(eq(adminUsers.username, username));
-    } catch (error) {
-      const detailMessage =
-        error?.cause?.message ||
-        error?.cause?.detail ||
-        error?.cause?.description ||
-        error?.message;
-      if (
-        detailMessage?.toLowerCase().includes('partner_api_id') ||
-        detailMessage?.toLowerCase().includes('column') ||
-        detailMessage?.toLowerCase().includes('missing') ||
-        detailMessage?.toLowerCase().includes('does not exist')
-      ) {
-        // Fallback for databases that haven't been migrated yet.
-        [user] = await db.select().from(adminUsers).where(eq(adminUsers.username, username));
-      } else {
-        throw error;
-      }
+    } else {
+      [user] = await db.select({
+        id: adminUsers.id,
+        username: adminUsers.username,
+        passwordHash: adminUsers.passwordHash,
+        role: adminUsers.role,
+        lastLoginAt: adminUsers.lastLoginAt,
+        lastLoginIp: adminUsers.lastLoginIp,
+        createdAt: adminUsers.createdAt,
+      }).from(adminUsers).where(eq(adminUsers.username, username));
     }
     
     if (!user) {
