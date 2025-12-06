@@ -107,67 +107,70 @@ export default function ThankYou() {
       <SectionCard
         surface="frosted"
         padding="md"
-        className="relative max-w-md w-full text-center space-y-6 lg:space-y-7"
+        className="relative max-w-md w-full flex flex-col gap-6 text-center"
+        style={{ maxHeight: 'calc(100vh - 3rem)' }}
       >
         {showContent && (
           <>
-            <AnimatedCheckmark />
+            <div className="flex flex-col gap-5 flex-1 items-center justify-center w-full">
+              <AnimatedCheckmark />
 
-            <div className="space-y-4 animate-fadeUp" style={{ animationDelay: '0.2s' }}>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-200">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                </span>
-                <span className="text-sm font-semibold text-emerald-700 uppercase tracking-wider">Request Confirmed</span>
+              <div className="space-y-4 animate-fadeUp" style={{ animationDelay: '0.2s' }}>
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-200">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                  </span>
+                  <span className="text-sm font-semibold text-emerald-700 uppercase tracking-wider">Request Confirmed</span>
+                </div>
+                
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-800 leading-tight">
+                  You're All Set!
+                </h1>
+                
+                <p className="text-slate-600 text-lg lg:text-xl max-w-lg mx-auto leading-relaxed">
+                  Your request has been sent to our network of verified professionals.
+                </p>
               </div>
-              
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-800 leading-tight">
-                You're All Set!
-              </h1>
-              
-              <p className="text-slate-600 text-lg lg:text-xl max-w-lg mx-auto leading-relaxed">
-                Your request has been sent to our network of verified professionals.
-              </p>
+
+              <div className="bg-gradient-to-br from-slate-50 to-white rounded-3xl p-5 border border-slate-200 space-y-3 w-full">
+                <h2 className="text-lg font-bold text-slate-800 flex items-center justify-center gap-2">
+                  <svg className="w-6 h-6 text-sky-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  What Happens Next
+                </h2>
+                
+                <div className="space-y-2">
+                  <StepCard 
+                    number={1}
+                    title="Review Your Request"
+                    description="Our team is matching you with the best local professionals."
+                    delay={0.4}
+                  />
+                  <StepCard 
+                    number={2}
+                    title="Get Contacted"
+                    description="Expect calls or emails from up to 4 verified pros within 24 hours."
+                    delay={0.5}
+                  />
+                  <StepCard 
+                    number={3}
+                    title="Compare & Choose"
+                    description="Review quotes, check reviews, and pick your perfect match."
+                    delay={0.6}
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="bg-gradient-to-br from-slate-50 to-white rounded-3xl p-5 border border-slate-200 space-y-3">
-              <h2 className="text-lg font-bold text-slate-800 flex items-center justify-center gap-2">
-                <svg className="w-6 h-6 text-sky-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                What Happens Next
-              </h2>
-              
-              <div className="space-y-2">
-                <StepCard 
-                  number={1}
-                  title="Review Your Request"
-                  description="Our team is matching you with the best local professionals."
-                  delay={0.4}
-                />
-                <StepCard 
-                  number={2}
-                  title="Get Contacted"
-                  description="Expect calls or emails from up to 4 verified pros within 24 hours."
-                  delay={0.5}
-                />
-                <StepCard 
-                  number={3}
-                  title="Compare & Choose"
-                  description="Review quotes, check reviews, and pick your perfect match."
-                  delay={0.6}
-                />
-              </div>
-            </div>
-
-            <div className="pt-3 space-y-3 animate-fadeUp" style={{ animationDelay: '0.7s' }}>
+            <div className="pt-3 animate-fadeUp w-full" style={{ animationDelay: '0.7s' }}>
               <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <div className="flex flex-col sm:flex-row gap-3 justify-center pt-3">
                 <Button
                   size="lg"
                   onClick={() => window.location.reload()}
-                  className="sm:w-auto"
+                  className="sm:w-auto w-full"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -178,7 +181,7 @@ export default function ThankYou() {
                   variant="ghost"
                   size="lg"
                   onClick={() => (window.location.href = '/')}
-                  className="sm:w-auto"
+                  className="sm:w-auto w-full"
                 >
                   Back to Home
                 </Button>

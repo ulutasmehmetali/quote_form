@@ -193,19 +193,11 @@ export default function ContactInfo({ onSubmit, onBack, isSubmitting, retryCount
                     value={email}
                     onChange={handleEmailChange}
                     placeholder="you@example.com"
-                    autoComplete="email"
-                    list="email-domains"
+                    autoComplete="off"
                     className={getInputClassName(emailState)}
                   />
                   <ValidationIcon valid={emailState.valid} touched={emailState.touched} />
                 </div>
-                <datalist id="email-domains">
-                  <option value={email.split('@')[0] + '@gmail.com'} />
-                  <option value={email.split('@')[0] + '@yahoo.com'} />
-                  <option value={email.split('@')[0] + '@outlook.com'} />
-                  <option value={email.split('@')[0] + '@hotmail.com'} />
-                  <option value={email.split('@')[0] + '@icloud.com'} />
-                </datalist>
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="phone" className="flex items-center gap-2 text-sm font-medium text-slate-700">

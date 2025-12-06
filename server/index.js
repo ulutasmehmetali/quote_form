@@ -86,9 +86,15 @@ const ACCESS_LOG_SCHEMA_STEPS = [
     $$ LANGUAGE plpgsql SECURITY DEFINER;
   `,
   sql`
-    CREATE TRIGGER IF NOT EXISTS set_updated_at
-    BEFORE UPDATE ON public.access_logs
-    FOR EACH ROW EXECUTE FUNCTION public.trigger_set_updated_at();
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_updated_at') THEN
+        CREATE TRIGGER set_updated_at
+        BEFORE UPDATE ON public.access_logs
+        FOR EACH ROW EXECUTE FUNCTION public.trigger_set_updated_at();
+      END IF;
+    END;
+    $$;
   `,
   sql`
     CREATE INDEX IF NOT EXISTS idx_access_logs_entered_at ON public.access_logs (entered_at);

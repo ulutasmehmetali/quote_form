@@ -42,8 +42,16 @@ router.get('/hourly-activity', async (_req, res) => {
   }
 });
 
-router.get('/daily-top-categories', async (_req, res) => {
+router.get('/daily-top-categories', async (req, res) => {
   try {
+    const allowedRanges = [7, 15, 30];
+    const requestedRange = Number(req.query.days);
+    const days = allowedRanges.includes(requestedRange) ? requestedRange : 30;
+
+    const startDate = new Date();
+    startDate.setHours(0, 0, 0, 0);
+    startDate.setDate(startDate.getDate() - (days - 1));
+
     const result = await db.execute(sql`
       SELECT day, category, count FROM (
         SELECT 
@@ -52,11 +60,11 @@ router.get('/daily-top-categories', async (_req, res) => {
           COUNT(*) AS count,
           ROW_NUMBER() OVER (PARTITION BY DATE(${submissions.createdAt}) ORDER BY COUNT(*) DESC) AS rn
         FROM ${submissions}
+        WHERE ${submissions.createdAt} >= ${startDate}
         GROUP BY DATE(${submissions.createdAt}), ${submissions.serviceType}
       ) t
       WHERE rn = 1
-      ORDER BY day ASC
-      LIMIT 30;
+      ORDER BY day ASC;
     `);
 
     const payload = asRows(result).map((row) => ({

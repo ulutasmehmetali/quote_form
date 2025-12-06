@@ -60,6 +60,8 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
   const [testing, setTesting] = useState<number | null>(null);
   const [testResult, setTestResult] = useState<{ partnerId: number; success: boolean; message: string } | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [workflows, setWorkflows] = useState<{ id: string; name: string; isActive: boolean }[]>([]);
+  const [workflowLoading, setWorkflowLoading] = useState(true);
   const [formData, setFormData] = useState<PartnerFormData>({
     name: '',
     endpointUrl: '',
@@ -87,8 +89,26 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
     }
   };
 
+  const fetchWorkflows = async () => {
+    setWorkflowLoading(true);
+    try {
+      const res = await fetch(apiUrl('/api/admin/automations'), {
+        credentials: 'include',
+        headers: getAuthHeaders(),
+      });
+      const json = await res.json();
+      setWorkflows(json.workflows || []);
+    } catch (error) {
+      console.error('Failed to fetch workflows:', error);
+      setWorkflows([]);
+    } finally {
+      setWorkflowLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchPartners();
+    fetchWorkflows();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -247,7 +267,7 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-4">
           <button onClick={() => onNavigate('settings')} className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5 text-slate-400" />
@@ -257,13 +277,59 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
             <p className="text-slate-400 text-sm">Müşteri verilerini göndermek için harici API'ler yapılandırın</p>
           </div>
         </div>
-        <button
-          onClick={() => { resetForm(); setShowModal(true); }}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-lg hover:from-sky-600 hover:to-blue-700 transition-all shadow-lg"
-        >
-          <Plus className="w-4 h-4" />
-          Yeni Partner Ekle
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => { resetForm(); setShowModal(true); }}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-lg hover:from-sky-600 hover:to-blue-700 transition-all shadow-lg"
+          >
+            <Plus className="w-4 h-4" />
+            Yeni Partner Ekle
+          </button>
+          <button
+            onClick={() => onNavigate('automations')}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-sky-500 text-white rounded-lg hover:from-emerald-600 hover:to-sky-600 transition-all shadow-lg"
+          >
+            <Activity className="w-4 h-4" />
+            Workflow ile Entegre Ol
+          </button>
+        </div>
+      </div>
+
+      <div className="grid gap-4">
+        <div className="bg-slate-800/60 border border-white/5 rounded-2xl p-5 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Workflow Senkronizasyonu</p>
+              <h2 className="text-lg font-semibold text-white">Partner API'ler + Workflow</h2>
+              <p className="text-sm text-slate-400">
+                İş akışlarınıza bağlı Partner API'ler buradan yönetilir. Her partner kaydı workflow adımına dönüştürülebilir.
+              </p>
+            </div>
+            <button
+              onClick={() => onNavigate('automations')}
+              className="px-3 py-1.5 text-xs rounded-full border border-slate-600 text-slate-200 hover:border-slate-400 hover:text-white transition"
+            >
+              Workflows'a Git
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {workflowLoading ? (
+              <span className="text-xs text-slate-400">Workflows yükleniyor...</span>
+            ) : workflows.length === 0 ? (
+              <span className="text-xs text-slate-400">Hiç workflow yok. Yeni bir workflow oluşturun.</span>
+            ) : (
+              workflows.slice(0, 3).map((workflow) => (
+                <div
+                  key={workflow.id}
+                  className="flex-1 min-w-[180px] rounded-2xl border border-white/5 bg-slate-900/60 p-3"
+                >
+                  <div className="text-sm text-slate-400">{workflow.isActive ? 'Aktif' : 'Pasif'}</div>
+                  <div className="text-white font-semibold">{workflow.name}</div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
 
       {partners.length === 0 ? (
