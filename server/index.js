@@ -33,6 +33,8 @@ const PORT = process.env.PORT || 3001;
 const isProduction = process.env.NODE_ENV === 'production';
 const ACCESS_LOG_COOKIE = 'access_session_id';
 const ACCESS_LOG_COOKIE_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
+const ACCESS_LOG_RETRY_ATTEMPTS = 3;
+const ACCESS_LOG_RETRY_BASE_MS = 1000;
 
 const ACCESS_LOG_COLUMNS = [
   { name: 'user_agent', definition: 'TEXT' },
@@ -396,19 +398,64 @@ async function ensureAccessLogSchema({ forceSync = false } = {}) {
     return;
   }
 
-  for (const statement of ACCESS_LOG_SCHEMA_STEPS) {
-    try {
-      await db.execute(statement);
-    } catch (error) {
-      console.warn(
-        'Access log schema sync skipped (starting server without forcing schema updates):',
-        error?.message || error,
+  const checkExists = async () => {
+    const existsResult = await db.execute(
+      sql`SELECT to_regclass('public.access_logs') AS tbl`
+    );
+    return (
+      existsResult?.rows?.[0]?.tbl ||
+      existsResult?.rows?.[0]?.to_regclass ||
+      null
+    );
+  };
+
+  const permissionHint = (message = '') => {
+    if (
+      /permission denied/i.test(message) ||
+      /must be owner/i.test(message) ||
+      /must have/i.test(message)
+    ) {
+      console.error(
+        '[access_logs] Permission issue: DB user may lack CREATE/USAGE on schema public.'
       );
+    }
+  };
+
+  for (let attempt = 1; attempt <= ACCESS_LOG_RETRY_ATTEMPTS; attempt++) {
+    try {
+      const existingName = await checkExists();
+      if (existingName) {
+        console.info(
+          `[access_logs] Table exists (${existingName}); skipping creation.`
+        );
+        return;
+      }
+
+      for (const statement of ACCESS_LOG_SCHEMA_STEPS) {
+        await db.execute(statement);
+      }
+
+      console.info('[access_logs] Table created and indexes ready.');
       return;
+    } catch (error) {
+      permissionHint(error?.message);
+      const isLast = attempt === ACCESS_LOG_RETRY_ATTEMPTS;
+      console.warn(
+        `[access_logs] Attempt ${attempt}/${ACCESS_LOG_RETRY_ATTEMPTS} failed:`,
+        error?.message || error
+      );
+
+      if (isLast) {
+        console.error(
+          '[access_logs] Schema sync failed after retries; continuing without access_logs.'
+        );
+        return;
+      }
+
+      const delay = ACCESS_LOG_RETRY_BASE_MS * 2 ** (attempt - 1);
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
-
-  console.log('Access log schema is ready.');
 }
 
 /* -------------------------------------------

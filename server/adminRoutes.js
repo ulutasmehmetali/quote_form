@@ -963,42 +963,48 @@ router.get('/submissions', requireAuth, async (req, res) => {
       }
     }
 
-    const submissionsWithSignals = submissionsWithGeo.map((submission) => {
-      const ipStat = submission.ipAddress ? ipStatsMap.get(submission.ipAddress) : null;
-      const uaStat = submission.userAgent ? uaStatsMap.get(submission.userAgent) : null;
-      const comboKey = submission.ipAddress && submission.userAgent ? JSON.stringify([submission.ipAddress, submission.userAgent]) : null;
-      const comboStat = comboKey ? comboStatsMap.get(comboKey) : null;
+    let submissionsWithSignals = submissionsWithGeo;
+    try {
+      submissionsWithSignals = submissionsWithGeo.map((submission) => {
+        const ipStat = submission.ipAddress ? ipStatsMap.get(submission.ipAddress) : null;
+        const uaStat = submission.userAgent ? uaStatsMap.get(submission.userAgent) : null;
+        const comboKey = submission.ipAddress && submission.userAgent ? JSON.stringify([submission.ipAddress, submission.userAgent]) : null;
+        const comboStat = comboKey ? comboStatsMap.get(comboKey) : null;
 
-      const sameIpRecent = ipStat?.recent10 || 0;
-      const sameUaRecent = uaStat?.recent10 || 0;
-      const comboRecent = comboStat?.recent10 || 0;
-      const rapidRepeat = comboRecent >= 2 || (sameIpRecent >= 3 && sameUaRecent >= 2);
-      const hasPattern =
-        rapidRepeat ||
-        (ipStat?.recent60 || 0) >= 3 ||
-        (uaStat?.recent60 || 0) >= 3;
+        const sameIpRecent = ipStat?.recent10 || 0;
+        const sameUaRecent = uaStat?.recent10 || 0;
+        const comboRecent = comboStat?.recent10 || 0;
+        const rapidRepeat = comboRecent >= 2 || (sameIpRecent >= 3 && sameUaRecent >= 2);
+        const hasPattern =
+          rapidRepeat ||
+          (ipStat?.recent60 || 0) >= 3 ||
+          (uaStat?.recent60 || 0) >= 3;
 
-      const spamSignals = {
-        rapidRepeat,
-        sameIpLast10m: sameIpRecent,
-        sameUaLast10m: sameUaRecent,
-        sameIpLast60m: ipStat?.recent60 || 0,
-        sameUaLast60m: uaStat?.recent60 || 0,
-        comboLast10m: comboRecent,
-        lastSeenAt: comboStat?.lastSeenAt || ipStat?.lastSeenAt || uaStat?.lastSeenAt || null,
-        windowMinutes: 60,
-        score:
-          (rapidRepeat ? 2 : 0) +
-          ((ipStat?.recent60 || 0) >= 3 ? 1 : 0) +
-          ((uaStat?.recent60 || 0) >= 3 ? 1 : 0),
-      };
+        const spamSignals = {
+          rapidRepeat,
+          sameIpLast10m: sameIpRecent,
+          sameUaLast10m: sameUaRecent,
+          sameIpLast60m: ipStat?.recent60 || 0,
+          sameUaLast60m: uaStat?.recent60 || 0,
+          comboLast10m: comboRecent,
+          lastSeenAt: comboStat?.lastSeenAt || ipStat?.lastSeenAt || uaStat?.lastSeenAt || null,
+          windowMinutes: 60,
+          score:
+            (rapidRepeat ? 2 : 0) +
+            ((ipStat?.recent60 || 0) >= 3 ? 1 : 0) +
+            ((uaStat?.recent60 || 0) >= 3 ? 1 : 0),
+        };
 
-      return {
-        ...submission,
-        spamSignals,
-        hasSpamPattern: hasPattern,
-      };
-    });
+        return {
+          ...submission,
+          spamSignals,
+          hasSpamPattern: hasPattern,
+        };
+      });
+    } catch (spamError) {
+      console.warn('Spam signal enrichment failed, returning base submissions:', spamError?.message || spamError);
+      submissionsWithSignals = submissionsWithGeo;
+    }
 
     let countQuery = db.select({ total: count() }).from(submissions);
     if (whereClause) countQuery = countQuery.where(whereClause);
