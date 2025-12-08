@@ -1,5 +1,6 @@
 import { pgTable, serial, text, timestamp, varchar, integer, jsonb, uuid, inet } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 
 export const submissions = pgTable('submissions', {
   id: serial('id').primaryKey(),
@@ -108,7 +109,7 @@ export const incompleteForms = pgTable('incomplete_forms', {
 });
 
 export const accessLogs = pgTable('access_logs', {
-  id: uuid('id').defaultRandom().primaryKey(),
+  id: uuid('id').$defaultFn(() => randomUUID()).primaryKey(),
   sessionId: uuid('session_id'),
   userIp: inet('user_ip'),
   userAgent: text('user_agent'),

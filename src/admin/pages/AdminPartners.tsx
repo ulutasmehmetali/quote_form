@@ -201,14 +201,14 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
         partnerId: id,
         success: data.success,
         message: data.success 
-          ? `Başarılı! Status: ${data.status}, Latency: ${data.latency}ms`
-          : `Başarısız: ${data.error || `Status ${data.status}`}`,
+          ? `Successful! Status: ${data.status}, Latency: ${data.latency}ms`
+          : `Failed: ${data.error || `Status ${data.status}`}`,
       });
     } catch (error) {
       setTestResult({
         partnerId: id,
         success: false,
-        message: 'Bağlantı hatası',
+        message: 'Connection error',
       });
     } finally {
       setTesting(null);
@@ -257,7 +257,7 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleString('tr-TR');
+    return new Date(dateStr).toLocaleString('en-US');
   };
 
   const getSuccessRate = (partner: Partner) => {
@@ -282,8 +282,8 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
             <ArrowLeft className="w-5 h-5 text-slate-400" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-white">Partner API Yönetimi</h1>
-            <p className="text-slate-400 text-sm">Müşteri verilerini göndermek için harici API'ler yapılandırın</p>
+            <h1 className="text-2xl font-bold text-white">Partner API Management</h1>
+            <p className="text-slate-400 text-sm">Customer verilerini göndermek için harici API'ler yapılandırın</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -292,7 +292,7 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
             className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-lg hover:from-sky-600 hover:to-blue-700 transition-all shadow-lg"
           >
             <Plus className="w-4 h-4" />
-            Yeni Partner Ekle
+            New Partner Add
           </button>
           <button
             onClick={() => onNavigate('automations')}
@@ -311,7 +311,7 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
               <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Workflow Senkronizasyonu</p>
               <h2 className="text-lg font-semibold text-white">Partner API'ler + Workflow</h2>
               <p className="text-sm text-slate-400">
-                İş akışlarınıza bağlı Partner API'ler buradan yönetilir. Her partner kaydı workflow adımına dönüştürülebilir.
+                Manage Partner APIs linked to your workflows. Each partner record can become a workflow step.
               </p>
             </div>
             <button
@@ -323,9 +323,9 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
           </div>
           <div className="flex flex-wrap gap-3">
             {workflowLoading ? (
-              <span className="text-xs text-slate-400">Workflows yükleniyor...</span>
+              <span className="text-xs text-slate-400">Loading workflows...</span>
             ) : workflows.length === 0 ? (
-              <span className="text-xs text-slate-400">Hiç workflow yok. Yeni bir workflow oluşturun.</span>
+              <span className="text-xs text-slate-400">Hiç workflow yok. New bir workflow oluşturun.</span>
             ) : (
               workflows.slice(0, 3).map((workflow) => (
                 <div
@@ -344,13 +344,13 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
       {partners.length === 0 ? (
         <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-700/50 p-12 text-center">
           <Link className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-white mb-2">Henüz Partner API Yok</h3>
-          <p className="text-slate-400 mb-6">Müşteri verilerini otomatik olarak göndermek için partner API'leri ekleyin</p>
+          <h3 className="text-lg font-semibold text-white mb-2">No Partner APIs yet</h3>
+          <p className="text-slate-400 mb-6">Customer verilerini otomatik olarak göndermek için partner API'leri ekleyin</p>
           <button
             onClick={() => { resetForm(); setShowModal(true); }}
             className="px-4 py-2 bg-sky-500/20 text-sky-400 rounded-lg hover:bg-sky-500/30 transition-colors"
           >
-            İlk Partner'ı Ekle
+            First Partner'ı Add
           </button>
         </div>
       ) : (
@@ -408,7 +408,7 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
                     </div>
                   ) : (
                     <div className="mb-3 text-xs text-slate-400">
-                      Workflow ile bağlantı bulunmuyor. Yeni partner eklediğinizde otomatik workflow oluşturulur.
+                      Workflow ile bağlantı bulunmuyor. New partner eklediğinizde otomatik workflow oluşturulur.
                     </div>
                   )}
 
@@ -422,11 +422,11 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
                       <p className="text-red-400 font-medium">{partner.failure_count}</p>
                     </div>
                     <div>
-                      <span className="text-slate-500">Başarı Oranı</span>
+                      <span className="text-slate-500">Success Rate</span>
                       <p className="text-white font-medium">{getSuccessRate(partner)}</p>
                     </div>
                     <div>
-                      <span className="text-slate-500">Son Başarı</span>
+                      <span className="text-slate-500">Last Success</span>
                       <p className="text-slate-300 text-xs">{formatDate(partner.last_success_at)}</p>
                     </div>
                   </div>
@@ -450,7 +450,7 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
                     onClick={() => handleTest(partner.id)}
                     disabled={testing === partner.id}
                     className="p-2 text-sky-400 hover:bg-sky-500/20 rounded-lg transition-colors disabled:opacity-50"
-                    title="Bağlantıyı Test Et"
+                    title="Test Connection"
                   >
                     {testing === partner.id ? (
                       <RefreshCw className="w-5 h-5 animate-spin" />
@@ -465,14 +465,14 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
                         ? 'text-emerald-400 hover:bg-emerald-500/20'
                         : 'text-slate-400 hover:bg-slate-500/20'
                     }`}
-                    title={partner.is_active ? 'Devre Dışı Bırak' : 'Aktif Et'}
+                    title={partner.is_active ? 'Disable' : 'Enable'}
                   >
                     {partner.is_active ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
                   </button>
                   <button
                     onClick={() => openEditModal(partner)}
                     className="p-2 text-amber-400 hover:bg-amber-500/20 rounded-lg transition-colors"
-                    title="Düzenle"
+                    title="Edit"
                   >
                     <Edit2 className="w-5 h-5" />
                   </button>
@@ -495,20 +495,20 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
           <div className="bg-slate-800 rounded-xl border border-slate-700/50 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-slate-700/50">
               <h2 className="text-xl font-bold text-white">
-                {editingPartner ? 'Partner API Düzenle' : 'Yeni Partner API Ekle'}
+                {editingPartner ? 'Partner API Edit' : 'New Partner API Add'}
               </h2>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Partner Adı *</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Partner Name *</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-4 py-2.5 bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-sky-500 focus:border-transparent"
-                    placeholder="Örn: Acme Lead API"
+                    placeholder="e.g., Acme Lead API"
                     required
                   />
                 </div>
@@ -541,7 +541,7 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Kimlik Doğrulama Yöntemi</label>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Authentication Method</label>
                 <select
                   value={formData.authMethod}
                   onChange={(e) => setFormData({ ...formData, authMethod: e.target.value, authConfig: {} })}
@@ -564,7 +564,7 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
                       value={formData.authConfig.apiKey || ''}
                       onChange={(e) => setFormData({ ...formData, authConfig: { ...formData.authConfig, apiKey: e.target.value } })}
                       className="w-full px-4 py-2.5 bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-sky-500 focus:border-transparent pr-12"
-                      placeholder="API anahtarınızı girin"
+                      placeholder="Enter your API key"
                     />
                     <button
                       type="button"
@@ -586,7 +586,7 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
                       value={formData.authConfig.bearerToken || ''}
                       onChange={(e) => setFormData({ ...formData, authConfig: { ...formData.authConfig, bearerToken: e.target.value } })}
                       className="w-full px-4 py-2.5 bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-sky-500 focus:border-transparent pr-12"
-                      placeholder="Token'ınızı girin"
+                      placeholder="Enter your token"
                     />
                     <button
                       type="button"
@@ -602,7 +602,7 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
               {formData.authMethod === 'basic' && (
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Kullanıcı Adı</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">User Adı</label>
                     <input
                       type="text"
                       value={formData.authConfig.username || ''}
@@ -611,7 +611,7 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Şifre</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Password</label>
                     <div className="relative">
                       <input
                         type={showPassword ? 'text' : 'password'}
@@ -634,7 +634,7 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
               {formData.authMethod === 'custom_header' && (
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Header Adı</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Header Name</label>
                     <input
                       type="text"
                       value={formData.authConfig.headerName || ''}
@@ -644,7 +644,7 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Header Değeri</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Header Value</label>
                     <div className="relative">
                       <input
                         type={showPassword ? 'text' : 'password'}
@@ -665,8 +665,8 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Hizmet Türleri (opsiyonel)</label>
-                <p className="text-xs text-slate-500 mb-2">Sadece seçilen hizmet türleri için veri gönderilir. Boş bırakılırsa tüm türler gönderilir.</p>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Service Types (optional)</label>
+                <p className="text-xs text-slate-500 mb-2">Send data only for selected service types. Leave empty to allow all types.</p>
                 <div className="flex flex-wrap gap-2">
                   {SERVICE_OPTIONS.map((service) => (
                     <button
@@ -703,7 +703,7 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Retry Sayısı</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Retry Count</label>
                   <input
                     type="number"
                     value={formData.retryCount}
@@ -716,13 +716,13 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Notlar</label>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Notes</label>
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   className="w-full px-4 py-2.5 bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-sky-500 focus:border-transparent"
                   rows={3}
-                  placeholder="Bu partner hakkında notlar..."
+                  placeholder="Notes about this partner..."
                 />
               </div>
 
@@ -732,13 +732,13 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
                   onClick={() => { setShowModal(false); resetForm(); }}
                   className="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors"
                 >
-                  İptal
+                  Cancelled
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-lg hover:from-sky-600 hover:to-blue-700 transition-all shadow-lg"
                 >
-                  {editingPartner ? 'Güncelle' : 'Kaydet'}
+                  {editingPartner ? 'Update' : 'Kaydet'}
                 </button>
               </div>
             </form>

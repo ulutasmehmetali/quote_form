@@ -247,7 +247,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
       const rows = dataToExport.map(s => [
         s.id, s.name, s.email, s.phone, s.serviceType, s.zipCode, s.status,
         s.country || '', s.city || '', s.browser || '', s.deviceType || '',
-        new Date(s.createdAt).toLocaleString('tr-TR')
+        new Date(s.createdAt).toLocaleString('en-US')
       ]);
       const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
       downloadFile(csv, 'submissions.csv', 'text/csv');
@@ -298,11 +298,11 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
   };
 
   const statusConfig: Record<string, { color: string; bg: string; icon: string; label: string }> = {
-    new: { color: 'text-blue-400', bg: 'bg-blue-500/20 border-blue-500/30', icon: '🆕', label: 'Yeni' },
-    contacted: { color: 'text-amber-400', bg: 'bg-amber-500/20 border-amber-500/30', icon: '📞', label: 'İletişimde' },
-    in_progress: { color: 'text-purple-400', bg: 'bg-purple-500/20 border-purple-500/30', icon: '⚙️', label: 'Devam Ediyor' },
-    completed: { color: 'text-emerald-400', bg: 'bg-emerald-500/20 border-emerald-500/30', icon: '✅', label: 'Tamamlandı' },
-    cancelled: { color: 'text-red-400', bg: 'bg-red-500/20 border-red-500/30', icon: '❌', label: 'İptal' },
+    new: { color: 'text-blue-400', bg: 'bg-blue-500/20 border-blue-500/30', icon: '🆕', label: 'New' },
+    contacted: { color: 'text-amber-400', bg: 'bg-amber-500/20 border-amber-500/30', icon: '📞', label: 'In contact' },
+    in_progress: { color: 'text-purple-400', bg: 'bg-purple-500/20 border-purple-500/30', icon: '⚙️', label: 'In progress' },
+    completed: { color: 'text-emerald-400', bg: 'bg-emerald-500/20 border-emerald-500/30', icon: '✅', label: 'Completed' },
+    cancelled: { color: 'text-red-400', bg: 'bg-red-500/20 border-red-500/30', icon: '❌', label: 'Cancelled' },
   };
 
   const deviceIcons: Record<string, string> = {
@@ -322,7 +322,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
             </div>
             <div>
               <h1 className="font-bold text-white text-lg">MIYOMINT</h1>
-              <p className="text-sm text-slate-400">Yönetim Paneli</p>
+              <p className="text-sm text-slate-400">Admin Panel</p>
             </div>
           </div>
           
@@ -331,16 +331,16 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
               <span className="flex items-center gap-2">📊 Dashboard</span>
             </button>
             <button onClick={() => onNavigate('submissions')} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium shadow-lg shadow-sky-500/20">
-              <span className="flex items-center gap-2">📋 Başvurular</span>
+              <span className="flex items-center gap-2">📋 Submissions</span>
             </button>
             <button onClick={() => onNavigate('reports')} className="px-5 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 font-medium transition-all">
-              <span className="flex items-center gap-2">📈 Raporlar</span>
+              <span className="flex items-center gap-2">📈 Reports</span>
             </button>
             <button onClick={() => onNavigate('logs')} className="px-5 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 font-medium transition-all">
-              <span className="flex items-center gap-2">📜 Loglar</span>
+              <span className="flex items-center gap-2">📜 Logs</span>
             </button>
             <button onClick={() => onNavigate('settings')} className="px-5 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 font-medium transition-all">
-              <span className="flex items-center gap-2">⚙️ Ayarlar</span>
+              <span className="flex items-center gap-2">⚙️ Settings</span>
             </button>
           </nav>
 
@@ -351,7 +351,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
               </div>
               <span className="text-white font-medium hidden sm:block">{user?.username}</span>
             </div>
-            <button onClick={logout} className="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all" title="Çıkış Yap">
+            <button onClick={logout} className="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all" title="Log Out">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
@@ -364,9 +364,9 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
             <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-              📋 Başvurular
+              📋 Submissions
             </h2>
-            <p className="text-slate-400 mt-1">{usedFallback ? 'Son başvurular gösteriliyor (filtre boş veya veri yok).' : `${total} kayıt bulundu`}</p>
+            <p className="text-slate-400 mt-1">{usedFallback ? 'Showing recent submissions (empty filters or no data).' : `${total} records found`}</p>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -386,15 +386,15 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-                Dışa Aktar
+                Export
               </button>
               {showExportMenu && (
                 <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-20">
                   <button onClick={() => exportData('csv')} className="w-full px-4 py-3 text-left text-slate-300 hover:bg-white/5 flex items-center gap-3 transition-all">
-                    <span className="text-lg">📊</span> CSV olarak indir
+                    <span className="text-lg">📊</span> Download CSV
                   </button>
                   <button onClick={() => exportData('json')} className="w-full px-4 py-3 text-left text-slate-300 hover:bg-white/5 flex items-center gap-3 transition-all">
-                    <span className="text-lg">📄</span> JSON olarak indir
+                    <span className="text-lg">📄</span> Download JSON
                   </button>
                 </div>
               )}
@@ -406,36 +406,36 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
           <div className="bg-slate-800/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">🔍 Arama</label>
+                <label className="block text-sm font-medium text-slate-400 mb-2">🔍 Search</label>
                 <input
                   type="text"
                   value={filterSearch}
                   onChange={(e) => { setFilterSearch(e.target.value); setPage(1); }}
-                  placeholder="İsim, email, telefon, ZIP..."
+                  placeholder="Name, email, phone, ZIP..."
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-700/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50 transition-all"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">📌 Durum</label>
+                <label className="block text-sm font-medium text-slate-400 mb-2">📌 Status</label>
                 <select
                   value={filterStatus}
                   onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-700/50 border border-white/10 text-white focus:outline-none focus:border-sky-500/50 transition-all"
                 >
-                  <option value="all">Tüm Durumlar</option>
+                  <option value="all">All Statuses</option>
                   {filters?.statuses.map(s => (
                     <option key={s} value={s}>{statusConfig[s]?.icon} {statusConfig[s]?.label || s}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">🌍 Ülke</label>
+                <label className="block text-sm font-medium text-slate-400 mb-2">🌍 Country</label>
                 <select
                   value={filterCountry}
                   onChange={(e) => { setFilterCountry(e.target.value); setPage(1); }}
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-700/50 border border-white/10 text-white focus:outline-none focus:border-sky-500/50 transition-all"
                 >
-                  <option value="all">Tüm Ülkeler</option>
+                  <option value="all">All Countries</option>
                   {filters?.countries.map(c => (
                     <option key={c.countryCode} value={c.countryCode}>
                       {countryFlags[c.countryCode] || '🌍'} {c.country}
@@ -444,13 +444,13 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">🛠️ Hizmet</label>
+                <label className="block text-sm font-medium text-slate-400 mb-2">🛠️ Service</label>
                 <select
                   value={filterService}
                   onChange={(e) => { setFilterService(e.target.value); setPage(1); }}
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-700/50 border border-white/10 text-white focus:outline-none focus:border-sky-500/50 transition-all"
                 >
-                  <option value="all">Tüm Hizmetler</option>
+                  <option value="all">All Services</option>
                   {filters?.serviceTypes.map(s => (
                     <option key={s} value={s}>{s}</option>
                   ))}
@@ -459,7 +459,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">📅 Başlangıç</label>
+                <label className="block text-sm font-medium text-slate-400 mb-2">📅 Start</label>
                 <input
                   type="date"
                   value={filterDateFrom}
@@ -468,7 +468,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">📅 Bitiş</label>
+                <label className="block text-sm font-medium text-slate-400 mb-2">📅 End</label>
                 <input
                   type="date"
                   value={filterDateTo}
@@ -497,10 +497,10 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
               <div className="w-10 h-10 bg-sky-500/20 rounded-full flex items-center justify-center text-sky-400 font-bold">
                 {selectedIds.length}
               </div>
-              <span className="text-white font-medium">{selectedIds.length} kayıt seçildi</span>
+              <span className="text-white font-medium">{selectedIds.length} records selected</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-slate-400 text-sm mr-2">Toplu işlem:</span>
+              <span className="text-slate-400 text-sm mr-2">Bulk action:</span>
               {Object.entries(statusConfig).map(([status, config]) => (
                 <button
                   key={status}
@@ -514,7 +514,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                 onClick={() => setSelectedIds([])}
                 className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white ml-2"
               >
-                Vazgeç
+                Cancel
               </button>
             </div>
           </div>
@@ -541,13 +541,13 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                         className="w-4 h-4 rounded bg-slate-700 border-slate-600 text-sky-500 focus:ring-sky-500/20"
                       />
                     </th>
-                    <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Müşteri</th>
-                    <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Hizmet</th>
-                    <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Konum</th>
+                    <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Customer</th>
+                    <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Service</th>
+                    <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Location</th>
                     <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Cihaz</th>
-                    <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Durum</th>
+                    <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
                     <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Tarih</th>
-                    <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">İşlem</th>
+                    <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -555,14 +555,14 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                     const createdDate = new Date(sub.createdAt);
                     const hasValidDate = !Number.isNaN(createdDate.getTime());
                     const dateLabel = hasValidDate
-                      ? createdDate.toLocaleDateString('tr-TR', {
+                      ? createdDate.toLocaleDateString('en-US', {
                           day: '2-digit',
                           month: '2-digit',
                           year: 'numeric',
                         })
                       : '-';
                     const timeLabel = hasValidDate
-                      ? createdDate.toLocaleTimeString('tr-TR', {
+                      ? createdDate.toLocaleTimeString('en-US', {
                           hour: '2-digit',
                           minute: '2-digit',
                           second: '2-digit',
@@ -600,7 +600,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                           <span className="text-xl">{countryFlags[sub.countryCode || 'XX'] || '🌍'}</span>
                           <div>
                             <p className="text-sm text-white">{sub.city || '-'}</p>
-                            <p className="text-xs text-slate-500">{sub.country || 'Bilinmiyor'}</p>
+                            <p className="text-xs text-slate-500">{sub.country || 'Unknown'}</p>
                           </div>
                         </div>
                       </td>
@@ -643,8 +643,8 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                     <tr>
                       <td colSpan={8} className="px-6 py-16 text-center">
                         <div className="text-6xl mb-4">📭</div>
-                        <p className="text-slate-400 text-lg">Başvuru bulunamadı</p>
-                        <p className="text-slate-500 text-sm mt-1">Filtrelerinizi değiştirmeyi deneyin</p>
+                        <p className="text-slate-400 text-lg">No submissions found</p>
+                        <p className="text-slate-500 text-sm mt-1">Try adjusting your filters</p>
                       </td>
                     </tr>
                   )}
@@ -654,8 +654,8 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
 
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-2 p-6 border-t border-white/5">
-                <button onClick={() => setPage(1)} disabled={page === 1} className="px-4 py-2 rounded-xl bg-slate-700/50 text-slate-300 disabled:opacity-50 hover:bg-slate-700 transition-all text-sm font-medium">İlk</button>
-                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 rounded-xl bg-slate-700/50 text-slate-300 disabled:opacity-50 hover:bg-slate-700 transition-all text-sm font-medium">Önceki</button>
+                <button onClick={() => setPage(1)} disabled={page === 1} className="px-4 py-2 rounded-xl bg-slate-700/50 text-slate-300 disabled:opacity-50 hover:bg-slate-700 transition-all text-sm font-medium">First</button>
+                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 rounded-xl bg-slate-700/50 text-slate-300 disabled:opacity-50 hover:bg-slate-700 transition-all text-sm font-medium">Previous</button>
                 <div className="flex items-center gap-1 px-4">
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     const pageNum = Math.max(1, Math.min(page - 2, totalPages - 4)) + i;
@@ -689,7 +689,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-white">{selectedSubmission.name}</h3>
-                  <p className="text-sm text-slate-400">Başvuru #{selectedSubmission.id}</p>
+                  <p className="text-sm text-slate-400">Submission #{selectedSubmission.id}</p>
                 </div>
               </div>
               <button onClick={() => setSelectedSubmission(null)} className="w-10 h-10 rounded-xl hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all">
@@ -702,7 +702,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-slate-700/30 rounded-2xl p-5 border border-white/5">
                   <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
-                    <span className="text-lg">👤</span> İletişim Bilgileri
+                    <span className="text-lg">👤</span> Contact Info
                   </h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div><label className="text-xs text-slate-500">Ad Soyad</label><p className="font-medium text-white mt-1">{selectedSubmission.name}</p></div>
@@ -714,13 +714,13 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
 
                 <div className="bg-slate-700/30 rounded-2xl p-5 border border-white/5">
                   <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
-                    <span className="text-lg">🌍</span> Konum & Cihaz
+                    <span className="text-lg">🌍</span> Location & Device
                   </h4>
                   <div className="grid grid-cols-2 gap-4">
-                    <div><label className="text-xs text-slate-500">Ülke</label><p className="font-medium text-white mt-1">{countryFlags[selectedSubmission.countryCode || 'XX']} {selectedSubmission.country || 'Bilinmiyor'}</p></div>
-                    <div><label className="text-xs text-slate-500">Şehir</label><p className="font-medium text-white mt-1">{selectedSubmission.city || '-'}</p></div>
-                    <div><label className="text-xs text-slate-500">Tarayıcı</label><p className="font-medium text-white mt-1">{selectedSubmission.browser || '-'} {selectedSubmission.browserVersion || ''}</p></div>
-                    <div><label className="text-xs text-slate-500">İşletim Sistemi</label><p className="font-medium text-white mt-1">{selectedSubmission.os || '-'}</p></div>
+                    <div><label className="text-xs text-slate-500">Country</label><p className="font-medium text-white mt-1">{countryFlags[selectedSubmission.countryCode || 'XX']} {selectedSubmission.country || 'Unknown'}</p></div>
+                    <div><label className="text-xs text-slate-500">City</label><p className="font-medium text-white mt-1">{selectedSubmission.city || '-'}</p></div>
+                    <div><label className="text-xs text-slate-500">Browser</label><p className="font-medium text-white mt-1">{selectedSubmission.browser || '-'} {selectedSubmission.browserVersion || ''}</p></div>
+                    <div><label className="text-xs text-slate-500">Operating System</label><p className="font-medium text-white mt-1">{selectedSubmission.os || '-'}</p></div>
                     <div><label className="text-xs text-slate-500">Cihaz</label><p className="font-medium text-white mt-1">{deviceIcons[selectedSubmission.deviceType || 'desktop']} {selectedSubmission.deviceType || '-'}</p></div>
                     <div><label className="text-xs text-slate-500">Saat Dilimi</label><p className="font-medium text-white mt-1">{selectedSubmission.timezone || '-'}</p></div>
                   </div>
@@ -733,11 +733,11 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                   <p className="font-mono text-white mt-1 text-sm">{selectedSubmission.ipAddress || '-'}</p>
                 </div>
                 <div className="bg-slate-700/30 rounded-xl p-4 border border-white/5">
-                  <label className="text-xs text-slate-500">Hizmet</label>
+                  <label className="text-xs text-slate-500">Service</label>
                   <p className="font-medium text-white mt-1">{selectedSubmission.serviceType}</p>
                 </div>
                 <div className="bg-slate-700/30 rounded-xl p-4 border border-white/5">
-                  <label className="text-xs text-slate-500">Durum</label>
+                  <label className="text-xs text-slate-500">Status</label>
                   <select
                     value={selectedSubmission.status}
                     onChange={(e) => updateStatus(selectedSubmission.id, e.target.value)}
@@ -753,7 +753,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
               {selectedSubmission.answers && Object.keys(selectedSubmission.answers).length > 0 && (
                 <div className="bg-slate-700/30 rounded-2xl p-5 border border-white/5">
                   <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
-                    <span className="text-lg">📝</span> Cevaplar
+                    <span className="text-lg">📝</span> Answers
                   </h4>
                   <div className="space-y-3">
                     {Object.entries(selectedSubmission.answers).map(([key, value]) => (
@@ -771,11 +771,11 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
               {selectedSubmission.photoUrls && selectedSubmission.photoUrls.length > 0 && (
                 <div className="bg-slate-700/30 rounded-2xl p-5 border border-white/5">
                   <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
-                    <span className="text-lg">📷</span> Fotoğraflar ({selectedSubmission.photoUrls.length})
+                    <span className="text-lg">📷</span> Photos ({selectedSubmission.photoUrls.length})
                   </h4>
                   <div className="grid grid-cols-4 gap-3">
                     {selectedSubmission.photoUrls.map((url, index) => (
-                      <img key={index} src={url} alt={`Fotoğraf ${index + 1}`} className="rounded-xl w-full h-24 object-cover cursor-pointer hover:opacity-80 transition-all hover:scale-105" onClick={() => window.open(url, '_blank')} />
+                      <img key={index} src={url} alt={`Photo ${index + 1}`} className="rounded-xl w-full h-24 object-cover cursor-pointer hover:opacity-80 transition-all hover:scale-105" onClick={() => window.open(url, '_blank')} />
                     ))}
                   </div>
                 </div>
@@ -783,17 +783,17 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
 
               <div className="bg-slate-700/30 rounded-2xl p-5 border border-white/5">
                 <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
-                  <span className="text-lg">💬</span> Notlar ({submissionNotes.length})
+                  <span className="text-lg">💬</span> Notes ({submissionNotes.length})
                 </h4>
                 <div className="space-y-3 mb-4 max-h-48 overflow-y-auto">
                   {submissionNotes.map((note: any) => (
                     <div key={note.id} className="bg-slate-800/50 rounded-xl p-3 border border-white/5">
                       <p className="text-white text-sm">{note.note}</p>
-                      <p className="text-xs text-slate-500 mt-2">{new Date(note.createdAt).toLocaleString('tr-TR')}</p>
+                      <p className="text-xs text-slate-500 mt-2">{new Date(note.createdAt).toLocaleString('en-US')}</p>
                     </div>
                   ))}
                   {submissionNotes.length === 0 && (
-                    <p className="text-slate-500 text-center py-4">Henüz not eklenmemiş</p>
+                    <p className="text-slate-500 text-center py-4">No notes yet</p>
                   )}
                 </div>
                 <div className="flex gap-3">
@@ -805,13 +805,13 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                     className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50"
                     onKeyPress={(e) => e.key === 'Enter' && addNote()}
                   />
-                  <button onClick={addNote} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium">Ekle</button>
+                  <button onClick={addNote} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium">Add</button>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
-                <div><label className="text-xs text-slate-500">Oluşturulma</label><p className="text-white mt-1">{new Date(selectedSubmission.createdAt).toLocaleString('tr-TR')}</p></div>
-                <div><label className="text-xs text-slate-500">Güncelleme</label><p className="text-white mt-1">{new Date(selectedSubmission.updatedAt).toLocaleString('tr-TR')}</p></div>
+                <div><label className="text-xs text-slate-500">Created</label><p className="text-white mt-1">{new Date(selectedSubmission.createdAt).toLocaleString('en-US')}</p></div>
+                <div><label className="text-xs text-slate-500">Updated</label><p className="text-white mt-1">{new Date(selectedSubmission.updatedAt).toLocaleString('en-US')}</p></div>
               </div>
             </div>
           </div>

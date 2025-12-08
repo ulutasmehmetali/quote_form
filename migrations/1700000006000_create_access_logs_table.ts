@@ -2,12 +2,8 @@ import { sql } from 'drizzle-orm';
 
 export const up = async (db: any) => {
   await db.execute(sql`
-    CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-  `);
-
-  await db.execute(sql`
     CREATE TABLE IF NOT EXISTS public.access_logs (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      id UUID PRIMARY KEY,
       session_id UUID,
       user_ip INET,
       user_agent TEXT,

@@ -19,18 +19,18 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
     e.preventDefault();
     
     if (newPassword !== confirmPassword) {
-      setMessage({ type: 'error', text: 'Yeni şifreler eşleşmiyor!' });
+      setMessage({ type: 'error', text: 'New şifreler eşleşmiyor!' });
       return;
     }
     
     if (newPassword.length < 8) {
-      setMessage({ type: 'error', text: 'Şifre en az 8 karakter olmalı!' });
+      setMessage({ type: 'error', text: 'Password must be at least 8 characters!' });
       return;
     }
     
     const passwordStrength = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}$/;
     if (!passwordStrength.test(newPassword)) {
-      setMessage({ type: 'error', text: 'Şifre büyük harf, küçük harf, rakam ve özel karakter içermeli!' });
+      setMessage({ type: 'error', text: 'Password must include upper/lowercase letters, a number, and a special character!' });
       return;
     }
     
@@ -51,15 +51,15 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
       const data = await res.json();
       
       if (res.ok) {
-        setMessage({ type: 'success', text: 'Şifre başarıyla değiştirildi!' });
+        setMessage({ type: 'success', text: 'Password changed successfully!' });
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
       } else {
-        setMessage({ type: 'error', text: data.error || 'Şifre değiştirilemedi' });
+        setMessage({ type: 'error', text: data.error || 'Failed to change password' });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Bir hata oluştu' });
+      setMessage({ type: 'error', text: 'An error occurred' });
     } finally {
       setIsLoading(false);
     }
@@ -76,7 +76,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
             </div>
             <div>
               <h1 className="font-bold text-white text-lg">MIYOMINT</h1>
-              <p className="text-sm text-slate-400">Yönetim Paneli</p>
+              <p className="text-sm text-slate-400">Admin Panel</p>
             </div>
           </div>
           
@@ -85,16 +85,16 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
               <span className="flex items-center gap-2">📊 Dashboard</span>
             </button>
             <button onClick={() => onNavigate('submissions')} className="px-5 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 font-medium transition-all">
-              <span className="flex items-center gap-2">📋 Başvurular</span>
+              <span className="flex items-center gap-2">📋 Submissions</span>
             </button>
             <button onClick={() => onNavigate('reports')} className="px-5 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 font-medium transition-all">
-              <span className="flex items-center gap-2">📈 Raporlar</span>
+              <span className="flex items-center gap-2">📈 Reports</span>
             </button>
             <button onClick={() => onNavigate('logs')} className="px-5 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 font-medium transition-all">
-              <span className="flex items-center gap-2">📜 Loglar</span>
+              <span className="flex items-center gap-2">📜 Logs</span>
             </button>
             <button onClick={() => onNavigate('settings')} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium shadow-lg shadow-sky-500/20">
-              <span className="flex items-center gap-2">⚙️ Ayarlar</span>
+              <span className="flex items-center gap-2">⚙️ Settings</span>
             </button>
           </nav>
 
@@ -105,7 +105,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
               </div>
               <span className="text-white font-medium hidden sm:block">{user?.username}</span>
             </div>
-            <button onClick={logout} className="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all" title="Çıkış Yap">
+            <button onClick={logout} className="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all" title="Log Out">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
@@ -117,7 +117,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
       <main className="max-w-3xl mx-auto px-6 py-8">
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-            ⚙️ Ayarlar
+            ⚙️ Settings
           </h2>
           <p className="text-slate-400 mt-1">Hesap ve sistem ayarlarını yönetin</p>
         </div>
@@ -130,7 +130,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
               </div>
               <div>
                 <h3 className="text-xl font-bold text-white">{user?.username}</h3>
-                <p className="text-slate-400">Yönetici Hesabı</p>
+                <p className="text-slate-400">Admin Account</p>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
                   Aktif
@@ -139,7 +139,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
             </div>
 
             <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
-              <span className="text-lg">🔐</span> Şifre Değiştir
+              <span className="text-lg">🔐</span> Password Değjobstir
             </h4>
 
             {message && (
@@ -151,7 +151,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
 
             <form onSubmit={handleChangePassword} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">Mevcut Şifre</label>
+                <label className="block text-sm font-medium text-slate-400 mb-2">Current Password</label>
                 <div className="relative">
                   <input
                     type={showPasswords ? 'text' : 'password'}
@@ -165,12 +165,12 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">Yeni Şifre</label>
+                <label className="block text-sm font-medium text-slate-400 mb-2">New Password</label>
                 <input
                   type={showPasswords ? 'text' : 'password'}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Yeni şifrenizi girin (min. 6 karakter)"
+                  placeholder="New şifrenizi girin (min. 6 karakter)"
                   className="w-full px-4 py-3 rounded-xl bg-slate-700/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50 transition-all"
                   required
                   minLength={6}
@@ -178,12 +178,12 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">Yeni Şifre (Tekrar)</label>
+                <label className="block text-sm font-medium text-slate-400 mb-2">New Password (Tekrar)</label>
                 <input
                   type={showPasswords ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Yeni şifrenizi tekrar girin"
+                  placeholder="New şifrenizi tekrar girin"
                   className="w-full px-4 py-3 rounded-xl bg-slate-700/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50 transition-all"
                   required
                 />
@@ -197,7 +197,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
                     onChange={(e) => setShowPasswords(e.target.checked)}
                     className="w-4 h-4 rounded bg-slate-700 border-slate-600 text-sky-500 focus:ring-sky-500/20"
                   />
-                  Şifreleri göster
+                  Show passwords
                 </label>
                 <button
                   type="submit"
@@ -214,7 +214,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
-                      Şifreyi Değiştir
+                      Change Password
                     </>
                   )}
                 </button>
@@ -224,15 +224,15 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
 
           <div className="bg-slate-800/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
             <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
-              <span className="text-lg">🔧</span> Yönetim Araçları
+              <span className="text-lg">🔧</span> Admin Tools
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <button onClick={() => onNavigate('professionals')} className="p-4 rounded-xl bg-gradient-to-br from-sky-500/10 to-indigo-500/10 border border-sky-500/20 hover:border-sky-500/40 transition-all text-left group">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-sky-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">👷</div>
                   <div>
-                    <p className="font-medium text-white">Profesyoneller</p>
-                    <p className="text-xs text-slate-400">Usta ve şirket yönetimi</p>
+                    <p className="font-medium text-white">Professionals</p>
+                    <p className="text-xs text-slate-400">Professionals and company management</p>
                   </div>
                 </div>
               </button>
@@ -240,8 +240,8 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">👥</div>
                   <div>
-                    <p className="font-medium text-white">Admin Kullanıcıları</p>
-                    <p className="text-xs text-slate-400">Yönetici hesapları</p>
+                    <p className="font-medium text-white">Admin Userları</p>
+                    <p className="text-xs text-slate-400">Admin accounts</p>
                   </div>
                 </div>
               </button>
@@ -268,16 +268,16 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
 
           <div className="bg-slate-800/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
             <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
-              <span className="text-lg">🤝</span> Partner API Entegrasyonu
+              <span className="text-lg">🤝</span> Partner API Integration
             </h4>
-            <p className="text-slate-400 text-sm mb-4">Müşteri verilerini otomatik olarak anlaşmalı partnerlerinize gönderin ve tüm gönderileri takip edin.</p>
+            <p className="text-slate-400 text-sm mb-4">Customer verilerini otomatik olarak anlaşmalı partnerlerinize gönderin ve tüm gönderileri takip edin.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button onClick={() => onNavigate('partners')} className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 hover:border-emerald-500/40 transition-all text-left group">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">🔌</div>
                   <div>
                     <p className="font-medium text-white">Partner API'ler</p>
-                    <p className="text-xs text-slate-400">API yapılandırması ve yönetimi</p>
+                    <p className="text-xs text-slate-400">API configuration and management</p>
                   </div>
                 </div>
               </button>
@@ -285,8 +285,8 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📊</div>
                   <div>
-                    <p className="font-medium text-white">Dağıtım Logları</p>
-                    <p className="text-xs text-slate-400">Gönderim takibi ve izleme</p>
+                    <p className="font-medium text-white">Distribution Logs</p>
+                    <p className="text-xs text-slate-400">Delivery tracking and monitoring</p>
                   </div>
                 </div>
               </button>
@@ -295,7 +295,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
 
           <div className="bg-slate-800/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
             <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
-              <span className="text-lg">ℹ️</span> Sistem Bilgisi
+              <span className="text-lg">ℹ️</span> System Info
             </h4>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-slate-700/30 rounded-xl p-4 border border-white/5">
@@ -307,11 +307,11 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
                 <p className="text-white font-medium mt-1">MIYOMINT Admin</p>
               </div>
               <div className="bg-slate-700/30 rounded-xl p-4 border border-white/5">
-                <p className="text-xs text-slate-500">Kullanıcı</p>
+                <p className="text-xs text-slate-500">User</p>
                 <p className="text-white font-medium mt-1 truncate text-sm">{user?.username || 'N/A'}</p>
               </div>
               <div className="bg-slate-700/30 rounded-xl p-4 border border-white/5">
-                <p className="text-xs text-slate-500">Durum</p>
+                <p className="text-xs text-slate-500">Status</p>
                 <p className="text-emerald-400 font-medium mt-1 flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
                   Aktif
@@ -322,14 +322,14 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
 
           <div className="bg-slate-800/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
             <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
-              <span className="text-lg">⌨️</span> Klavye Kısayolları
+              <span className="text-lg">⌨️</span> Keyboard Shortcuts
             </h4>
             <div className="space-y-2">
               {[
                 { keys: ['Alt', 'D'], action: 'Dashboard' },
-                { keys: ['Alt', 'S'], action: 'Başvurular' },
-                { keys: ['Alt', 'R'], action: 'Raporlar' },
-                { keys: ['Alt', 'L'], action: 'Loglar' },
+                { keys: ['Alt', 'S'], action: 'Submissions' },
+                { keys: ['Alt', 'R'], action: 'Reports' },
+                { keys: ['Alt', 'L'], action: 'Logs' },
                 { keys: ['Esc'], action: 'Modal Kapat' },
               ].map(({ keys, action }) => (
                 <div key={action} className="flex items-center justify-between py-2">
@@ -349,9 +349,9 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
 
           <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-6">
             <h4 className="font-semibold text-red-400 mb-4 flex items-center gap-2">
-              <span className="text-lg">⚠️</span> Tehlikeli Bölge
+              <span className="text-lg">⚠️</span> Danger Zone
             </h4>
-            <p className="text-slate-400 text-sm mb-4">Çıkış yaptığınızda oturumunuz sonlandırılacak ve tekrar giriş yapmanız gerekecek.</p>
+            <p className="text-slate-400 text-sm mb-4">Logging out will end your session and you will need to sign in again.</p>
             <button
               onClick={logout}
               className="px-5 py-2.5 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30 font-medium transition-all flex items-center gap-2"
@@ -359,7 +359,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
-              Oturumu Sonlandır
+              End Session
             </button>
           </div>
         </div>

@@ -121,7 +121,7 @@ export default function AdminProfessionals({ onNavigate }: AdminProfessionalsPro
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Bu profesyoneli silmek istediğinize emin misiniz?')) return;
+    if (!confirm('Are you sure you want to delete this professional?')) return;
     try {
       await fetch(apiUrl(`/api/admin/professionals/${id}`), {
         method: 'DELETE',
@@ -167,15 +167,15 @@ export default function AdminProfessionals({ onNavigate }: AdminProfessionalsPro
           <nav className="flex items-center gap-2">
             {[
               { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-              { id: 'submissions', label: 'Başvurular', icon: '📋' },
-              { id: 'professionals', label: 'Profesyoneller', icon: '👷' },
-              { id: 'settings', label: 'Ayarlar', icon: '⚙️' },
+              { id: 'submissions', label: 'Submissions', icon: '📋' },
+              { id: 'professionals', label: 'Professionals', icon: '👷' },
+              { id: 'settings', label: 'Settings', icon: '⚙️' },
             ].map(item => (
               <button key={item.id} onClick={() => onNavigate(item.id)} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${item.id === 'professionals' ? 'bg-gradient-to-r from-sky-500/20 to-indigo-500/20 text-white border border-sky-500/30' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                 {item.icon} {item.label}
               </button>
             ))}
-            <button onClick={logout} className="ml-4 px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 text-sm font-medium transition-all">Çıkış</button>
+            <button onClick={logout} className="ml-4 px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 text-sm font-medium transition-all">Log Out</button>
           </nav>
         </div>
       </header>
@@ -183,30 +183,30 @@ export default function AdminProfessionals({ onNavigate }: AdminProfessionalsPro
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-3xl font-bold text-white flex items-center gap-3">👷 Profesyoneller</h2>
-            <p className="text-slate-400 mt-1">{total} profesyonel kayıtlı</p>
+            <h2 className="text-3xl font-bold text-white flex items-center gap-3">👷 Professionals</h2>
+            <p className="text-slate-400 mt-1">{total} professionals</p>
           </div>
           <button onClick={() => { setEditingPro(null); setFormData({ name: '', email: '', phone: '', companyName: '', serviceTypes: [], zipCodes: '', licenseNumber: '', notes: '' }); setShowModal(true); }} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium shadow-lg shadow-sky-500/25 hover:shadow-sky-500/40 transition-all flex items-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-            Yeni Profesyonel
+            New Profesyonel
           </button>
         </div>
 
         <div className="flex flex-wrap gap-3 mb-6">
           <input type="text" placeholder="Ara..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="px-4 py-2.5 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-400 focus:outline-none focus:border-sky-500/50 w-64" />
           <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className="px-4 py-2.5 rounded-xl bg-slate-800/50 border border-white/10 text-white focus:outline-none focus:border-sky-500/50">
-            <option value="all">Tüm Durumlar</option>
-            <option value="pending">Beklemede</option>
-            <option value="approved">Onaylı</option>
-            <option value="suspended">Askıda</option>
-            <option value="rejected">Reddedildi</option>
+            <option value="all">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="suspended">Suspended</option>
+            <option value="rejected">Rejected</option>
           </select>
         </div>
 
         {loading ? (
           <div className="text-center py-20"><div className="w-12 h-12 border-4 border-sky-500/20 border-t-sky-500 rounded-full animate-spin mx-auto"></div></div>
         ) : professionals.length === 0 ? (
-          <div className="text-center py-20 text-slate-400">Henüz profesyonel kaydı yok.</div>
+          <div className="text-center py-20 text-slate-400">No professional records yet.</div>
         ) : (
           <div className="grid gap-4">
             {professionals.map((pro) => (
@@ -228,7 +228,7 @@ export default function AdminProfessionals({ onNavigate }: AdminProfessionalsPro
                   <div className="flex items-center gap-3">
                     <div className={`px-3 py-1 rounded-full ${statusColors[pro.status]?.bg || 'bg-slate-500/20'} ${statusColors[pro.status]?.text || 'text-slate-400'} text-xs font-medium flex items-center gap-1.5`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${statusColors[pro.status]?.dot || 'bg-slate-500'}`}></span>
-                      {pro.status === 'pending' ? 'Beklemede' : pro.status === 'approved' ? 'Onaylı' : pro.status === 'suspended' ? 'Askıda' : 'Reddedildi'}
+                      {pro.status === 'pending' ? 'Pending' : pro.status === 'approved' ? 'Approved' : pro.status === 'suspended' ? 'Suspended' : 'Rejected'}
                     </div>
                     <button onClick={() => openEditModal(pro)} className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-all">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -247,12 +247,12 @@ export default function AdminProfessionals({ onNavigate }: AdminProfessionalsPro
 
                 <div className="flex items-center gap-6 mt-4 pt-4 border-t border-white/5">
                   <div className="flex items-center gap-2">
-                    {pro.insurance_verified && <span className="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-xs flex items-center gap-1"><svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>Sigortalı</span>}
-                    {pro.background_checked && <span className="px-2 py-1 rounded-lg bg-purple-500/10 text-purple-400 text-xs flex items-center gap-1"><svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>Güvenlik Kontrolü</span>}
+                    {pro.insurance_verified && <span className="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-xs flex items-center gap-1"><svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>Insured</span>}
+                    {pro.background_checked && <span className="px-2 py-1 rounded-lg bg-purple-500/10 text-purple-400 text-xs flex items-center gap-1"><svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>Background Checked</span>}
                   </div>
                   <div className="flex items-center gap-4 ml-auto text-sm">
                     <span className="text-slate-400">⭐ {pro.rating || '0.0'}</span>
-                    <span className="text-slate-400">{pro.total_jobs || 0} iş</span>
+                    <span className="text-slate-400">{pro.total_jobs || 0} jobs</span>
                   </div>
                   <div className="flex gap-2">
                     {pro.status === 'pending' && (
@@ -262,10 +262,10 @@ export default function AdminProfessionals({ onNavigate }: AdminProfessionalsPro
                       </>
                     )}
                     {pro.status === 'approved' && (
-                      <button onClick={() => handleStatusChange(pro.id, 'suspended')} className="px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 text-xs font-medium transition-all">Askıya Al</button>
+                      <button onClick={() => handleStatusChange(pro.id, 'suspended')} className="px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 text-xs font-medium transition-all">Suspend</button>
                     )}
                     {pro.status === 'suspended' && (
-                      <button onClick={() => handleStatusChange(pro.id, 'approved')} className="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 text-xs font-medium transition-all">Aktifleştir</button>
+                      <button onClick={() => handleStatusChange(pro.id, 'approved')} className="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 text-xs font-medium transition-all">Activate</button>
                     )}
                   </div>
                 </div>
@@ -276,7 +276,7 @@ export default function AdminProfessionals({ onNavigate }: AdminProfessionalsPro
 
         {total > 20 && (
           <div className="flex items-center justify-center gap-2 mt-8">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 rounded-xl bg-slate-800/50 text-slate-300 disabled:opacity-50 hover:bg-slate-700 transition-all text-sm font-medium">Önceki</button>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 rounded-xl bg-slate-800/50 text-slate-300 disabled:opacity-50 hover:bg-slate-700 transition-all text-sm font-medium">Previous</button>
             <span className="px-4 py-2 text-slate-400 text-sm">Sayfa {page} / {Math.ceil(total / 20)}</span>
             <button onClick={() => setPage(p => p + 1)} disabled={page >= Math.ceil(total / 20)} className="px-4 py-2 rounded-xl bg-slate-800/50 text-slate-300 disabled:opacity-50 hover:bg-slate-700 transition-all text-sm font-medium">Sonraki</button>
           </div>
@@ -287,7 +287,7 @@ export default function AdminProfessionals({ onNavigate }: AdminProfessionalsPro
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-slate-800 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-white/10">
             <div className="p-6 border-b border-white/10">
-              <h3 className="text-xl font-bold text-white">{editingPro ? 'Profesyonel Düzenle' : 'Yeni Profesyonel'}</h3>
+              <h3 className="text-xl font-bold text-white">{editingPro ? 'Profesyonel Edit' : 'New Profesyonel'}</h3>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
@@ -304,12 +304,12 @@ export default function AdminProfessionals({ onNavigate }: AdminProfessionalsPro
                   <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full px-4 py-2.5 rounded-xl bg-slate-700/50 border border-white/10 text-white focus:outline-none focus:border-sky-500/50" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Şirket Adı</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Company Name</label>
                   <input type="text" value={formData.companyName} onChange={(e) => setFormData({ ...formData, companyName: e.target.value })} className="w-full px-4 py-2.5 rounded-xl bg-slate-700/50 border border-white/10 text-white focus:outline-none focus:border-sky-500/50" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Hizmet Türleri</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Service Types</label>
                 <div className="flex flex-wrap gap-2">
                   {serviceOptions.map((service) => (
                     <button key={service} type="button" onClick={() => {
@@ -324,20 +324,20 @@ export default function AdminProfessionals({ onNavigate }: AdminProfessionalsPro
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Hizmet Bölgeleri (ZIP kodları, virgülle ayırın)</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Service Regions (ZIP codes, comma separated)</label>
                 <input type="text" value={formData.zipCodes} onChange={(e) => setFormData({ ...formData, zipCodes: e.target.value })} placeholder="90210, 90211, 90212" className="w-full px-4 py-2.5 rounded-xl bg-slate-700/50 border border-white/10 text-white focus:outline-none focus:border-sky-500/50" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Lisans Numarası</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">License Number</label>
                 <input type="text" value={formData.licenseNumber} onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })} className="w-full px-4 py-2.5 rounded-xl bg-slate-700/50 border border-white/10 text-white focus:outline-none focus:border-sky-500/50" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Notlar</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Notes</label>
                 <textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows={3} className="w-full px-4 py-2.5 rounded-xl bg-slate-700/50 border border-white/10 text-white focus:outline-none focus:border-sky-500/50 resize-none" />
               </div>
               <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2.5 rounded-xl bg-slate-700 text-slate-300 hover:bg-slate-600 font-medium transition-all">İptal</button>
-                <button type="submit" className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium shadow-lg hover:shadow-sky-500/25 transition-all">{editingPro ? 'Güncelle' : 'Ekle'}</button>
+                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2.5 rounded-xl bg-slate-700 text-slate-300 hover:bg-slate-600 font-medium transition-all">Cancelled</button>
+                <button type="submit" className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium shadow-lg hover:shadow-sky-500/25 transition-all">{editingPro ? 'Update' : 'Add'}</button>
               </div>
             </form>
           </div>

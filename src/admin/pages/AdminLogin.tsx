@@ -23,7 +23,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
     if (result.success) {
       onLoginSuccess();
     } else {
-      setError(result.error || 'Kullanıcı adı veya şifre hatalı');
+      setError(result.error || 'Invalid username or password');
     }
     
     setIsLoading(false);
@@ -49,7 +49,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
               </div>
             </div>
             <h1 className="text-3xl font-bold text-white mb-2">MIYOMINT</h1>
-            <p className="text-slate-400">Yönetim Paneli</p>
+            <p className="text-slate-400">Admin Panel</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -64,7 +64,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
 
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Kullanıcı Adı
+                Username
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -76,7 +76,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Kullanıcı adınızı girin"
+                  placeholder="Enter your username"
                   className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-slate-700/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50 focus:ring-2 focus:ring-sky-500/20 transition-all"
                   required
                 />
@@ -85,7 +85,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
 
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Şifre
+                Password
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -97,7 +97,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Şifrenizi girin"
+                  placeholder="Enter your password"
                   className="w-full pl-12 pr-12 py-3.5 rounded-xl bg-slate-700/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50 focus:ring-2 focus:ring-sky-500/20 transition-all"
                   required
                 />
@@ -130,14 +130,14 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
                 {isLoading ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    <span>Giriş yapılıyor...</span>
+                    <span>Signing in...</span>
                   </>
                 ) : (
                   <>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                     </svg>
-                    <span>Giriş Yap</span>
+                    <span>Sign In</span>
                   </>
                 )}
               </div>
@@ -149,13 +149,13 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
-              <span>Güvenli bağlantı ile korunmaktadır</span>
+              <span>Protected by a secure connection</span>
             </div>
           </div>
         </div>
 
         <div className="mt-6 text-center text-sm text-slate-500">
-          <p>© 2024 MIYOMINT. Tüm hakları saklıdır.</p>
+          <p>© 2024 MIYOMINT. All rights reserved.</p>
         </div>
       </div>
     </div>

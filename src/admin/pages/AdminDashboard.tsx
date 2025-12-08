@@ -250,7 +250,7 @@ const COUNTRY_CODE_ALIASES: Record<string, string> = {
 
 
 
-  'TÜRKIYE': 'TR',
+  'TURKIYE': 'TR',
 
 
 
@@ -432,7 +432,7 @@ const toFlagEmoji = (code?: string | null) => {
 
 
 
-const weekdays = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 
 
@@ -782,31 +782,31 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
   const statusConfig: Record<string, { color: string; bg: string; icon: string; label?: string }> = {
 
-    new: { color: 'text-blue-600', bg: 'bg-blue-500/10', icon: '🆕', label: 'Yeni' },
+    new: { color: 'text-blue-600', bg: 'bg-blue-500/10', icon: '🆕', label: 'New' },
 
-    'new-fresh': { color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: '🟢', label: 'Yeni (<3s)' },
+    'new-fresh': { color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: '🟢', label: 'New (<3h)' },
 
-    'new-today': { color: 'text-sky-400', bg: 'bg-sky-500/10', icon: '⏱️', label: 'Bugün (3-24s)' },
+    'new-today': { color: 'text-sky-400', bg: 'bg-sky-500/10', icon: '⏱️', label: 'Today (3-24h)' },
 
-    'new-yesterday': { color: 'text-amber-400', bg: 'bg-amber-500/10', icon: '🕰️', label: 'Dün (24-48s)' },
+    'new-yesterday': { color: 'text-amber-400', bg: 'bg-amber-500/10', icon: '🕰️', label: 'Yesterday (24-48h)' },
 
-    'new-older': { color: 'text-purple-400', bg: 'bg-purple-500/10', icon: '🗂️', label: 'Eski (>48s)' },
+    'new-older': { color: 'text-purple-400', bg: 'bg-purple-500/10', icon: '🗂️', label: 'Older (>48h)' },
 
-    contacted: { color: 'text-amber-600', bg: 'bg-amber-500/10', icon: '📞', label: 'İletildi' },
+    contacted: { color: 'text-amber-600', bg: 'bg-amber-500/10', icon: '📞', label: 'Contacted' },
 
-    in_progress: { color: 'text-purple-600', bg: 'bg-purple-500/10', icon: '⚙️', label: 'İşleniyor' },
+    in_progress: { color: 'text-purple-600', bg: 'bg-purple-500/10', icon: '⚙️', label: 'In progress' },
 
-    completed: { color: 'text-emerald-600', bg: 'bg-emerald-500/10', icon: '✅', label: 'Tamamlandı' },
+    completed: { color: 'text-emerald-600', bg: 'bg-emerald-500/10', icon: '✅', label: 'Completed' },
 
-    cancelled: { color: 'text-red-600', bg: 'bg-red-500/10', icon: '❌', label: 'İptal' },
+    cancelled: { color: 'text-red-600', bg: 'bg-red-500/10', icon: '❌', label: 'Cancelled' },
 
   };
 
   const NEW_BUCKET_LABELS: Record<string, string> = {
-    fresh: 'Yeni (<3 saat)',
-    today: 'Bugün (3-24s)',
-    yesterday: 'Dün (24-48s)',
-    older: 'Eski (>48s)',
+    fresh: 'New (<3 saat)',
+    today: 'Today (3-24h)',
+    yesterday: 'Yesterday (24-48h)',
+    older: 'Older (>48h)',
   };
 
   const NEW_SEGMENT_COLORS: Record<string, string> = {
@@ -837,7 +837,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   const prettyStatusLabel = (status: string, createdAt?: string) => {
     if (status.startsWith('new-')) {
       const bucket = status.replace('new-', '');
-      return NEW_BUCKET_LABELS[bucket] || 'Yeni';
+      return NEW_BUCKET_LABELS[bucket] || 'New';
     }
     return statusConfig[status]?.label || status.replace('_', ' ');
   };
@@ -1125,7 +1125,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-          <p className="text-slate-400 animate-pulse">Veriler yükleniyor...</p>
+          <p className="text-slate-400 animate-pulse">Loading data...</p>
 
 
         </div>
@@ -1169,7 +1169,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-  const weeklyServiceName = stats.weeklyTrendService?.serviceType || 'Henüz hizmet yok';
+  const weeklyServiceName = stats.weeklyTrendService?.serviceType || 'No service yet';
 
 
   const weeklyServiceCount = stats.weeklyTrendService?.count || 0;
@@ -1272,11 +1272,11 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-              <p className="font-bold">{newCount} Yeni Başvuru!</p>
+              <p className="font-bold">{newCount} New Submission!</p>
 
 
 
-              <p className="text-sm text-white/80">Az önce yeni başvuru(lar) geldi</p>
+              <p className="text-sm text-white/80">New submission(s) just arrived</p>
 
 
             </div>
@@ -1338,7 +1338,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-              <p className="text-sm text-slate-400">Yönetim Paneli</p>
+              <p className="text-sm text-slate-400">Admin Panel</p>
 
 
             </div>
@@ -1373,7 +1373,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-              <span className="flex items-center gap-2">📋 Başvurular</span>
+              <span className="flex items-center gap-2">📋 Submissions</span>
 
 
 
@@ -1385,7 +1385,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-              <span className="flex items-center gap-2">📈 Raporlar</span>
+              <span className="flex items-center gap-2">📈 Reports</span>
 
 
 
@@ -1397,7 +1397,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-              <span className="flex items-center gap-2">📜 Loglar</span>
+              <span className="flex items-center gap-2">📜 Logs</span>
 
 
 
@@ -1409,7 +1409,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-              <span className="flex items-center gap-2">⚙️ Ayarlar</span>
+              <span className="flex items-center gap-2">⚙️ Settings</span>
 
 
 
@@ -1437,7 +1437,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-              <span>Son güncelleme: {lastUpdate.toLocaleTimeString('tr-TR')}</span>
+              <span>Last update: {lastUpdate.toLocaleTimeString('tr-TR')}</span>
 
 
             </div>
@@ -1468,7 +1468,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-            <button onClick={logout} className="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all" title="Çıkış Yap">
+            <button onClick={logout} className="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all" title="Log Out">
 
 
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -1513,11 +1513,11 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-            <h2 className="text-3xl font-bold text-white">Hoş Geldiniz! 👋</h2>
+            <h2 className="text-3xl font-bold text-white">Welcome! 👋</h2>
 
 
 
-            <p className="text-slate-400 mt-1">İşte bugünün özeti ve performans metrikleri</p>
+            <p className="text-slate-400 mt-1">Here is today’s summary and performance metrics</p>
 
 
           </div>
@@ -1564,7 +1564,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-                {isRefreshing ? 'Yenileniyor' : 'Yenile'}
+                {isRefreshing ? 'Newleniyor' : 'Newle'}
 
 
               </span>
@@ -1579,7 +1579,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-              Tüm Başvurular
+              All Submissions
 
 
 
@@ -1649,7 +1649,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-                  <p className="text-xs text-slate-400 mt-1">Toplam Başvuru</p>
+                  <p className="text-xs text-slate-400 mt-1">Total Submissions</p>
 
 
 
@@ -1721,7 +1721,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-                  <p className="text-xs text-slate-400 mt-1">Bugün</p>
+                  <p className="text-xs text-slate-400 mt-1">Today</p>
 
 
 
@@ -1749,7 +1749,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-                <span>Ortalama: {avgDaily}/gün</span>
+                <span>Average: {avgDaily}/day</span>
 
 
 
@@ -1841,7 +1841,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-                  <p className="text-xs text-slate-400 mt-1">Son 7 gün</p>
+                  <p className="text-xs text-slate-400 mt-1">Last 7 days</p>
 
 
 
@@ -1885,7 +1885,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-                  <span className="text-slate-400">({weeklyServiceCount} başvuru)</span>
+                  <span className="text-slate-400">({weeklyServiceCount} submission)</span>
 
 
 
@@ -1985,7 +1985,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-              <span>Yarım form: {partialDrafts}</span>
+              <span>Partial form: {partialDrafts}</span>
 
 
 
@@ -2023,7 +2023,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-              <span className="text-2xl">🎯</span> Durum Dağılımı
+              <span className="text-2xl">🎯</span> Status Distribution
 
 
 
@@ -2168,7 +2168,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-              <span className="text-2xl">🌍</span> Ülke Dağılımı
+              <span className="text-2xl">🌍</span> Country Distribution
 
 
 
@@ -2212,7 +2212,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
                   <span className="text-xl">{flagIcon}</span>
 
-                  <span className="text-slate-300 text-sm">{country || countryCode || 'Bilinmiyor'}</span>
+                  <span className="text-slate-300 text-sm">{country || countryCode || 'Unknown'}</span>
 
                 </div>
 
@@ -2264,7 +2264,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-                <p className="text-slate-500 text-center py-8">Henüz konum verisi yok</p>
+                <p className="text-slate-500 text-center py-8">No location data yet</p>
 
 
 
@@ -2292,7 +2292,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-              <span className="text-2xl">📱</span> Cihaz & Tarayıcı
+              <span className="text-2xl">📱</span> Device & Browser
 
 
 
@@ -2360,7 +2360,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-              <p className="text-sm text-slate-400 mb-3">Tarayıcılar</p>
+              <p className="text-sm text-slate-400 mb-3">Browsers</p>
 
 
 
@@ -2458,7 +2458,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-                <span className="text-2xl">🏆</span> Popüler Hizmetler
+                <span className="text-2xl">🏆</span> Popular Services
 
 
 
@@ -2586,7 +2586,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-                <span className="text-2xl">📋</span> Son Başvurular
+                <span className="text-2xl">📋</span> Recent Submissions
 
 
 
@@ -2598,7 +2598,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-                Tümünü Gör →
+                See All →
 
 
 
@@ -2618,11 +2618,11 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-                const serviceTypeLabel = sub.service_type || sub.serviceType || 'Bilinmiyor';
+                const serviceTypeLabel = sub.service_type || sub.serviceType || 'Unknown';
 
 
 
-                const deviceTypeLabel = sub.deviceType || sub.device_type || 'Bilinmiyor';
+                const deviceTypeLabel = sub.deviceType || sub.device_type || 'Unknown';
 
 
 
@@ -2640,7 +2640,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-                const countryLabel = sub.country || sub.countryCode || 'Bilinmiyor';
+                const countryLabel = sub.country || sub.countryCode || 'Unknown';
 
 
 
@@ -2661,7 +2661,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
                 const formattedDate
                 = dateObject && !Number.isNaN(dateObject.getTime())
-                ? dateObject.toLocaleDateString('tr-TR')
+                ? dateObject.toLocaleDateString('en-US')
                 : '—';
 
                 const formattedTime
@@ -2775,7 +2775,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-                <p className="text-slate-500 text-center py-8">Henüz başvuru yok</p>
+                <p className="text-slate-500 text-center py-8">No submissions yet</p>
 
 
 

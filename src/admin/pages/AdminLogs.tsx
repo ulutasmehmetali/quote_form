@@ -61,23 +61,14 @@ interface AdminLogsProps {
 
 
 const actionConfig: Record<string, { icon: string; label: string; color: string; bg: string }> = {
-
-  login_success: { icon: '✅', label: 'Giriş Başarılı', color: 'text-emerald-400', bg: 'bg-emerald-500/20 border-emerald-500/30' },
-
-  login_failed: { icon: '❌', label: 'Giriş Başarısız', color: 'text-red-400', bg: 'bg-red-500/20 border-red-500/30' },
-
-  logout: { icon: '🚪', label: 'Çıkış', color: 'text-slate-400', bg: 'bg-slate-500/20 border-slate-500/30' },
-
-  view_submission: { icon: '📝', label: 'Görüntüleme', color: 'text-blue-400', bg: 'bg-blue-500/20 border-blue-500/30' },
-
-  update_submission: { icon: '🔄', label: 'Güncelleme', color: 'text-amber-400', bg: 'bg-amber-500/20 border-amber-500/30' },
-
-  delete_submission: { icon: '🗑️', label: 'Silme', color: 'text-red-400', bg: 'bg-red-500/20 border-red-500/30' },
-
-  add_note: { icon: '🗒️', label: 'Not Ekleme', color: 'text-purple-400', bg: 'bg-purple-500/20 border-purple-500/30' },
-
-  change_password: { icon: '🔐', label: 'Şifre Değiştirme', color: 'text-indigo-400', bg: 'bg-indigo-500/20 border-indigo-500/30' },
-
+  login_success: { icon: '✅', label: 'Login Success', color: 'text-emerald-400', bg: 'bg-emerald-500/20 border-emerald-500/30' },
+  login_failed: { icon: '❌', label: 'Login Failed', color: 'text-red-400', bg: 'bg-red-500/20 border-red-500/30' },
+  logout: { icon: '🚪', label: 'Logout', color: 'text-slate-400', bg: 'bg-slate-500/20 border-slate-500/30' },
+  view_submission: { icon: '📝', label: 'View', color: 'text-blue-400', bg: 'bg-blue-500/20 border-blue-500/30' },
+  update_submission: { icon: '🔄', label: 'Update', color: 'text-amber-400', bg: 'bg-amber-500/20 border-amber-500/30' },
+  delete_submission: { icon: '🗑️', label: 'Delete', color: 'text-red-400', bg: 'bg-red-500/20 border-red-500/30' },
+  add_note: { icon: '🗒️', label: 'Add Note', color: 'text-purple-400', bg: 'bg-purple-500/20 border-purple-500/30' },
+  change_password: { icon: '🔐', label: 'Password Change', color: 'text-indigo-400', bg: 'bg-indigo-500/20 border-indigo-500/30' },
 };
 
 
@@ -242,15 +233,15 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
 
 
-    if (diffMins < 1) return 'Az önce';
+    if (diffMins < 1) return 'Just now';
 
-    if (diffMins < 60) return `${diffMins} dk önce`;
+    if (diffMins < 60) return `${diffMins} min ago`;
 
-    if (diffHours < 24) return `${diffHours} saat önce`;
+    if (diffHours < 24) return `${diffHours} hours ago`;
 
-    if (diffDays < 7) return `${diffDays} gün önce`;
+    if (diffDays < 7) return `${diffDays} days ago`;
 
-    return date.toLocaleDateString('tr-TR');
+    return date.toLocaleDateString('en-US');
 
   };
 
@@ -284,7 +275,7 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
               <h1 className="font-bold text-white text-lg">MIYOMINT</h1>
 
-              <p className="text-sm text-slate-400">Yönetim Paneli</p>
+              <p className="text-sm text-slate-400">Admin Panel</p>
 
             </div>
 
@@ -302,25 +293,25 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
             <button onClick={() => onNavigate('submissions')} className="px-5 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 font-medium transition-all">
 
-              <span className="flex items-center gap-2">📋 Başvurular</span>
+              <span className="flex items-center gap-2">📋 Submissions</span>
 
             </button>
 
             <button onClick={() => onNavigate('reports')} className="px-5 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 font-medium transition-all">
 
-              <span className="flex items-center gap-2">📈 Raporlar</span>
+              <span className="flex items-center gap-2">📈 Reports</span>
 
             </button>
 
             <button onClick={() => onNavigate('logs')} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium shadow-lg shadow-sky-500/20">
 
-              <span className="flex items-center gap-2">🗂 Loglar</span>
+              <span className="flex items-center gap-2">🗂 Logs</span>
 
             </button>
 
             <button onClick={() => onNavigate('settings')} className="px-5 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 font-medium transition-all">
 
-              <span className="flex items-center gap-2">⚙️ Ayarlar</span>
+              <span className="flex items-center gap-2">⚙️ Settings</span>
 
             </button>
 
@@ -342,7 +333,7 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
             </div>
 
-            <button onClick={logout} className="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all" title="Çıkış Yap">
+            <button onClick={logout} className="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all" title="Log Out">
 
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
 
@@ -368,7 +359,7 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
             <h2 className="text-3xl font-bold text-white flex items-center gap-3">
 
-              🗃 Aktivite Logları
+              🗃 Activity Logs
 
             </h2>
 
@@ -388,7 +379,7 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
             >
 
-              <option value="all">Tüm İşlemler</option>
+              <option value="all">All Actions</option>
 
               {actions.map(a => (
 
@@ -408,11 +399,11 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
             >
 
-              <option value="all">Tüm Tipler</option>
+              <option value="all">All Types</option>
 
               {entityTypes.map(t => (
 
-                <option key={t} value={t}>{t === 'admin' ? 'Admin' : 'Başvuru'}</option>
+                <option key={t} value={t}>{t === 'admin' ? 'Admin' : 'Submission'}</option>
 
               ))}
 
@@ -428,13 +419,13 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
           {[
 
-            { icon: '🔐', label: 'Girişler', count: logs.filter(l => l.action === 'login_success').length, color: 'from-emerald-500 to-teal-600' },
+            { icon: '🔐', label: 'Logins', count: logs.filter(l => l.action === 'login_success').length, color: 'from-emerald-500 to-teal-600' },
 
-            { icon: '🖥️', label: 'Görüntülemeler', count: logs.filter(l => l.action === 'view_submission').length, color: 'from-blue-500 to-indigo-600' },
+            { icon: '🖥️', label: 'Views', count: logs.filter(l => l.action === 'view_submission').length, color: 'from-blue-500 to-indigo-600' },
 
-            { icon: '✏️', label: 'Güncellemeler', count: logs.filter(l => l.action === 'update_submission').length, color: 'from-amber-500 to-orange-600' },
+            { icon: '✏️', label: 'Updates', count: logs.filter(l => l.action === 'update_submission').length, color: 'from-amber-500 to-orange-600' },
 
-            { icon: '🗒️', label: 'Notlar', count: logs.filter(l => l.action === 'add_note').length, color: 'from-purple-500 to-pink-600' },
+            { icon: '🗒️', label: 'Notes', count: logs.filter(l => l.action === 'add_note').length, color: 'from-purple-500 to-pink-600' },
 
           ].map(stat => (
 
@@ -520,7 +511,7 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
                             <span className="text-xs text-slate-500 px-2 py-0.5 bg-slate-700/50 rounded-full">
 
-                              {log.entityType === 'admin' ? 'Admin' : 'Başvuru'}
+                              {log.entityType === 'admin' ? 'Admin' : 'Submission'}
 
                             </span>
 
@@ -582,7 +573,7 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
                         <div className="text-sm text-slate-300 font-medium">{formatTimeAgo(log.createdAt)}</div>
 
-                        <div className="text-xs text-slate-500">{new Date(log.createdAt).toLocaleTimeString('tr-TR')}</div>
+                        <div className="text-xs text-slate-500">{new Date(log.createdAt).toLocaleTimeString('en-US')}</div>
 
                       </div>
 
@@ -600,9 +591,9 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
                   <div className="text-6xl mb-4">⚠️</div>
 
-                  <p className="text-slate-400 text-lg">Log bulunamadı</p>
+                  <p className="text-slate-400 text-lg">No logs found</p>
 
-                  <p className="text-slate-500 text-sm mt-1">Filtrelerinizi değiştirerek tekrar deneyin</p>
+                  <p className="text-slate-500 text-sm mt-1">Try adjusting your filters</p>
 
                 </div>
 
@@ -618,9 +609,9 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
                 <div className="flex items-center justify-between mb-4">
 
-                  <p className="text-sm font-semibold text-white">Son Başvurular (Log tablosu boş)</p>
+                  <p className="text-sm font-semibold text-white">Recent submissions (log table empty)</p>
 
-                  <span className="text-xs text-slate-400">{recentSubmissions.length} kayıt</span>
+                  <span className="text-xs text-slate-400">{recentSubmissions.length} records</span>
 
                 </div>
 
@@ -628,9 +619,9 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
                   {recentSubmissions.map((sub) => {
 
-                    const label = sub.serviceType || 'Bilinmiyor';
+                    const label = sub.serviceType || 'Unknown';
 
-                    const timestamp = sub.createdAt ? new Date(sub.createdAt).toLocaleString('tr-TR') : 'Zaman yok';
+                    const timestamp = sub.createdAt ? new Date(sub.createdAt).toLocaleString('en-US') : 'Zaman yok';
 
                     return (
 
@@ -638,7 +629,7 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
                         <div>
 
-                          <p className="text-white font-medium">{sub.name || 'İsim yok'}</p>
+                          <p className="text-white font-medium">{sub.name || 'No name'}</p>
 
                           <p className="text-slate-400 text-xs">{label}</p>
 
@@ -646,7 +637,7 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
                         <div className="text-right text-xs text-slate-500">
 
-                          <p>{sub.country || sub.countryCode || 'Ülke yok'}</p>
+                          <p>{sub.country || sub.countryCode || 'No country'}</p>
 
                           <p className="text-[11px]">{timestamp}</p>
 
@@ -666,9 +657,9 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
               <div className="flex items-center justify-center gap-2 p-6 border-t border-white/5">
 
-                <button onClick={() => setPage(1)} disabled={page === 1} className="px-4 py-2 rounded-xl bg-slate-700/50 text-slate-300 disabled:opacity-50 hover:bg-slate-700 transition-all text-sm font-medium">İlk</button>
+                <button onClick={() => setPage(1)} disabled={page === 1} className="px-4 py-2 rounded-xl bg-slate-700/50 text-slate-300 disabled:opacity-50 hover:bg-slate-700 transition-all text-sm font-medium">First</button>
 
-                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 rounded-xl bg-slate-700/50 text-slate-300 disabled:opacity-50 hover:bg-slate-700 transition-all text-sm font-medium">Önceki</button>
+                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 rounded-xl bg-slate-700/50 text-slate-300 disabled:opacity-50 hover:bg-slate-700 transition-all text-sm font-medium">Previous</button>
 
                 <span className="text-slate-400 text-sm px-4">Sayfa {page} / {totalPages}</span>
 
@@ -732,7 +723,7 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
                 <div className="bg-slate-700/30 rounded-xl p-4 border border-white/5">
 
-                  <label className="text-xs text-slate-500">İşlem</label>
+                  <label className="text-xs text-slate-500">Action</label>
 
                   <p className={`mt-1 inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium border ${actionConfig[selectedLog.action]?.bg} ${actionConfig[selectedLog.action]?.color}`}>
 
@@ -744,15 +735,15 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
                 <div className="bg-slate-700/30 rounded-xl p-4 border border-white/5">
 
-                  <label className="text-xs text-slate-500">Varlık Tipi</label>
+                  <label className="text-xs text-slate-500">Entity Type</label>
 
-                  <p className="font-medium text-white mt-1 capitalize">{selectedLog.entityType === 'admin' ? 'Admin' : 'Başvuru'}</p>
+                  <p className="font-medium text-white mt-1 capitalize">{selectedLog.entityType === 'admin' ? 'Admin' : 'Submission'}</p>
 
                 </div>
 
                 <div className="bg-slate-700/30 rounded-xl p-4 border border-white/5">
 
-                  <label className="text-xs text-slate-500">Varlık ID</label>
+                  <label className="text-xs text-slate-500">Entity ID</label>
 
                   <p className="font-medium text-white mt-1">{selectedLog.entityId || 'Yok'}</p>
 
@@ -770,7 +761,7 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
                   <label className="text-xs text-slate-500">IP Adresi</label>
 
-                  <p className="font-mono text-white mt-1 text-sm">{selectedLog.ipAddress || 'Bilinmiyor'}</p>
+                  <p className="font-mono text-white mt-1 text-sm">{selectedLog.ipAddress || 'Unknown'}</p>
 
                 </div>
 
@@ -778,7 +769,7 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
                   <label className="text-xs text-slate-500">Zaman</label>
 
-                  <p className="font-medium text-white mt-1">{new Date(selectedLog.createdAt).toLocaleString('tr-TR')}</p>
+                  <p className="font-medium text-white mt-1">{new Date(selectedLog.createdAt).toLocaleString('en-US')}</p>
 
                 </div>
 

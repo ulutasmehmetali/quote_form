@@ -51,10 +51,10 @@ const SERVICES = ['Roofing', 'Plumbing', 'Electrical', 'HVAC', 'Painting', 'Floo
 const nodeDefaults = { sourcePosition: Position.Right, targetPosition: Position.Left };
 
 const paletteByType: Record<string, { border: string; dot: string; badge: string; label: string }> = {
-  trigger: { border: 'border-sky-400/40', dot: 'bg-sky-400', badge: 'bg-sky-500/20 text-sky-100', label: 'Tetikleyici' },
-  filter_service: { border: 'border-amber-400/40', dot: 'bg-amber-400', badge: 'bg-amber-500/20 text-amber-100', label: 'Servis Filtresi' },
-  http_action: { border: 'border-emerald-400/40', dot: 'bg-emerald-400', badge: 'bg-emerald-500/20 text-emerald-100', label: 'HTTP Çağrısı' },
-  end: { border: 'border-emerald-400/40', dot: 'bg-emerald-400', badge: 'bg-emerald-500/20 text-emerald-100', label: 'Bitiş' },
+  trigger: { border: 'border-sky-400/40', dot: 'bg-sky-400', badge: 'bg-sky-500/20 text-sky-100', label: 'Trigger' },
+  filter_service: { border: 'border-amber-400/40', dot: 'bg-amber-400', badge: 'bg-amber-500/20 text-amber-100', label: 'Service Filter' },
+  http_action: { border: 'border-emerald-400/40', dot: 'bg-emerald-400', badge: 'bg-emerald-500/20 text-emerald-100', label: 'HTTP Call' },
+  end: { border: 'border-emerald-400/40', dot: 'bg-emerald-400', badge: 'bg-emerald-500/20 text-emerald-100', label: 'End' },
   branch: { border: 'border-purple-400/40', dot: 'bg-purple-400', badge: 'bg-purple-500/20 text-purple-100', label: 'Branch' },
 };
 
@@ -99,7 +99,7 @@ function PaletteButton({ label, onClick, accent }: { label: string; onClick: () 
       style={{ borderColor: accent, color: '#e2e8f0', background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))' }}
     >
       <span>{label}</span>
-      <span className="text-xs opacity-70">+ ekle</span>
+      <span className="text-xs opacity-70">+ add</span>
     </button>
   );
 }
@@ -150,10 +150,10 @@ function Editor() {
     });
 
     const presetNodes: Node[] = [
-      base('t1', 'trigger', 80, 180, 'Form Tetikleyici', 'Yeni form geldiğinde'),
-      base('f1', 'filter_service', 320, 140, 'Servis Filtresi', 'Servise göre ayır', { services: ['Roofing'] }),
-      base('h1', 'http_action', 560, 140, 'API Çağrısı', 'Partner API çıkışı', { url: '', method: 'POST', headers: {}, timeout: 5000 }),
-      base('e1', 'end', 820, 160, 'Bitiş', 'Tamamlandı'),
+      base('t1', 'trigger', 80, 180, 'Form Trigger', 'When a new form arrives'),
+      base('f1', 'filter_service', 320, 140, 'Service Filter', 'Route by service', { services: ['Roofing'] }),
+      base('h1', 'http_action', 560, 140, 'API Call', 'Call partner API', { url: '', method: 'POST', headers: {}, timeout: 5000 }),
+      base('e1', 'end', 820, 160, 'End', 'Completed'),
     ];
 
     const presetEdges: Edge[] = [
@@ -191,7 +191,7 @@ function Editor() {
       });
       if (!res.ok) {
         appendLog({ nodeName: 'Workflow', eventType: 'error', payload: { action: 'create', status: res.status }, status: 'error' });
-        alert('Workflow oluşturulamadı. Oturum veya izinleri kontrol edin.');
+        alert('Could not create workflow. Check your session or permissions.');
         return;
       }
       const json = await res.json();
@@ -224,7 +224,7 @@ function Editor() {
             syncFromWorkflow(list[0]);
           }
         } else {
-          await createWorkflow('Varsayilan Workflow');
+          await createWorkflow('Default Workflow');
         }
       }
     } catch (error) {
@@ -239,7 +239,7 @@ function Editor() {
   }, [loadWorkflows]);
 
   const handleAddWorkflow = async () => {
-    const name = prompt('Workflow adi?');
+    const name = prompt('Workflow name?');
     if (!name) return;
     await createWorkflow(name);
   };
@@ -274,14 +274,14 @@ function Editor() {
       if (!res.ok) {
         const json = await res.json().catch(() => null);
         appendLog({ nodeName: 'Save', eventType: 'error', payload: { status: res.status, body: json }, status: 'error' });
-        alert('Kaydetme başarısız. Oturum veya ağ hatası olabilir.');
+        alert('Save failed. Session or network error is possible.');
         return;
       }
-      await loadWorkflows(); // yenile ve kalici olup olmadigini goster
+      await loadWorkflows(); // reload to confirm the changes persist
     } catch (error) {
       console.error('Save failed', error);
       appendLog({ nodeName: 'Save', eventType: 'error', payload: { message: (error as any)?.message }, status: 'error' });
-      alert('Kaydedilirken hata oluştu.');
+      alert('An error occurred while saving.');
     } finally {
       setSaving(false);
     }
@@ -299,7 +299,7 @@ function Editor() {
     });
     if (!res.ok) {
       appendLog({ nodeName: 'Toggle', eventType: 'error', payload: { status: res.status }, status: 'error' });
-      alert('Aktif/pasif güncellenemedi. Oturumu kontrol edin.');
+      alert('Could not update active state. Check your session.');
     } else {
       await loadWorkflows({ syncNodes: false });
     }
@@ -308,7 +308,7 @@ function Editor() {
   const renameWorkflow = async () => {
     if (!activeId) return;
     const wf = workflows.find((w) => w.id === activeId);
-    const name = prompt('Workflow adı değiştir', wf?.name || '');
+    const name = prompt('Rename workflow', wf?.name || '');
     if (!name) return;
     setWorkflows((prev) => prev.map((w) => (w.id === activeId ? { ...w, name } : w)));
     await fetch(apiUrl(`/api/admin/automations/${activeId}`), {
@@ -338,16 +338,16 @@ function Editor() {
       const json = await res.json();
       appendLog({ nodeName: 'Test Runner', eventType: res.ok ? 'info' : 'error', payload: { response: json }, status: res.ok ? 'success' : 'error' });
       if (!res.ok) {
-        alert('Test basarisiz: oturum veya API hatasi.');
+        alert('Test failed: session or API error.');
       }
     } catch (error: any) {
       appendLog({ nodeName: 'Test Runner', eventType: 'error', payload: { message: error?.message }, status: 'error' });
-      alert('Test çağrılırken hata oluştu.');
+      alert('An error occurred while running the test.');
     }
   };
 
   const handleDeleteWorkflow = async (id: string) => {
-    if (!confirm('Bu workflow silinsin mi?')) return;
+    if (!confirm('Delete this workflow?')) return;
     try {
       const res = await fetch(apiUrl(`/api/admin/automations/${id}`), {
         method: 'DELETE',
@@ -363,7 +363,7 @@ function Editor() {
         });
         if (!fallback.ok) {
           appendLog({ nodeName: 'Delete', eventType: 'error', payload: { status: res.status, fallbackStatus: fallback.status }, status: 'error' });
-          alert('Silme basarisiz. Oturum veya yetki sorunlari olabilir.');
+          alert('Delete failed. Session or permission issues may exist.');
           return;
         }
       }
@@ -377,7 +377,7 @@ function Editor() {
       }
     } catch (error: any) {
       appendLog({ nodeName: 'Delete', eventType: 'error', payload: { message: error?.message }, status: 'error' });
-      alert('Silme sirasinda hata olustu. Ag/CORS izinlerini kontrol edin.');
+      alert('Error during delete. Check network/CORS settings.');
     }
   };
 
@@ -394,17 +394,17 @@ function Editor() {
   const selectedNode = useMemo(() => nodes.find((n) => n.id === selectedNodeId), [nodes, selectedNodeId]);
 
   const renderNodeInspector = () => {
-    if (!selectedNode) return <div className="text-slate-400 text-sm">Bir blok seçin veya paletten ekleyin.</div>;
+    if (!selectedNode) return <div className="text-slate-400 text-sm">Select a block or add one from the palette.</div>;
 
     const common = (
       <>
-        <label className="text-xs text-slate-400">Başlık</label>
+        <label className="text-xs text-slate-400">Title</label>
         <input
           className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/5 text-white mb-3"
           value={selectedNode.data?.label || ''}
           onChange={(e) => setNodes((prev) => prev.map((n) => (n.id === selectedNode.id ? { ...n, data: { ...n.data, label: e.target.value } } : n)))}
         />
-        <label className="text-xs text-slate-400">Açıklama</label>
+        <label className="text-xs text-slate-400">Description</label>
         <textarea
           className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/5 text-white mb-3"
           value={selectedNode.data?.description || ''}
@@ -419,7 +419,7 @@ function Editor() {
       return (
         <div className="space-y-2">
           {common}
-          <p className="text-xs text-slate-400">Hedef servisler</p>
+          <p className="text-xs text-slate-400">Target services</p>
           <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
             {SERVICES.map((srv) => {
               const checked = selected.includes(srv);
@@ -459,7 +459,7 @@ function Editor() {
           {common}
           <div className="grid grid-cols-3 gap-2 items-center">
             <div>
-              <label className="text-xs text-slate-400">Yöntem</label>
+              <label className="text-xs text-slate-400">Method</label>
               <select
                 className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/5 text-white"
                 value={method}
@@ -487,7 +487,7 @@ function Editor() {
 
           <div className="grid grid-cols-2 gap-2 items-center">
             <div>
-              <label className="text-xs text-slate-400">Zaman aşımı (ms)</label>
+              <label className="text-xs text-slate-400">Timeout (ms)</label>
               <input
                 type="number"
                 min={1000}
@@ -504,7 +504,7 @@ function Editor() {
               />
             </div>
             <div>
-              <label className="text-xs text-slate-400">Header ekle (JSON)</label>
+              <label className="text-xs text-slate-400">Add headers (JSON)</label>
               <textarea
                 className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/5 text-white"
                 rows={3}
@@ -536,21 +536,21 @@ function Editor() {
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Automation Studio</p>
-              <h1 className="text-3xl font-semibold">Otomasyon Tasarımcısı</h1>
-              <p className="text-slate-400 text-sm">Servise göre yönlendir, API çağır, blokları bağla ve test et.</p>
+              <h1 className="text-3xl font-semibold">Automation Designer</h1>
+              <p className="text-slate-400 text-sm">Route by service, call APIs, connect blocks, and test.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <button onClick={handleAddWorkflow} className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm shadow-lg shadow-emerald-900/40">
-                Yeni Workflow
+                New Workflow
               </button>
               <button onClick={() => handleTestWorkflow()} disabled={!activeId} className="px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-sm">
-                Test Et
+                Run Test
               </button>
               <button onClick={renameWorkflow} disabled={!activeId} className="px-3 py-2 rounded-lg bg-slate-800 text-slate-100 border border-white/10 text-sm disabled:opacity-50">
-                Adini Duzenle
+                Rename
               </button>
               <button onClick={save} disabled={saving || !activeId} className="px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white text-sm">
-                {saving ? 'Kaydediliyor...' : 'Kaydet'}
+                {saving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -568,17 +568,17 @@ function Editor() {
                 ))}
               </select>
             </div>
-            <div className="text-xs text-slate-500">{activeWorkflow?.nodes?.length || 0} blok • {activeWorkflow?.edges?.length || 0} bağlantı</div>
+            <div className="text-xs text-slate-500">{activeWorkflow?.nodes?.length || 0} blocks / {activeWorkflow?.edges?.length || 0} connections</div>
           </div>
 
           <div className="bg-slate-900/60 border border-white/5 rounded-2xl p-3">
-            <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Flow Durumları</p>
+            <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Flow Status</p>
             <div className="space-y-2">
               {workflows.map((wf) => (
                 <div key={wf.id} className="text-sm bg-slate-800/60 rounded-xl px-3 py-2 space-y-2">
                   <div className="flex items-center justify-between">
                     <button className="flex items-center gap-2 text-white font-semibold" onClick={() => setExpandedFlowId(expandedFlowId === wf.id ? null : wf.id)}>
-                      <span className="text-slate-400 text-lg">{expandedFlowId === wf.id ? '▾' : '▸'}</span>
+                      <span className="text-slate-400 text-lg">{expandedFlowId === wf.id ? 'v' : '>'}</span>
                       {wf.name}
                     </button>
                     <div className="flex items-center gap-2">
@@ -589,7 +589,7 @@ function Editor() {
                   </div>
                   {expandedFlowId === wf.id && (
                     <div className="flex flex-wrap items-center gap-2 text-xs text-slate-200">
-                      <span className="text-slate-400">{(wf.nodes?.length || 0)} blok, {(wf.edges?.length || 0)} bağlantı</span>
+                      <span className="text-slate-400">{(wf.nodes?.length || 0)} blocks, {(wf.edges?.length || 0)} connections</span>
                       <button
                         className="px-2 py-1 rounded-lg bg-slate-700 hover:bg-slate-600"
                         onClick={() => {
@@ -597,13 +597,13 @@ function Editor() {
                           syncFromWorkflow(wf);
                         }}
                       >
-                        Aç
+                        Open
                       </button>
                       <button className="px-2 py-1 rounded-lg bg-amber-700 hover:bg-amber-600" onClick={() => handleTestWorkflow(wf.id)}>
                         Test
                       </button>
                       <button className="px-2 py-1 rounded-lg bg-red-700 hover:bg-red-600" onClick={() => handleDeleteWorkflow(wf.id)}>
-                        Sil
+                        Delete
                       </button>
                     </div>
                   )}
@@ -614,21 +614,21 @@ function Editor() {
 
           <div className="grid grid-cols-12 gap-3">
             <div className="col-span-12 lg:col-span-2 space-y-3 bg-slate-900/60 border border-white/5 rounded-2xl p-3">
-              <p className="text-xs text-slate-400 uppercase tracking-wide">Palet</p>
-              <PaletteButton label="Trigger (Form)" accent="#38bdf8" onClick={() => addNode('trigger', 'Form Gönderimi', { description: 'Yeni form geldiğinde çalışır' })} />
-              <PaletteButton label="Servis Filtresi" accent="#f97316" onClick={() => addNode('filter_service', 'Servis Filtresi', { services: ['Roofing'], description: 'Belirli servisler için ilerle' })} />
-              <PaletteButton label="HTTP Çağrısı" accent="#22c55e" onClick={() => addNode('http_action', 'API Çağrısı', { url: '', method: 'POST', headers: {}, timeout: 5000, description: 'Partner API çıkışı' })} />
-              <div className="text-xs text-slate-500 pt-2 border-t border-white/5">Bağlantıları nodun sağ/sol ucundan sürükleyerek oluştur.</div>
+              <p className="text-xs text-slate-400 uppercase tracking-wide">Palette</p>
+              <PaletteButton label="Trigger (Form)" accent="#38bdf8" onClick={() => addNode('trigger', 'Form Submission', { description: 'Runs when a new form arrives' })} />
+              <PaletteButton label="Service Filter" accent="#f97316" onClick={() => addNode('filter_service', 'Service Filter', { services: ['Roofing'], description: 'Proceed for selected services' })} />
+              <PaletteButton label="HTTP Call" accent="#22c55e" onClick={() => addNode('http_action', 'API Call', { url: '', method: 'POST', headers: {}, timeout: 5000, description: 'Call partner API' })} />
+              <div className="text-xs text-slate-500 pt-2 border-t border-white/5">Create connections by dragging from the left/right handles of a node.</div>
               {selectedNode && (
                 <button onClick={() => setNodes((prev) => prev.filter((n) => n.id !== selectedNode.id))} className="w-full px-3 py-2 rounded-lg bg-red-500/10 text-red-300 border border-red-500/30 text-sm">
-                  Secili blogu sil
+                  Delete selected block
                 </button>
               )}
             </div>
 
             <div className="col-span-12 lg:col-span-7 h-[600px] bg-slate-900/60 border border-white/5 rounded-2xl">
               {loading ? (
-                <div className="h-full flex items-center justify-center text-slate-400 text-sm">Yükleniyor...</div>
+                <div className="h-full flex items-center justify-center text-slate-400 text-sm">Loading...</div>
               ) : (
                 <ReactFlow
                   nodes={nodes}
@@ -650,7 +650,7 @@ function Editor() {
             </div>
 
             <div className="col-span-12 lg:col-span-3 space-y-3 bg-slate-900/60 border border-white/5 rounded-2xl p-3">
-              <p className="text-xs text-slate-400 uppercase tracking-wide">Ayarlar</p>
+              <p className="text-xs text-slate-400 uppercase tracking-wide">Settings</p>
               {renderNodeInspector()}
             </div>
           </div>
@@ -658,8 +658,8 @@ function Editor() {
           <div className="bg-slate-900/70 border border-white/5 rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm text-slate-300">
-                <span className="font-semibold text-white">Gerçek Zamanlı Loglar</span>
-                <span className="text-xs text-slate-500">(auto-scroll, filtre, export)</span>
+                <span className="font-semibold text-white">Live Logs</span>
+                <span className="text-xs text-slate-500">(auto-scroll, filter, export)</span>
               </div>
               <div className="flex items-center gap-2">
                 {['all', 'info', 'error', 'warning', 'debug'].map((lvl) => (
@@ -695,7 +695,7 @@ function Editor() {
               <button
                 onClick={() =>
                   appendLog({
-                    nodeName: 'Primary API Cagrisi',
+                    nodeName: 'Primary API Call',
                     eventType: 'info',
                     payload: { message: 'API response OK', status: 200 },
                     duration: 320,
@@ -704,7 +704,7 @@ function Editor() {
                 }
                 className="px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-200"
               >
-                Örnek Success Log
+                Sample Success Log
               </button>
               <button
                 onClick={() =>
@@ -718,7 +718,7 @@ function Editor() {
                 }
                 className="px-3 py-1 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-200"
               >
-                Örnek Error Log
+                Sample Error Log
               </button>
             </div>
 
@@ -746,7 +746,7 @@ function Editor() {
                           {log.duration != null && <span>{log.duration} ms</span>}
                           <span className="opacity-70">{log.timestamp}</span>
                           <button onClick={() => setExpandedLogId(expanded ? null : log.id)} className="underline">
-                            {expanded ? 'Kapat' : 'Detay'}
+                            {expanded ? 'Close' : 'Details'}
                           </button>
                         </div>
                       </div>
@@ -754,7 +754,7 @@ function Editor() {
                     </div>
                   );
                 })}
-              {logs.length === 0 && <div className="text-slate-500 text-sm">Henüz log yok. Workflow çalıştıkça buraya düşecek.</div>}
+              {logs.length === 0 && <div className="text-slate-500 text-sm">No logs yet. They will appear as workflows run.</div>}
               <div ref={logsEndRef} />
             </div>
           </div>

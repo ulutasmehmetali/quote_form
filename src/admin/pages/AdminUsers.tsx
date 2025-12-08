@@ -54,18 +54,18 @@ export default function AdminUsers({ onNavigate }: AdminUsersProps) {
     setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Şifreler eşleşmiyor!');
+      setError('Passwords do not match!');
       return;
     }
 
     if (formData.password.length < 8) {
-      setError('Şifre en az 8 karakter olmalı!');
+      setError('Password must be at least 8 characters!');
       return;
     }
 
     const passwordStrength = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}$/;
     if (!passwordStrength.test(formData.password)) {
-      setError('Şifre büyük harf, küçük harf, rakam ve özel karakter içermeli!');
+      setError('Password must include upper/lowercase letters, a number, and a special character!');
       return;
     }
 
@@ -88,15 +88,15 @@ export default function AdminUsers({ onNavigate }: AdminUsersProps) {
         setFormData({ username: '', password: '', confirmPassword: '', role: 'viewer' });
         fetchUsers();
       } else {
-        setError(data.error || 'Kullanıcı oluşturulamadı');
+        setError(data.error || 'Failed to create user');
       }
     } catch (error) {
-      setError('Bir hata oluştu');
+      setError('An error occurred');
     }
   };
 
   const handleDelete = async (id: number, username: string) => {
-    if (!confirm(`"${username}" kullanıcısını silmek istediğinize emin misiniz?`)) return;
+    if (!confirm(`Are you sure you want to delete "${username}"?`)) return;
     
     try {
       const res = await fetch(apiUrl(`/api/admin/admin-users/${id}`), {
@@ -131,13 +131,13 @@ export default function AdminUsers({ onNavigate }: AdminUsersProps) {
           <nav className="flex items-center gap-2">
             {[
               { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-              { id: 'settings', label: 'Ayarlar', icon: '⚙️' },
+              { id: 'settings', label: 'Settings', icon: '⚙️' },
             ].map(item => (
               <button key={item.id} onClick={() => onNavigate(item.id)} className="px-4 py-2 rounded-xl text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-white/5">
                 {item.icon} {item.label}
               </button>
             ))}
-            <button onClick={logout} className="ml-4 px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 text-sm font-medium transition-all">Çıkış</button>
+            <button onClick={logout} className="ml-4 px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 text-sm font-medium transition-all">Log Out</button>
           </nav>
         </div>
       </header>
@@ -145,13 +145,13 @@ export default function AdminUsers({ onNavigate }: AdminUsersProps) {
       <main className="max-w-4xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-3xl font-bold text-white flex items-center gap-3">👥 Admin Kullanıcıları</h2>
-            <p className="text-slate-400 mt-1">{users.length} kullanıcı kayıtlı</p>
+            <h2 className="text-3xl font-bold text-white flex items-center gap-3">👥 Admin Users</h2>
+            <p className="text-slate-400 mt-1">{users.length} users registered</p>
           </div>
           {user?.role === 'admin' && (
             <button onClick={() => setShowModal(true)} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium shadow-lg shadow-sky-500/25 hover:shadow-sky-500/40 transition-all flex items-center gap-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-              Yeni Kullanıcı
+              New User
             </button>
           )}
         </div>
@@ -174,16 +174,16 @@ export default function AdminUsers({ onNavigate }: AdminUsersProps) {
                       </h3>
                       <div className="flex items-center gap-3 mt-1">
                         <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${roleColors[u.role]?.bg} ${roleColors[u.role]?.text}`}>
-                          {u.role === 'admin' ? 'Yönetici' : u.role === 'editor' ? 'Editör' : 'İzleyici'}
+                          {u.role === 'admin' ? 'Admin' : u.role === 'editor' ? 'Editor' : 'Viewer'}
                         </span>
-                        <span className="text-slate-500 text-xs">Oluşturulma: {new Date(u.createdAt).toLocaleDateString('tr-TR')}</span>
+                        <span className="text-slate-500 text-xs">Created: {new Date(u.createdAt).toLocaleDateString('en-US')}</span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <p className="text-xs text-slate-400">Son Giriş</p>
-                      <p className="text-sm text-slate-300">{u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString('tr-TR') : 'Henüz yok'}</p>
+                      <p className="text-xs text-slate-400">Last Login</p>
+                      <p className="text-sm text-slate-300">{u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString('en-US') : 'Not yet'}</p>
                     </div>
                     {user?.role === 'admin' && u.id !== user?.id && (
                       <button onClick={() => handleDelete(u.id, u.username)} className="p-2 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-all">
@@ -202,36 +202,36 @@ export default function AdminUsers({ onNavigate }: AdminUsersProps) {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-slate-800 rounded-2xl max-w-md w-full border border-white/10">
             <div className="p-6 border-b border-white/10">
-              <h3 className="text-xl font-bold text-white">Yeni Admin Kullanıcı</h3>
+              <h3 className="text-xl font-bold text-white">New Admin User</h3>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {error && (
                 <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>
               )}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Kullanıcı Adı *</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Username *</label>
                 <input type="text" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} required minLength={3} maxLength={50} className="w-full px-4 py-2.5 rounded-xl bg-slate-700/50 border border-white/10 text-white focus:outline-none focus:border-sky-500/50" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Şifre *</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Password *</label>
                 <input type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required className="w-full px-4 py-2.5 rounded-xl bg-slate-700/50 border border-white/10 text-white focus:outline-none focus:border-sky-500/50" />
-                <p className="text-xs text-slate-500 mt-1">En az 8 karakter, büyük/küçük harf, rakam ve özel karakter</p>
+                <p className="text-xs text-slate-500 mt-1">At least 8 characters, uppercase/lowercase, number, and special character</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Şifre Tekrar *</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Password Confirm *</label>
                 <input type="password" value={formData.confirmPassword} onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })} required className="w-full px-4 py-2.5 rounded-xl bg-slate-700/50 border border-white/10 text-white focus:outline-none focus:border-sky-500/50" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1">Rol</label>
                 <select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })} className="w-full px-4 py-2.5 rounded-xl bg-slate-700/50 border border-white/10 text-white focus:outline-none focus:border-sky-500/50">
-                  <option value="viewer">İzleyici - Sadece görüntüleme</option>
-                  <option value="editor">Editör - Düzenleme yapabilir</option>
-                  <option value="admin">Yönetici - Tam yetki</option>
+                  <option value="viewer">Viewer - Read only</option>
+                  <option value="editor">Editor - Can edit</option>
+                  <option value="admin">Admin - Tam yetki</option>
                 </select>
               </div>
               <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2.5 rounded-xl bg-slate-700 text-slate-300 hover:bg-slate-600 font-medium transition-all">İptal</button>
-                <button type="submit" className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium shadow-lg hover:shadow-sky-500/25 transition-all">Oluştur</button>
+                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2.5 rounded-xl bg-slate-700 text-slate-300 hover:bg-slate-600 font-medium transition-all">Cancel</button>
+                <button type="submit" className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium shadow-lg hover:shadow-sky-500/25 transition-all">Create</button>
               </div>
             </form>
           </div>

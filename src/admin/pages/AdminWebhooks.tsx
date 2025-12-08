@@ -18,11 +18,11 @@ interface AdminWebhooksProps {
 }
 
 const eventOptions = [
-  { value: 'submission.created', label: 'Yeni Başvuru' },
-  { value: 'submission.updated', label: 'Başvuru Güncellendi' },
-  { value: 'submission.deleted', label: 'Başvuru Silindi' },
-  { value: 'professional.created', label: 'Yeni Profesyonel' },
-  { value: 'professional.approved', label: 'Profesyonel Onaylandı' },
+  { value: 'submission.created', label: 'New Başvuru' },
+  { value: 'submission.updated', label: 'Başvuru Updatendi' },
+  { value: 'submission.deleted', label: 'Submission Deleted' },
+  { value: 'professional.created', label: 'New Profesyonel' },
+  { value: 'professional.approved', label: 'Professional Approved' },
 ];
 
 export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
@@ -122,10 +122,10 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
         credentials: 'include',
       });
       const data = await res.json();
-      alert(data.success ? 'Test başarılı!' : `Test başarısız: ${data.error}`);
+      alert(data.success ? 'Test successful!' : `Test failed: ${data.error}`);
       fetchWebhooks();
     } catch (error) {
-      alert('Test gönderilirken hata oluştu');
+      alert('Error while sending test');
     } finally {
       setTestingId(null);
     }
@@ -159,13 +159,13 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
           <nav className="flex items-center gap-2">
             {[
               { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-              { id: 'settings', label: 'Ayarlar', icon: '⚙️' },
+              { id: 'settings', label: 'Settings', icon: '⚙️' },
             ].map(item => (
               <button key={item.id} onClick={() => onNavigate(item.id)} className="px-4 py-2 rounded-xl text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-white/5">
                 {item.icon} {item.label}
               </button>
             ))}
-            <button onClick={logout} className="ml-4 px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 text-sm font-medium transition-all">Çıkış</button>
+            <button onClick={logout} className="ml-4 px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 text-sm font-medium transition-all">Log Out</button>
           </nav>
         </div>
       </header>
@@ -174,11 +174,11 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-3xl font-bold text-white flex items-center gap-3">🔗 Webhooks</h2>
-            <p className="text-slate-400 mt-1">Harici sistemlere bildirim gönderin</p>
+            <p className="text-slate-400 mt-1">Send notifications to external systems</p>
           </div>
           <button onClick={() => { setEditingWebhook(null); setFormData({ name: '', url: '', events: [] }); setSecretKey(null); setShowModal(true); }} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium shadow-lg shadow-sky-500/25 hover:shadow-sky-500/40 transition-all flex items-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-            Yeni Webhook
+            New Webhook
           </button>
         </div>
 
@@ -187,8 +187,8 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
         ) : webhooks.length === 0 ? (
           <div className="text-center py-20">
             <div className="w-20 h-20 rounded-2xl bg-slate-800/50 flex items-center justify-center mx-auto mb-4 text-4xl">🔗</div>
-            <p className="text-slate-400">Henüz webhook eklenmemiş.</p>
-            <p className="text-slate-500 text-sm mt-1">Webhook ekleyerek harici sistemlere bildirim gönderebilirsiniz.</p>
+            <p className="text-slate-400">No webhooks added yet.</p>
+            <p className="text-slate-500 text-sm mt-1">Add a webhook to send notifications to external systems.</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -225,7 +225,7 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
                       )}
                     </button>
                     <button onClick={() => handleToggle(webhook.id, !webhook.is_active)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${webhook.is_active ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'}`}>
-                      {webhook.is_active ? 'Durdur' : 'Aktifleştir'}
+                      {webhook.is_active ? 'Stop' : 'Activate'}
                     </button>
                     <button onClick={() => openEditModal(webhook)} className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-all">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -236,9 +236,9 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
                   </div>
                 </div>
                 <div className="flex items-center gap-4 mt-4 pt-4 border-t border-white/5 text-xs text-slate-500">
-                  <span>Oluşturulma: {new Date(webhook.created_at).toLocaleDateString('tr-TR')}</span>
+                  <span>Created: {new Date(webhook.created_at).toLocaleDateString('en-US')}</span>
                   {webhook.last_triggered_at && (
-                    <span>Son tetikleme: {new Date(webhook.last_triggered_at).toLocaleString('tr-TR')}</span>
+                    <span>Son tetikleme: {new Date(webhook.last_triggered_at).toLocaleString('en-US')}</span>
                   )}
                 </div>
               </div>
@@ -251,13 +251,13 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-slate-800 rounded-2xl max-w-md w-full border border-white/10">
             <div className="p-6 border-b border-white/10">
-              <h3 className="text-xl font-bold text-white">{editingWebhook ? 'Webhook Düzenle' : 'Yeni Webhook'}</h3>
+              <h3 className="text-xl font-bold text-white">{editingWebhook ? 'Edit Webhook' : 'New Webhook'}</h3>
             </div>
             {secretKey ? (
               <div className="p-6 space-y-4">
                 <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                  <p className="text-emerald-400 font-medium mb-2">Webhook oluşturuldu!</p>
-                  <p className="text-slate-400 text-sm mb-3">Aşağıdaki secret key'i güvenli bir yerde saklayın. Tekrar gösterilmeyecek:</p>
+                  <p className="text-emerald-400 font-medium mb-2">Webhook created!</p>
+                  <p className="text-slate-400 text-sm mb-3">Store the secret key below in a safe place. It will not be shown again:</p>
                   <div className="p-3 rounded-lg bg-slate-900/50 font-mono text-xs text-sky-400 break-all">{secretKey}</div>
                 </div>
                 <button onClick={() => { setShowModal(false); setSecretKey(null); fetchWebhooks(); }} className="w-full px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium">Tamam</button>
@@ -266,7 +266,7 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-1">Ad *</label>
-                  <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required className="w-full px-4 py-2.5 rounded-xl bg-slate-700/50 border border-white/10 text-white focus:outline-none focus:border-sky-500/50" placeholder="Örn: Slack Bildirimi" />
+                  <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required className="w-full px-4 py-2.5 rounded-xl bg-slate-700/50 border border-white/10 text-white focus:outline-none focus:border-sky-500/50" placeholder="e.g., Slack Notification" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-1">URL *</label>
@@ -291,8 +291,8 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
                   </div>
                 </div>
                 <div className="flex gap-3 pt-4">
-                  <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2.5 rounded-xl bg-slate-700 text-slate-300 hover:bg-slate-600 font-medium transition-all">İptal</button>
-                  <button type="submit" className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium shadow-lg hover:shadow-sky-500/25 transition-all">{editingWebhook ? 'Güncelle' : 'Oluştur'}</button>
+                  <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2.5 rounded-xl bg-slate-700 text-slate-300 hover:bg-slate-600 font-medium transition-all">Cancelled</button>
+                  <button type="submit" className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium shadow-lg hover:shadow-sky-500/25 transition-all">{editingWebhook ? 'Update' : 'Create'}</button>
                 </div>
               </form>
             )}

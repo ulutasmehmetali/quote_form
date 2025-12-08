@@ -16,16 +16,16 @@ import AdminAutomations from './pages/AdminAutomations';
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard' },
-  { id: 'submissions', label: 'Basvurular' },
-  { id: 'reports', label: 'Raporlar' },
-  { id: 'logs', label: 'Loglar' },
-  { id: 'professionals', label: 'Profesyoneller' },
-  { id: 'partners', label: 'Partnerler' },
-  { id: 'webhooks', label: 'Webhook' },
-  { id: 'automations', label: 'Otomasyonlar' },
-  { id: 'users', label: 'Kullanicilar' },
-  { id: 'settings', label: 'Ayarlar' },
-  { id: 'distribution-logs', label: 'Dagitim' },
+  { id: 'submissions', label: 'Submissions' },
+  { id: 'reports', label: 'Reports' },
+  { id: 'logs', label: 'Logs' },
+  { id: 'professionals', label: 'Professionals' },
+  { id: 'partners', label: 'Partners' },
+  { id: 'webhooks', label: 'Webhooks' },
+  { id: 'automations', label: 'Automations' },
+  { id: 'users', label: 'Users' },
+  { id: 'settings', label: 'Settings' },
+  { id: 'distribution-logs', label: 'Distribution' },
 ];
 
 function AdminContent() {
@@ -145,7 +145,7 @@ function AdminContent() {
               style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}
             ></div>
           </div>
-          <p className="text-slate-400 animate-pulse">Yukleniyor...</p>
+          <p className="text-slate-400 animate-pulse">Loading...</p>
         </div>
       </div>
     );
@@ -161,19 +161,10 @@ function AdminContent() {
         <button
           type="button"
           onClick={handleBack}
-          className="hidden lg:flex items-center gap-2 fixed top-6 left-6 z-50 rounded-full bg-slate-900/80 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-black/40 backdrop-blur"
+          className="fixed top-4 left-4 z-50 flex items-center gap-2 rounded-full bg-slate-900/80 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-black/40 backdrop-blur lg:top-6 lg:left-6"
         >
           <ArrowLeft className="w-4 h-4" />
-          Geri
-        </button>
-      )}
-      {currentPage !== 'dashboard' && (
-        <button
-          type="button"
-          onClick={handleBack}
-          className="md:hidden fixed top-4 left-4 z-50 flex items-center gap-2 rounded-full bg-slate-900/80 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-black/40 backdrop-blur"
-        >
-          Geri
+          Back
         </button>
       )}
       {pageComponent}
