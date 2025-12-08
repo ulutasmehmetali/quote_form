@@ -36,7 +36,13 @@ const ACCESS_LOG_COOKIE_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
 const ACCESS_LOG_RETRY_ATTEMPTS = 3;
 const ACCESS_LOG_RETRY_BASE_MS = 1000;
 let accessLogsReady = true;
-let skipAccessLogs = process.env.SKIP_ACCESS_LOG_SCHEMA_SYNC === 'true';
+const forceSkipAccessLogs = process.env.FORCE_SKIP_ACCESS_LOGS === 'true';
+// Default: disable access_logs unless explicitly enabled to avoid startup noise on locked-down DBs.
+// Set ENABLE_ACCESS_LOGS=true to attempt schema sync.
+let skipAccessLogs =
+  forceSkipAccessLogs ||
+  process.env.SKIP_ACCESS_LOG_SCHEMA_SYNC === 'true' ||
+  process.env.ENABLE_ACCESS_LOGS !== 'true';
 
 const ACCESS_LOG_COLUMNS = [
   { name: 'user_agent', definition: 'TEXT' },
@@ -1045,12 +1051,16 @@ function startServer() {
 }
 
 async function bootstrapServer() {
-  await ensureAccessLogSchema().catch((error) => {
-    console.warn(
-      'Access log schema sync skipped (starting server without forcing schema updates):',
-      error?.message || error,
-    );
-  });
+  if (!skipAccessLogs) {
+    await ensureAccessLogSchema().catch((error) => {
+      console.warn(
+        'Access log schema sync skipped (starting server without forcing schema updates):',
+        error?.message || error,
+      );
+    });
+  } else {
+    accessLogsReady = false;
+  }
   startServer();
 }
 
