@@ -33,6 +33,20 @@ interface Submission {
   referrer: string | null;
   createdAt: string;
   updatedAt: string;
+  spamSignals?: SpamSignals;
+  hasSpamPattern?: boolean;
+}
+
+interface SpamSignals {
+  rapidRepeat: boolean;
+  sameIpLast10m: number;
+  sameUaLast10m: number;
+  sameIpLast60m: number;
+  sameUaLast60m: number;
+  comboLast10m: number;
+  lastSeenAt: string | null;
+  windowMinutes: number;
+  score: number;
 }
 
 interface Filters {
@@ -369,14 +383,14 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
             <p className="text-slate-400 mt-1">{usedFallback ? 'Showing recent submissions (empty filters or no data).' : `${total} records found`}</p>
           </div>
           <div className="flex items-center gap-3">
-            <button
+              <button
               onClick={() => setShowFilters(!showFilters)}
               className={`px-4 py-2.5 rounded-xl border font-medium transition-all flex items-center gap-2 ${showFilters ? 'bg-sky-500/20 border-sky-500/30 text-sky-400' : 'border-white/10 text-slate-300 hover:bg-white/5'}`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
               </svg>
-              Filtreler
+              Filters
             </button>
             <div className="relative">
               <button
@@ -484,7 +498,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  Filtreleri Temizle
+                  Clear filters
                 </button>
               </div>
             </div>
@@ -544,7 +558,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                     <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Customer</th>
                     <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Service</th>
                     <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Location</th>
-                    <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Cihaz</th>
+                    <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Device</th>
                     <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
                     <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Tarih</th>
                     <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
@@ -588,6 +602,22 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                             <p className="font-medium text-white">{sub.name}</p>
                             <p className="text-xs text-slate-400">{sub.email}</p>
                             <p className="text-xs text-slate-500">{sub.phone}</p>
+                            {sub.hasSpamPattern && (
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                <span className="px-2 py-1 rounded-lg border border-red-500/40 bg-red-500/10 text-red-300 text-[10px] font-semibold uppercase tracking-wide">
+                                  Spam pattern
+                                </span>
+                                {sub.spamSignals?.comboLast10m ? (
+                                  <span className="px-2 py-1 rounded-lg bg-amber-500/10 text-amber-200 text-[10px]">
+                                    {sub.spamSignals.comboLast10m} fast repeats (10m)
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-1 rounded-lg bg-amber-500/10 text-amber-200 text-[10px]">
+                                    Same IP {sub.spamSignals?.sameIpLast60m || 0}x / UA {sub.spamSignals?.sameUaLast60m || 0}x last hour
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -633,7 +663,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                           onClick={() => openSubmissionDetail(sub)}
                           className="px-4 py-2 rounded-lg bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 font-medium text-sm transition-all"
                         >
-                          Detay
+                          Details
                         </button>
                       </td>
                     </tr>
@@ -671,8 +701,8 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                     );
                   })}
                 </div>
-                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-4 py-2 rounded-xl bg-slate-700/50 text-slate-300 disabled:opacity-50 hover:bg-slate-700 transition-all text-sm font-medium">Sonraki</button>
-                <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-4 py-2 rounded-xl bg-slate-700/50 text-slate-300 disabled:opacity-50 hover:bg-slate-700 transition-all text-sm font-medium">Son</button>
+                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-4 py-2 rounded-xl bg-slate-700/50 text-slate-300 disabled:opacity-50 hover:bg-slate-700 transition-all text-sm font-medium">Next</button>
+                <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-4 py-2 rounded-xl bg-slate-700/50 text-slate-300 disabled:opacity-50 hover:bg-slate-700 transition-all text-sm font-medium">Last</button>
               </div>
             )}
           </div>
@@ -705,10 +735,10 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                     <span className="text-lg">👤</span> Contact Info
                   </h4>
                   <div className="grid grid-cols-2 gap-4">
-                    <div><label className="text-xs text-slate-500">Ad Soyad</label><p className="font-medium text-white mt-1">{selectedSubmission.name}</p></div>
-                    <div><label className="text-xs text-slate-500">Telefon</label><p className="font-medium text-white mt-1">{selectedSubmission.phone}</p></div>
-                    <div className="col-span-2"><label className="text-xs text-slate-500">E-posta</label><p className="font-medium text-white mt-1">{selectedSubmission.email}</p></div>
-                    <div><label className="text-xs text-slate-500">ZIP Kodu</label><p className="font-medium text-white mt-1">{selectedSubmission.zipCode}</p></div>
+                    <div><label className="text-xs text-slate-500">Full Name</label><p className="font-medium text-white mt-1">{selectedSubmission.name}</p></div>
+                    <div><label className="text-xs text-slate-500">Phone</label><p className="font-medium text-white mt-1">{selectedSubmission.phone}</p></div>
+                    <div className="col-span-2"><label className="text-xs text-slate-500">Email</label><p className="font-medium text-white mt-1">{selectedSubmission.email}</p></div>
+                    <div><label className="text-xs text-slate-500">ZIP Code</label><p className="font-medium text-white mt-1">{selectedSubmission.zipCode}</p></div>
                   </div>
                 </div>
 
@@ -721,11 +751,52 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                     <div><label className="text-xs text-slate-500">City</label><p className="font-medium text-white mt-1">{selectedSubmission.city || '-'}</p></div>
                     <div><label className="text-xs text-slate-500">Browser</label><p className="font-medium text-white mt-1">{selectedSubmission.browser || '-'} {selectedSubmission.browserVersion || ''}</p></div>
                     <div><label className="text-xs text-slate-500">Operating System</label><p className="font-medium text-white mt-1">{selectedSubmission.os || '-'}</p></div>
-                    <div><label className="text-xs text-slate-500">Cihaz</label><p className="font-medium text-white mt-1">{deviceIcons[selectedSubmission.deviceType || 'desktop']} {selectedSubmission.deviceType || '-'}</p></div>
-                    <div><label className="text-xs text-slate-500">Saat Dilimi</label><p className="font-medium text-white mt-1">{selectedSubmission.timezone || '-'}</p></div>
+                    <div><label className="text-xs text-slate-500">Device</label><p className="font-medium text-white mt-1">{deviceIcons[selectedSubmission.deviceType || 'desktop']} {selectedSubmission.deviceType || '-'}</p></div>
+                    <div><label className="text-xs text-slate-500">Time Zone</label><p className="font-medium text-white mt-1">{selectedSubmission.timezone || '-'}</p></div>
                   </div>
                 </div>
               </div>
+
+              {selectedSubmission.spamSignals && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-white flex items-center gap-2">
+                      <span className="text-lg">dY\"v</span> Spam / Pattern Signals
+                    </h4>
+                    {selectedSubmission.hasSpamPattern && (
+                      <span className="px-3 py-1 rounded-lg bg-red-600/20 text-red-200 text-xs font-semibold">Pattern detected</span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
+                    <div className="bg-slate-900/40 rounded-xl p-3 border border-white/5">
+                      <p className="text-slate-400 text-xs mb-1">Same IP (last 10m)</p>
+                      <p className="text-white font-semibold">{selectedSubmission.spamSignals.sameIpLast10m} hits</p>
+                      <p className="text-slate-500 text-xs mt-1">Last hour: {selectedSubmission.spamSignals.sameIpLast60m}</p>
+                    </div>
+                    <div className="bg-slate-900/40 rounded-xl p-3 border border-white/5">
+                      <p className="text-slate-400 text-xs mb-1">Same UA (last 10m)</p>
+                      <p className="text-white font-semibold">{selectedSubmission.spamSignals.sameUaLast10m} hits</p>
+                      <p className="text-slate-500 text-xs mt-1">Last hour: {selectedSubmission.spamSignals.sameUaLast60m}</p>
+                    </div>
+                    <div className="bg-slate-900/40 rounded-xl p-3 border border-white/5">
+                      <p className="text-slate-400 text-xs mb-1">Fast repeats</p>
+                      <p className="text-white font-semibold">{selectedSubmission.spamSignals.comboLast10m} in 10m</p>
+                      <p className={`text-xs mt-1 ${selectedSubmission.spamSignals.rapidRepeat ? 'text-amber-300' : 'text-slate-500'}`}>
+                        {selectedSubmission.spamSignals.rapidRepeat ? 'Rapid repeat detected' : 'No rapid repeat'}
+                      </p>
+                    </div>
+                    <div className="bg-slate-900/40 rounded-xl p-3 border border-white/5">
+                      <p className="text-slate-400 text-xs mb-1">Last similar</p>
+                      <p className="text-white font-semibold">
+                        {selectedSubmission.spamSignals.lastSeenAt
+                          ? new Date(selectedSubmission.spamSignals.lastSeenAt).toLocaleString('en-US')
+                          : 'Unknown'}
+                      </p>
+                      <p className="text-slate-500 text-xs mt-1">Score: {selectedSubmission.spamSignals.score}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-slate-700/30 rounded-xl p-4 border border-white/5">
@@ -801,7 +872,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                     type="text"
                     value={noteText}
                     onChange={(e) => setNoteText(e.target.value)}
-                    placeholder="Not ekle..."
+                    placeholder="Add a note..."
                     className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50"
                     onKeyPress={(e) => e.key === 'Enter' && addNote()}
                   />
