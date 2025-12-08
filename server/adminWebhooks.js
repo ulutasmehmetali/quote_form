@@ -176,26 +176,4 @@ router.post('/:id/test', requireAdmin, async (req, res) => {
     });
   }
 });
-
-router.get('/:id/logs', requireAdmin, async (req, res) => {
-  const { id } = req.params;
-  let { limit = 20 } = req.query;
-
-  const safeLimit = Math.max(1, Math.min(parseInt(limit, 10) || 20, 50));
-
-  const { data, error } = await supabase
-    .from('webhook_logs')
-    .select('*')
-    .eq('webhook_id', id)
-    .order('created_at', { ascending: false })
-    .limit(safeLimit);
-
-  if (error) {
-    console.error('Webhook log fetch error:', error.message);
-    return res.status(500).json({ error: 'Failed to load webhook logs' });
-  }
-
-  res.json({ logs: data || [] });
-});
-
 export default router;
