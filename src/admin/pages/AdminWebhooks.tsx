@@ -13,24 +13,15 @@ interface Webhook {
   created_at: string;
 }
 
-interface WebhookTestLog {
-  id: number;
-  webhook_id: number;
-  status: string;
-  response_code: number | null;
-  response_body: string | null;
-  created_at: string;
-}
-
 interface AdminWebhooksProps {
   onNavigate: (page: string) => void;
 }
 
 const eventOptions = [
-  { value: 'submission.created', label: 'New Submission' },
-  { value: 'submission.updated', label: 'Submission Updated' },
+  { value: 'submission.created', label: 'New BaYvuru' },
+  { value: 'submission.updated', label: 'BaYvuru Updatendi' },
   { value: 'submission.deleted', label: 'Submission Deleted' },
-  { value: 'professional.created', label: 'New Professional' },
+  { value: 'professional.created', label: 'New Profesyonel' },
   { value: 'professional.approved', label: 'Professional Approved' },
 ];
 
@@ -43,9 +34,6 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
   const [formData, setFormData] = useState({ name: '', url: '', events: [] as string[] });
   const [secretKey, setSecretKey] = useState<string | null>(null);
   const [testingId, setTestingId] = useState<number | null>(null);
-  const [testLogs, setTestLogs] = useState<Record<number, WebhookTestLog[]>>({});
-  const [logsLoading, setLogsLoading] = useState<Record<number, boolean>>({});
-  const [expandedLogs, setExpandedLogs] = useState<Record<number, boolean>>({});
 
   const fetchWebhooks = useCallback(async () => {
     setLoading(true);
@@ -63,38 +51,9 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
     }
   }, [getAuthHeaders]);
 
-  const fetchWebhookLogs = useCallback(async (webhookId: number) => {
-    setLogsLoading((prev) => ({ ...prev, [webhookId]: true }));
-    try {
-      const res = await fetch(apiUrl(`/api/admin/webhooks/${webhookId}/logs?limit=20`), {
-        headers: getAuthHeaders(),
-        credentials: 'include',
-      });
-      const data = await res.json();
-      setTestLogs((prev) => ({
-        ...prev,
-        [webhookId]: Array.isArray(data.logs) ? data.logs : [],
-      }));
-    } catch (error) {
-      console.error('Fetch webhook logs error:', error);
-    } finally {
-      setLogsLoading((prev) => ({ ...prev, [webhookId]: false }));
-    }
-  }, [getAuthHeaders]);
-
   useEffect(() => {
     fetchWebhooks();
   }, [fetchWebhooks]);
-
-  const toggleLogs = (id: number) => {
-    setExpandedLogs((prev) => {
-      const nextExpanded = !prev[id];
-      if (!prev[id]) {
-        fetchWebhookLogs(id);
-      }
-      return { ...prev, [id]: nextExpanded };
-    });
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,7 +124,6 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
       const data = await res.json();
       alert(data.success ? 'Test successful!' : `Test failed: ${data.error}`);
       fetchWebhooks();
-      fetchWebhookLogs(id);
     } catch (error) {
       alert('Error while sending test');
     } finally {
@@ -266,9 +224,6 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
                         <><svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /></svg> Test</>
                       )}
                     </button>
-                    <button onClick={() => toggleLogs(webhook.id)} className="px-3 py-1.5 rounded-lg bg-slate-700/60 text-slate-200 hover:bg-slate-600 text-xs font-medium transition-all">
-                      {expandedLogs[webhook.id] ? 'Hide history' : 'Test history'}
-                    </button>
                     <button onClick={() => handleToggle(webhook.id, !webhook.is_active)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${webhook.is_active ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'}`}>
                       {webhook.is_active ? 'Stop' : 'Activate'}
                     </button>
@@ -280,48 +235,6 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
                     </button>
                   </div>
                 </div>
-                {expandedLogs[webhook.id] && (
-                  <div className="mt-4 bg-slate-900/40 border border-white/5 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-white">Test History</span>
-                        <span className="text-xs text-slate-400">Last 20 tests</span>
-                      </div>
-                      <button onClick={() => fetchWebhookLogs(webhook.id)} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-sky-500/10 text-sky-300 hover:bg-sky-500/20 transition-all">
-                        Refresh
-                      </button>
-                    </div>
-                    {logsLoading[webhook.id] ? (
-                      <div className="flex items-center justify-center py-4 text-slate-400 text-sm">
-                        <div className="w-5 h-5 border-2 border-sky-500/30 border-t-sky-400 rounded-full animate-spin mr-3"></div>
-                        Loading logs...
-                      </div>
-                    ) : (testLogs[webhook.id] || []).length > 0 ? (
-                      <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                        {(testLogs[webhook.id] || []).map((log) => (
-                          <div key={log.id} className="flex items-start gap-3 bg-slate-800/50 border border-white/5 rounded-lg p-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 text-xs">
-                                <span className={`px-2 py-0.5 rounded-full font-semibold ${log.status === 'success' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-300'}`}>
-                                  {log.status}
-                                </span>
-                                <span className="text-slate-400">Code: {log.response_code ?? '-'}</span>
-                              </div>
-                              <p className="text-slate-300 text-xs mt-1 truncate">
-                                {(log.response_body || '').slice(0, 180) || 'No response body'}
-                              </p>
-                            </div>
-                            <div className="text-right text-xs text-slate-400 w-32">
-                              {log.created_at ? new Date(log.created_at).toLocaleString('en-US') : '-'}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-slate-500 text-sm">No test history yet.</p>
-                    )}
-                  </div>
-                )}
                 <div className="flex items-center gap-4 mt-4 pt-4 border-t border-white/5 text-xs text-slate-500">
                   <span>Created: {new Date(webhook.created_at).toLocaleDateString('en-US')}</span>
                   {webhook.last_triggered_at && (

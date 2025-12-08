@@ -33,20 +33,6 @@ interface Submission {
   referrer: string | null;
   createdAt: string;
   updatedAt: string;
-  spamSignals?: SpamSignals;
-  hasSpamPattern?: boolean;
-}
-
-interface SpamSignals {
-  rapidRepeat: boolean;
-  sameIpLast10m: number;
-  sameUaLast10m: number;
-  sameIpLast60m: number;
-  sameUaLast60m: number;
-  comboLast10m: number;
-  lastSeenAt: string | null;
-  windowMinutes: number;
-  score: number;
 }
 
 interface Filters {
@@ -602,22 +588,6 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                             <p className="font-medium text-white">{sub.name}</p>
                             <p className="text-xs text-slate-400">{sub.email}</p>
                             <p className="text-xs text-slate-500">{sub.phone}</p>
-                            {sub.hasSpamPattern && (
-                              <div className="mt-2 flex flex-wrap gap-2">
-                                <span className="px-2 py-1 rounded-lg border border-red-500/40 bg-red-500/10 text-red-300 text-[10px] font-semibold uppercase tracking-wide">
-                                  Spam pattern
-                                </span>
-                                {sub.spamSignals?.comboLast10m ? (
-                                  <span className="px-2 py-1 rounded-lg bg-amber-500/10 text-amber-200 text-[10px]">
-                                    {sub.spamSignals.comboLast10m} fast repeats (10m)
-                                  </span>
-                                ) : (
-                                  <span className="px-2 py-1 rounded-lg bg-amber-500/10 text-amber-200 text-[10px]">
-                                    Same IP {sub.spamSignals?.sameIpLast60m || 0}x / UA {sub.spamSignals?.sameUaLast60m || 0}x last hour
-                                  </span>
-                                )}
-                              </div>
-                            )}
                           </div>
                         </div>
                       </td>
@@ -756,47 +726,6 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                   </div>
                 </div>
               </div>
-
-              {selectedSubmission.spamSignals && (
-                <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold text-white flex items-center gap-2">
-                      <span className="text-lg">dY\"v</span> Spam / Pattern Signals
-                    </h4>
-                    {selectedSubmission.hasSpamPattern && (
-                      <span className="px-3 py-1 rounded-lg bg-red-600/20 text-red-200 text-xs font-semibold">Pattern detected</span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
-                    <div className="bg-slate-900/40 rounded-xl p-3 border border-white/5">
-                      <p className="text-slate-400 text-xs mb-1">Same IP (last 10m)</p>
-                      <p className="text-white font-semibold">{selectedSubmission.spamSignals.sameIpLast10m} hits</p>
-                      <p className="text-slate-500 text-xs mt-1">Last hour: {selectedSubmission.spamSignals.sameIpLast60m}</p>
-                    </div>
-                    <div className="bg-slate-900/40 rounded-xl p-3 border border-white/5">
-                      <p className="text-slate-400 text-xs mb-1">Same UA (last 10m)</p>
-                      <p className="text-white font-semibold">{selectedSubmission.spamSignals.sameUaLast10m} hits</p>
-                      <p className="text-slate-500 text-xs mt-1">Last hour: {selectedSubmission.spamSignals.sameUaLast60m}</p>
-                    </div>
-                    <div className="bg-slate-900/40 rounded-xl p-3 border border-white/5">
-                      <p className="text-slate-400 text-xs mb-1">Fast repeats</p>
-                      <p className="text-white font-semibold">{selectedSubmission.spamSignals.comboLast10m} in 10m</p>
-                      <p className={`text-xs mt-1 ${selectedSubmission.spamSignals.rapidRepeat ? 'text-amber-300' : 'text-slate-500'}`}>
-                        {selectedSubmission.spamSignals.rapidRepeat ? 'Rapid repeat detected' : 'No rapid repeat'}
-                      </p>
-                    </div>
-                    <div className="bg-slate-900/40 rounded-xl p-3 border border-white/5">
-                      <p className="text-slate-400 text-xs mb-1">Last similar</p>
-                      <p className="text-white font-semibold">
-                        {selectedSubmission.spamSignals.lastSeenAt
-                          ? new Date(selectedSubmission.spamSignals.lastSeenAt).toLocaleString('en-US')
-                          : 'Unknown'}
-                      </p>
-                      <p className="text-slate-500 text-xs mt-1">Score: {selectedSubmission.spamSignals.score}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-slate-700/30 rounded-xl p-4 border border-white/5">

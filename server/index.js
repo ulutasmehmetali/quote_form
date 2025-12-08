@@ -43,6 +43,8 @@ let skipAccessLogs =
   forceSkipAccessLogs ||
   process.env.SKIP_ACCESS_LOG_SCHEMA_SYNC === 'true' ||
   process.env.ENABLE_ACCESS_LOGS !== 'true';
+const bypassAccessLogSchemaCheck =
+  process.env.BYPASS_ACCESS_LOG_SCHEMA_CHECK === 'true';
 
 const ACCESS_LOG_COLUMNS = [
   { name: 'user_agent', definition: 'TEXT' },
@@ -408,6 +410,11 @@ function validateZipCode(zip) {
 async function ensureAccessLogSchema({ forceSync = false } = {}) {
   if (!forceSync && skipAccessLogs) {
     accessLogsReady = false;
+    return;
+  }
+
+  if (bypassAccessLogSchemaCheck) {
+    console.info('[access_logs] Schema check bypassed by env flag.');
     return;
   }
 
@@ -1051,7 +1058,7 @@ function startServer() {
 }
 
 async function bootstrapServer() {
-  if (!skipAccessLogs) {
+  if (!skipAccessLogs && !bypassAccessLogSchemaCheck) {
     await ensureAccessLogSchema().catch((error) => {
       console.warn(
         'Access log schema sync skipped (starting server without forcing schema updates):',
