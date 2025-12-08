@@ -50,6 +50,20 @@ interface SubmissionFallback {
 
 }
 
+type AccessLog = {
+  id: string;
+  sessionId: string | null;
+  userIp: string | null;
+  country: string | null;
+  city: string | null;
+  path: string | null;
+  method: string | null;
+  referer: string | null;
+  enteredAt: string | null;
+  leftAt: string | null;
+  createdAt: string | null;
+};
+
 
 
 interface AdminLogsProps {
@@ -94,6 +108,9 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
   const [total, setTotal] = useState(0);
 
   const [selectedLog, setSelectedLog] = useState<ActivityLog | null>(null);
+  const [accessLogs, setAccessLogs] = useState<AccessLog[]>([]);
+  const [accessLoading, setAccessLoading] = useState(false);
+  const [accessError, setAccessError] = useState('');
 
 
 
@@ -217,6 +234,45 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
   };
 
 
+
+  const fetchAccessLogs = async () => {
+
+    setAccessLoading(true);
+
+    setAccessError('');
+
+    try {
+
+      const res = await fetch(apiUrl('/api/admin/access-logs?limit=200'), {
+
+        headers: getAuthHeaders(),
+
+        credentials: 'include',
+
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+
+        throw new Error(data?.error || 'Failed to load access logs');
+
+      }
+
+      const payload = Array.isArray(data?.logs) ? data.logs : [];
+
+      setAccessLogs(payload);
+
+    } catch (error) {
+      console.error('Failed to fetch access logs:', error);
+      setAccessError((error as any)?.message || 'Failed to load access logs');
+      setAccessLogs([]);
+    } finally {
+      setAccessLoading(false);
+    }
+  };
+
+
   const formatTimeAgo = (dateString: string) => {
 
     const date = new Date(dateString);
@@ -242,6 +298,18 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
     if (diffDays < 7) return `${diffDays} days ago`;
 
     return date.toLocaleDateString('en-US');
+
+  };
+
+  const formatDateTime = (value?: string | null) => {
+
+    if (!value) return '—';
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) return '—';
+
+    return date.toLocaleString('en-US');
 
   };
 
@@ -363,11 +431,25 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
             </h2>
 
-            <p className="text-slate-400 mt-1">{total} aktivite kaydedildi</p>
+            <p className="text-slate-400 mt-1">{total} activities recorded</p>
 
           </div>
 
           <div className="flex items-center gap-3">
+
+            <button
+
+              onClick={fetchAccessLogs}
+
+              disabled={accessLoading}
+
+              className="px-4 py-2.5 rounded-xl bg-slate-800/50 border border-white/10 text-white text-sm hover:bg-slate-700/60 disabled:opacity-60"
+
+            >
+
+              {accessLoading ? 'Loading IP logs...' : 'Access Logs'}
+
+            </button>
 
             <select
 
@@ -451,7 +533,52 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
         </div>
 
-
+        <div className="bg-slate-800/50 backdrop-blur-sm border border-white/5 rounded-2xl p-4 mb-6">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <h3 className="text-lg font-semibold text-white">Access Logs (IP)</h3>
+              <p className="text-slate-400 text-sm">Recent visits with IP, country, city, and entry/exit times.</p>
+            </div>
+            {accessLogs.length > 0 && (
+              <span className="text-xs text-slate-400 bg-white/5 px-3 py-1 rounded-full">
+                Showing {accessLogs.length} records
+              </span>
+            )}
+          </div>
+          {accessError && <p className="text-sm text-red-300 mb-3">{accessError}</p>}
+          {accessLoading ? (
+            <div className="py-6 text-slate-400 text-sm">Loading access logs...</div>
+          ) : accessLogs.length === 0 ? (
+            <p className="text-slate-500 text-sm">Click “Access Logs” above to load recent visit data.</p>
+          ) : (
+            <div className="overflow-auto">
+              <table className="min-w-full text-sm">
+                <thead className="text-left text-slate-400">
+                  <tr>
+                    <th className="px-2 py-2">IP</th>
+                    <th className="px-2 py-2">Country</th>
+                    <th className="px-2 py-2">City</th>
+                    <th className="px-2 py-2">Path</th>
+                    <th className="px-2 py-2">Entered</th>
+                    <th className="px-2 py-2">Left</th>
+                  </tr>
+                </thead>
+                <tbody className="text-white divide-y divide-white/5">
+                  {accessLogs.map((log) => (
+                    <tr key={log.id}>
+                      <td className="px-2 py-2 font-mono text-xs">{log.userIp || '—'}</td>
+                      <td className="px-2 py-2">{log.country || 'Unknown'}</td>
+                      <td className="px-2 py-2">{log.city || 'Unknown'}</td>
+                      <td className="px-2 py-2 text-slate-300">{log.path || '—'} {log.method ? `(${log.method})` : ''}</td>
+                      <td className="px-2 py-2 text-slate-300">{formatDateTime(log.enteredAt || log.createdAt)}</td>
+                      <td className="px-2 py-2 text-slate-300">{formatDateTime(log.leftAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
 
         {isLoading ? (
 

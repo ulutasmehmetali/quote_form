@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import geoip from 'geoip-lite';
 import { db, pool } from './db.js';
-import { submissions, adminUsers, submissionNotes, activityLogs, partialForms, adminIpBlacklist } from '../shared/schema.js';
+import { submissions, adminUsers, submissionNotes, activityLogs, partialForms, adminIpBlacklist, accessLogs } from '../shared/schema.js';
 import { eq, desc, sql, count, gte, and, like, or, asc, lt } from 'drizzle-orm';
 import { getClientIP } from './utils/geoip.js';
 import { getGeoFromIP } from './helpers/geo.js';
@@ -1342,6 +1342,39 @@ router.get('/logs', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Logs error:', error.message);
     res.status(500).json({ error: 'Failed to fetch logs' });
+  }
+});
+
+router.get('/access-logs', requireAuth, async (req, res) => {
+  try {
+    let { limit = 100 } = req.query;
+    limit = Math.max(1, Math.min(parseInt(limit) || 100, 500));
+
+    const logs = await db
+      .select({
+        id: accessLogs.id,
+        sessionId: accessLogs.sessionId,
+        userIp: accessLogs.userIp,
+        country: accessLogs.country,
+        city: accessLogs.city,
+        path: accessLogs.path,
+        method: accessLogs.method,
+        referer: accessLogs.referer,
+        enteredAt: accessLogs.enteredAt,
+        leftAt: accessLogs.leftAt,
+        createdAt: accessLogs.createdAt,
+        statusCode: accessLogs.statusCode,
+        latencyMs: accessLogs.latencyMs,
+        userAgent: accessLogs.userAgent,
+      })
+      .from(accessLogs)
+      .orderBy(desc(accessLogs.createdAt))
+      .limit(limit);
+
+    res.json({ logs });
+  } catch (error) {
+    console.error('Access logs fetch error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch access logs' });
   }
 });
 
