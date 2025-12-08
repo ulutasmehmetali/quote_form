@@ -111,6 +111,12 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
   const [accessLogs, setAccessLogs] = useState<AccessLog[]>([]);
   const [accessLoading, setAccessLoading] = useState(false);
   const [accessError, setAccessError] = useState('');
+  const [accessFilters, setAccessFilters] = useState({
+    ip: '',
+    country: '',
+    city: '',
+    path: '',
+  });
 
 
 
@@ -311,6 +317,48 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
 
     return date.toLocaleString('en-US');
 
+  };
+
+  const filteredAccessLogs = accessLogs.filter((log) => {
+    const matches = (value: string | null, filter: string) =>
+      !filter || (value || '').toLowerCase().includes(filter.toLowerCase());
+    return (
+      matches(log.userIp, accessFilters.ip) &&
+      matches(log.country, accessFilters.country) &&
+      matches(log.city, accessFilters.city) &&
+      matches(log.path, accessFilters.path)
+    );
+  });
+
+  const exportAccessLogs = () => {
+    const rows = filteredAccessLogs.map((log) => ({
+      id: log.id,
+      sessionId: log.sessionId || '',
+      userIp: log.userIp || '',
+      country: log.country || '',
+      city: log.city || '',
+      path: log.path || '',
+      method: log.method || '',
+      referer: log.referer || '',
+      enteredAt: log.enteredAt || log.createdAt || '',
+      leftAt: log.leftAt || '',
+    }));
+    const header = Object.keys(rows[0] || {}).join(',');
+    const body = rows
+      .map((r) =>
+        Object.values(r)
+          .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+          .join(','),
+      )
+      .join('\n');
+    const csv = `${header}\n${body}`;
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `access-logs-${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
 
@@ -541,7 +589,7 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
             </div>
             {accessLogs.length > 0 && (
               <span className="text-xs text-slate-400 bg-white/5 px-3 py-1 rounded-full">
-                Showing {accessLogs.length} records
+                Showing {filteredAccessLogs.length} of {accessLogs.length} records
               </span>
             )}
           </div>
@@ -551,32 +599,72 @@ export default function AdminLogs({ onNavigate }: AdminLogsProps) {
           ) : accessLogs.length === 0 ? (
             <p className="text-slate-500 text-sm">Click “Access Logs” above to load recent visit data.</p>
           ) : (
-            <div className="overflow-auto">
-              <table className="min-w-full text-sm">
-                <thead className="text-left text-slate-400">
-                  <tr>
-                    <th className="px-2 py-2">IP</th>
-                    <th className="px-2 py-2">Country</th>
-                    <th className="px-2 py-2">City</th>
-                    <th className="px-2 py-2">Path</th>
-                    <th className="px-2 py-2">Entered</th>
-                    <th className="px-2 py-2">Left</th>
-                  </tr>
-                </thead>
-                <tbody className="text-white divide-y divide-white/5">
-                  {accessLogs.map((log) => (
-                    <tr key={log.id}>
-                      <td className="px-2 py-2 font-mono text-xs">{log.userIp || '—'}</td>
-                      <td className="px-2 py-2">{log.country || 'Unknown'}</td>
-                      <td className="px-2 py-2">{log.city || 'Unknown'}</td>
-                      <td className="px-2 py-2 text-slate-300">{log.path || '—'} {log.method ? `(${log.method})` : ''}</td>
-                      <td className="px-2 py-2 text-slate-300">{formatDateTime(log.enteredAt || log.createdAt)}</td>
-                      <td className="px-2 py-2 text-slate-300">{formatDateTime(log.leftAt)}</td>
+            <>
+              <div className="flex flex-wrap gap-3 mb-3">
+                <input
+                  value={accessFilters.ip}
+                  onChange={(e) => setAccessFilters({ ...accessFilters, ip: e.target.value })}
+                  placeholder="Filter IP"
+                  className="px-3 py-2 rounded-lg bg-slate-900/60 border border-white/10 text-sm text-white"
+                />
+                <input
+                  value={accessFilters.country}
+                  onChange={(e) => setAccessFilters({ ...accessFilters, country: e.target.value })}
+                  placeholder="Filter country"
+                  className="px-3 py-2 rounded-lg bg-slate-900/60 border border-white/10 text-sm text-white"
+                />
+                <input
+                  value={accessFilters.city}
+                  onChange={(e) => setAccessFilters({ ...accessFilters, city: e.target.value })}
+                  placeholder="Filter city"
+                  className="px-3 py-2 rounded-lg bg-slate-900/60 border border-white/10 text-sm text-white"
+                />
+                <input
+                  value={accessFilters.path}
+                  onChange={(e) => setAccessFilters({ ...accessFilters, path: e.target.value })}
+                  placeholder="Filter path"
+                  className="px-3 py-2 rounded-lg bg-slate-900/60 border border-white/10 text-sm text-white"
+                />
+                <button
+                  onClick={() => setAccessFilters({ ip: '', country: '', city: '', path: '' })}
+                  className="px-3 py-2 rounded-lg bg-slate-800/60 border border-white/10 text-sm text-white"
+                >
+                  Clear filters
+                </button>
+                <button
+                  onClick={exportAccessLogs}
+                  className="px-3 py-2 rounded-lg bg-sky-600 text-white text-sm hover:bg-sky-500"
+                >
+                  Export CSV
+                </button>
+              </div>
+              <div className="overflow-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="text-left text-slate-400">
+                    <tr>
+                      <th className="px-2 py-2">IP</th>
+                      <th className="px-2 py-2">Country</th>
+                      <th className="px-2 py-2">City</th>
+                      <th className="px-2 py-2">Path</th>
+                      <th className="px-2 py-2">Entered</th>
+                      <th className="px-2 py-2">Left</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="text-white divide-y divide-white/5">
+                    {filteredAccessLogs.map((log) => (
+                      <tr key={log.id}>
+                        <td className="px-2 py-2 font-mono text-xs">{log.userIp || '—'}</td>
+                        <td className="px-2 py-2">{log.country || 'Unknown'}</td>
+                        <td className="px-2 py-2">{log.city || 'Unknown'}</td>
+                        <td className="px-2 py-2 text-slate-300">{log.path || '—'} {log.method ? `(${log.method})` : ''}</td>
+                        <td className="px-2 py-2 text-slate-300">{formatDateTime(log.enteredAt || log.createdAt)}</td>
+                        <td className="px-2 py-2 text-slate-300">{formatDateTime(log.leftAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
 
