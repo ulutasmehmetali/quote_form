@@ -33,8 +33,6 @@ const PORT = process.env.PORT || 3001;
 const isProduction = process.env.NODE_ENV === 'production';
 const ACCESS_LOG_COOKIE = 'access_session_id';
 const ACCESS_LOG_COOKIE_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
-const ACCESS_LOG_RETRY_ATTEMPTS = 3;
-const ACCESS_LOG_RETRY_BASE_MS = 1000;
 let accessLogsReady = true;
 const forceSkipAccessLogs = process.env.FORCE_SKIP_ACCESS_LOGS === 'true';
 // Default: disable access_logs unless explicitly enabled to avoid startup noise on locked-down DBs.
@@ -441,25 +439,8 @@ async function ensureAccessLogSchema({ forceSync = false } = {}) {
     }
   };
 
-  for (let attempt = 1; attempt <= ACCESS_LOG_RETRY_ATTEMPTS; attempt++) {
-    let existingName = null;
-    try {
-      existingName = await checkExists();
-    } catch (error) {
-      permissionHint(error?.message);
-      console.warn(
-        `[access_logs] Attempt ${attempt}/${ACCESS_LOG_RETRY_ATTEMPTS} failed while checking table:`,
-        error?.message || error
-      );
-
-      if (attempt === 1) {
-        console.warn(
-          '[access_logs] Initial check failed; temporarily disabling access log writes to avoid noise.'
-        );
-        skipAccessLogs = true;
-      }
-    }
-
+  try {
+    const existingName = await checkExists();
     if (existingName) {
       console.info(
         `[access_logs] Table exists (${existingName}); skipping creation.`
@@ -467,31 +448,18 @@ async function ensureAccessLogSchema({ forceSync = false } = {}) {
       return;
     }
 
-    try {
-      for (const statement of ACCESS_LOG_SCHEMA_STEPS) {
-        await db.execute(statement);
-      }
-      console.info('[access_logs] Table created and indexes ready.');
-      return;
-    } catch (error) {
-      permissionHint(error?.message);
-      const isLast = attempt === ACCESS_LOG_RETRY_ATTEMPTS;
-      console.warn(
-        `[access_logs] Attempt ${attempt}/${ACCESS_LOG_RETRY_ATTEMPTS} failed while creating/ensuring table:`,
-        error?.message || error
-      );
-
-      if (isLast) {
-        console.error(
-          '[access_logs] Schema sync failed after retries; continuing without access_logs.'
-        );
-        accessLogsReady = false;
-        return;
-      }
-
-      const delay = ACCESS_LOG_RETRY_BASE_MS * 2 ** (attempt - 1);
-      await new Promise((resolve) => setTimeout(resolve, delay));
+    for (const statement of ACCESS_LOG_SCHEMA_STEPS) {
+      await db.execute(statement);
     }
+    console.info('[access_logs] Table created and indexes ready.');
+  } catch (error) {
+    permissionHint(error?.message);
+    console.warn(
+      '[access_logs] Schema sync failed; disabling access log writes. Error:',
+      error?.message || error
+    );
+    skipAccessLogs = true;
+    accessLogsReady = false;
   }
 }
 
