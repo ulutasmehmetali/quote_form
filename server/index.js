@@ -422,26 +422,37 @@ async function ensureAccessLogSchema({ forceSync = false } = {}) {
   };
 
   for (let attempt = 1; attempt <= ACCESS_LOG_RETRY_ATTEMPTS; attempt++) {
+    let existsCheckFailed = false;
+    let existingName = null;
     try {
-      const existingName = await checkExists();
-      if (existingName) {
-        console.info(
-          `[access_logs] Table exists (${existingName}); skipping creation.`
-        );
-        return;
-      }
+      existingName = await checkExists();
+    } catch (error) {
+      existsCheckFailed = true;
+      permissionHint(error?.message);
+      console.warn(
+        `[access_logs] Attempt ${attempt}/${ACCESS_LOG_RETRY_ATTEMPTS} failed while checking table:`,
+        error?.message || error
+      );
+    }
 
+    if (existingName) {
+      console.info(
+        `[access_logs] Table exists (${existingName}); skipping creation.`
+      );
+      return;
+    }
+
+    try {
       for (const statement of ACCESS_LOG_SCHEMA_STEPS) {
         await db.execute(statement);
       }
-
       console.info('[access_logs] Table created and indexes ready.');
       return;
     } catch (error) {
       permissionHint(error?.message);
       const isLast = attempt === ACCESS_LOG_RETRY_ATTEMPTS;
       console.warn(
-        `[access_logs] Attempt ${attempt}/${ACCESS_LOG_RETRY_ATTEMPTS} failed:`,
+        `[access_logs] Attempt ${attempt}/${ACCESS_LOG_RETRY_ATTEMPTS} failed while creating/ensuring table:`,
         error?.message || error
       );
 
