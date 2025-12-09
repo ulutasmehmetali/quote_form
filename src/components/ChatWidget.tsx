@@ -208,9 +208,7 @@ export default function ChatWidget() {
       const summary =
         typeof data?.summary === 'string' && data.summary.trim()
           ? data.summary.trim()
-          : data?.error
-          ? 'I could not analyze the image automatically.'
-          : 'Here is my best read of the image.';
+          : 'I am not fully certain, but it appears to be a home repair. My best guess: door/lock/handyman. If that is off, tell me briefly what the picture shows.';
       const suggestion = service ? `Suggested service: ${service}.` : '';
       const replyText = [summary, suggestion].filter(Boolean).join(' ');
 

@@ -177,7 +177,7 @@ router.post('/chat/image', async (req, res) => {
     }))
     .slice(-8);
 
-const visionPrompt = `
+  const visionPrompt = `
 You triage home-service requests from images. Respond with JSON ONLY:
 {
  "serviceType": "plumbing|electrical|hvac|roofing|flooring|pest control|landscaping|painting|cleaning|remodeling|handyman|garage door|concrete|fencing|other",
@@ -201,12 +201,13 @@ Always provide a summary even with low confidence. Never invent prices.`;
             role: 'user',
             content: [
               { type: 'input_text', text: 'Analyze this image and classify the needed service.' },
-              { type: 'input_image', image_url: { url: image } },
+              { type: 'input_image', image_url: { url: image, detail: 'high' } },
             ],
           },
         ],
         temperature: 0,
-        max_output_tokens: 220,
+        max_output_tokens: 280,
+        response_format: { type: 'json_object' },
       }),
     });
 
