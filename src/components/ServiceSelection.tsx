@@ -364,8 +364,8 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
   return (
     <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-6 lg:space-y-8 animate-fadeIn">
       <div className="text-center space-y-2">
-        <div className="inline-flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-slate-200 shadow-sm">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white text-sm font-bold">
+        <div className="inline-flex items-center gap-3 px-3.5 py-2.5 rounded-2xl bg-sky-50/70 border border-sky-100 shadow-sm">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white text-sm font-bold shadow">
             1
           </span>
           <span className="text-sm font-semibold text-slate-800 tracking-tight">Step 1 of 3 · Choose Service</span>
@@ -560,8 +560,8 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
 
         <div className="space-y-3">
           <div className="flex justify-center mb-2">
-            <div className="inline-flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-slate-200 shadow-sm">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white text-sm font-bold">
+            <div className="inline-flex items-center gap-3 px-3.5 py-2.5 rounded-2xl bg-sky-50/70 border border-sky-100 shadow-sm">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white text-sm font-bold shadow">
                 2
               </span>
               <span className="text-sm font-semibold text-slate-800 tracking-tight">Step 2 of 3 · Enter ZIP</span>
