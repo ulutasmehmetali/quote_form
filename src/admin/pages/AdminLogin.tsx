@@ -49,7 +49,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
               </div>
             </div>
             <h1 className="text-3xl font-bold text-white mb-2">MIYOMINT</h1>
-            <p className="text-slate-400">Admin Panel</p>
+            <p className="text-slate-400 hidden sm:block">Admin Panel</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">

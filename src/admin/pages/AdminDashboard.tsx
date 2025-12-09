@@ -1326,17 +1326,9 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-            <div>
-
-
-
+            <div className="hidden sm:block">
               <h1 className="font-bold text-white text-lg">MIYOMINT</h1>
-
-
-
-              <p className="text-sm text-slate-400">Admin Panel</p>
-
-
+              <p className="text-sm text-slate-400 hidden sm:block">Admin Panel</p>
             </div>
 
 
@@ -1377,15 +1369,6 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-            <button onClick={() => onNavigate('reports')} className="px-5 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 font-medium transition-all">
-
-
-
-              <span className="flex items-center gap-2">📈 Reports</span>
-
-
-
-            </button>
 
 
 

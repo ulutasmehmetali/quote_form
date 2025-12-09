@@ -4,7 +4,6 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminSubmissions from './pages/AdminSubmissions';
-import AdminReports from './pages/AdminReports';
 import AdminLogs from './pages/AdminLogs';
 import AdminSettings from './pages/AdminSettings';
 import AdminProfessionals from './pages/AdminProfessionals';
@@ -17,7 +16,6 @@ import AdminAutomations from './pages/AdminAutomations';
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'submissions', label: 'Submissions' },
-  { id: 'reports', label: 'Reports' },
   { id: 'logs', label: 'Logs' },
   { id: 'professionals', label: 'Professionals' },
   { id: 'partners', label: 'Partners' },
@@ -67,8 +65,6 @@ function AdminContent() {
             navigate('submissions');
             break;
           case 'r':
-            e.preventDefault();
-            navigate('reports');
             break;
           case 'l':
             e.preventDefault();
@@ -110,8 +106,6 @@ function AdminContent() {
     switch (currentPage) {
       case 'submissions':
         return <AdminSubmissions onNavigate={navigate} />;
-      case 'reports':
-        return <AdminReports onNavigate={navigate} />;
       case 'logs':
         return <AdminLogs onNavigate={navigate} />;
       case 'settings':

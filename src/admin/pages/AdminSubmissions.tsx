@@ -320,7 +320,7 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
               <div className="absolute -inset-1 bg-gradient-to-r from-sky-500 to-indigo-500 rounded-xl blur opacity-40 group-hover:opacity-60 transition"></div>
               <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">M</div>
             </div>
-            <div>
+            <div className="hidden sm:block">
               <h1 className="font-bold text-white text-lg">MIYOMINT</h1>
               <p className="text-sm text-slate-400">Admin Panel</p>
             </div>
@@ -332,9 +332,6 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
             </button>
             <button onClick={() => onNavigate('submissions')} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium shadow-lg shadow-sky-500/20">
               <span className="flex items-center gap-2">📋 Submissions</span>
-            </button>
-            <button onClick={() => onNavigate('reports')} className="px-5 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 font-medium transition-all">
-              <span className="flex items-center gap-2">📈 Reports</span>
             </button>
             <button onClick={() => onNavigate('logs')} className="px-5 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 font-medium transition-all">
               <span className="flex items-center gap-2">📜 Logs</span>
