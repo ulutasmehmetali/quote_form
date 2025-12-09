@@ -69,6 +69,7 @@ export default function ChatWidget() {
       payload.zipCode &&
       payload.description;
     if (!ready) return;
+
     setSubmitting(true);
     try {
       const res = await fetch(apiUrl('/api/chat/submit'), {
@@ -112,9 +113,10 @@ export default function ChatWidget() {
       if (!res.ok) throw new Error(`Request failed (${res.status})`);
 
       const data = await res.json();
-      const reply = typeof data?.reply === 'string' && data.reply.trim()
-        ? data.reply.trim()
-        : "I'm here to help. Can you rephrase that?";
+      const reply =
+        typeof data?.reply === 'string' && data.reply.trim()
+          ? data.reply.trim()
+          : "I'm here to help. Can you rephrase that?";
 
       const allMessages = [...nextMessages, { role: 'assistant', content: reply }];
       setMessages(allMessages);
@@ -142,7 +144,7 @@ export default function ChatWidget() {
           }
         }
       } catch {
-        /* ignore extract errors */
+        // ignore extract errors
       }
     } catch (err) {
       setError('I had trouble answering. Please try again.');
@@ -168,8 +170,8 @@ export default function ChatWidget() {
         {!open && (
           <button
             onClick={() => setOpen(true)}
-            className="flex items-center justify-center h-14 w-14 rounded-full bg-gradient-to-r from-sky-500 vi×indigo-500 to-blue-600 text-white shadow-xl shadow-sky-600/30 hover:shadow-sky-500/50 transition-all ring-2 ring-sky-500/30 hover:ring-sky-400/50 text-sm"
-            ari×label="Open AI assistant"
+            className="flex items-center justify-center h-14 w-14 rounded-full bg-gradient-to-r from-sky-500 via-indigo-500 to-blue-600 text-white shadow-xl shadow-sky-600/30 hover:shadow-sky-500/50 transition-all ring-2 ring-sky-500/30 hover:ring-sky-400/50 text-sm"
+            aria-label="Open AI assistant"
           >
             <img
               src="/robot-icon.svg"
@@ -198,9 +200,9 @@ export default function ChatWidget() {
               <button
                 onClick={() => setOpen(false)}
                 className="text-white hover:text-white transition-colors"
-                ari×label="Close chat"
+                aria-label="Close chat"
               >
-                Ã—
+                x
               </button>
             </div>
 
@@ -267,9 +269,9 @@ export default function ChatWidget() {
                   onClick={() => runChat(input)}
                   disabled={loading || !input.trim()}
                   className="p-2 rounded-full bg-teal-600 text-white shadow-lg shadow-teal-500/40 disabled:opacity-50"
-                  ari×label="Send message"
+                  aria-label="Send message"
                 >
-                  âž¤
+                  &gt;
                 </button>
               </div>
               <div className="flex items-center justify-end text-[11px] text-slate-500">
