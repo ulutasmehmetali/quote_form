@@ -7,6 +7,13 @@ type ChatMessage = {
 };
 
 const initialAssistant = `Hi there! How can I help you?`;
+const quickPrompts = [
+  'I need emergency repair',
+  'What services do you offer?',
+  'How soon can you schedule?',
+  'Can I get a quote?',
+  'I want to speak to an expert',
+];
 
 export default function ChatWidget() {
   const [open, setOpen] = useState(false);
@@ -131,7 +138,13 @@ export default function ChatWidget() {
       const data = await res.json();
       if (!res.ok || data?.error) throw new Error(data?.error || 'Failed to save');
       setSubmitted(true);
-      setMessages((prev) => [...prev, { role: 'assistant', content: 'Got it! I saved your details for our team.' }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: 'Thanks! I saved your details. A service specialist will contact you shortly.',
+        },
+      ]);
     } catch (err) {
       setError('Could not save your details, please try again.');
     } finally {
@@ -141,28 +154,28 @@ export default function ChatWidget() {
 
   return (
     <>
-      <div className="fixed bottom-6 right-6 z-50 w-full max-w-xs sm:max-w-sm">
+      <div className="fixed bottom-6 right-6 z-50 w-full max-w-[14rem] sm:max-w-[16rem]">
         {!open && (
           <button
             onClick={() => setOpen(true)}
-            className="flex items-center gap-3 px-4 py-3 rounded-full bg-gradient-to-r from-sky-500 via-indigo-500 to-blue-600 text-white shadow-2xl shadow-sky-600/40 hover:shadow-sky-500/60 transition-all ring-2 ring-sky-500/30 hover:ring-sky-400/50 w-full justify-between"
+            className="flex items-center gap-2 px-3 py-2 rounded-full bg-gradient-to-r from-sky-500 via-indigo-500 to-blue-600 text-white shadow-xl shadow-sky-600/30 hover:shadow-sky-500/50 transition-all ring-2 ring-sky-500/30 hover:ring-sky-400/50 w-full justify-between text-sm"
             aria-label="Open AI assistant"
           >
             <img
               src="/robot-icon.svg"
               alt="AI robot"
-              className="h-7 w-7 rounded-full shadow-md shadow-sky-500/30"
+              className="h-6 w-6 rounded-full shadow-md shadow-sky-500/30"
               loading="lazy"
             />
-            <div className="text-left leading-tight">
+            <div className="text-left leading-tight flex-1 ml-1">
               <p className="font-semibold">Ask AI</p>
-              <p className="text-[11px] text-white/80">24/7 guided help</p>
+              <p className="text-[10px] text-white/80">24/7 guided help</p>
             </div>
           </button>
         )}
 
         {open && (
-          <div className="w-full max-w-xs sm:max-w-sm bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 rounded-3xl shadow-[0_15px_45px_rgba(0,0,0,0.35)] overflow-hidden border border-slate-800/70">
+          <div className="w-full max-w-[19rem] sm:max-w-[20rem] bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 rounded-3xl shadow-[0_15px_45px_rgba(0,0,0,0.35)] overflow-hidden border border-slate-800/70">
             <div className="flex items-center justify-between px-3 py-2.5 bg-slate-900/90 border-b border-slate-800/70">
               <div className="flex items-center gap-3">
                 <img

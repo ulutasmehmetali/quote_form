@@ -68,6 +68,20 @@ export default async function handler(req: Request): Promise<Response> {
       content: redactText(m.content.slice(0, 2000)),
     }));
 
+  const lastUser = [...sanitized].reverse().find((m) => m.role === "user");
+  const relevantKeywords = ["repair", "install", "service", "quote", "plumb", "roof", "hvac", "electric", "clean", "remodel", "paint", "landscap", "door", "window", "fence", "floor", "garage"];
+  const isRelevant =
+    lastUser &&
+    relevantKeywords.some((k) => lastUser.content.toLowerCase().includes(k));
+  if (!isRelevant) {
+    return new Response(
+      JSON.stringify({
+        reply: "I can help with home services and quotes. Tell me what you need (service, city/ZIP, brief issue).",
+      }),
+      { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+    );
+  }
+
   try {
     const ai = await fetch(OPENAI_URL, {
       method: "POST",
