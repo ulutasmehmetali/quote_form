@@ -139,40 +139,6 @@ export default function ChatWidget() {
     }
   };
 
-  const saveLead = async () => {
-    if (!lead.name || !lead.phone || !lead.email || !lead.serviceType || !lead.zipCode || !lead.description) {
-      setError('Please fill all required fields.');
-      return;
-    }
-    setSavingLead(true);
-    setError(null);
-    try {
-      const res = await fetch(apiUrl('/api/chat/submit'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(lead),
-      });
-      const data = await res.json();
-      if (!res.ok || data?.error) {
-        throw new Error(data?.error || `Failed: ${res.status}`);
-      }
-      setMessages((prev) => [...prev, { role: 'assistant', content: 'Saved! We received your details.' }]);
-      setLead({
-        name: '',
-        phone: '',
-        email: '',
-        serviceType: '',
-        zipCode: '',
-        urgency: '',
-        description: '',
-      });
-    } catch (err: any) {
-      setError('Failed to save. Please try again.');
-    } finally {
-      setSavingLead(false);
-    }
-  };
-
   return (
     <>
       <div className="fixed bottom-6 right-6 z-50 w-full max-w-xs sm:max-w-sm">
