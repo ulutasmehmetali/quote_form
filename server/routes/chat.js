@@ -145,3 +145,84 @@ router.post('/chat/submit', async (req, res) => {
 });
 
 export default router;
+
+router.post('/chat/extract', async (req, res) => {
+  const apiKey = process.env.CHAT_API_KEY || process.env.OPENAI_API_KEY;
+  if (!apiKey) return res.status(503).json({ error: 'AI not configured' });
+
+  const incoming = Array.isArray(req.body?.messages) ? req.body.messages : [];
+  const messages = incoming
+    .filter((m) => m && typeof m.content === 'string')
+    .map((m) => ({
+      role: m.role === 'assistant' ? 'assistant' : 'user',
+      content: redactText(m.content || ''),
+    }))
+    .slice(-40);
+
+  const extractionPrompt = `
+Extract lead fields from the conversation if present. Output ONLY JSON:
+{
+ "name": "",
+ "phone": "",
+ "email": "",
+ "serviceType": "",
+ "zipCode": "",
+ "urgency": "",
+ "description": "",
+ "ready": true|false
+}
+Fill what you can; leave missing as "". "ready" is true only if all required (name, phone, email, serviceType, zipCode, description) are non-empty.
+`;
+
+  try {
+    const ai = await fetch(OPENAI_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        input: [{ role: 'system', content: extractionPrompt }, ...messages],
+        temperature: 0,
+        max_output_tokens: 200,
+      }),
+    });
+
+    if (!ai.ok) return res.status(200).json({ error: 'extract failed' });
+    const json = await ai.json();
+    let reply =
+      json?.output_text ||
+      (json?.output && json.output[0] && json.output[0].content) ||
+      (json?.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) ||
+      '';
+
+    if (Array.isArray(reply)) reply = reply.map((r) => r?.text || r?.content || '').join('\n');
+    if (reply && typeof reply === 'object') reply = reply.text || reply.content || JSON.stringify(reply);
+    if (typeof reply !== 'string') reply = String(reply || '');
+
+    let parsed = {};
+    try {
+      parsed = JSON.parse(reply);
+    } catch {
+      parsed = {};
+    }
+
+    const clean = (v) => (typeof v === 'string' ? v.trim().slice(0, 200) : '');
+    const lead = {
+      name: clean(parsed.name),
+      phone: clean(parsed.phone),
+      email: clean(parsed.email),
+      serviceType: clean(parsed.serviceType),
+      zipCode: clean(parsed.zipCode),
+      urgency: clean(parsed.urgency),
+      description: clean(parsed.description),
+    };
+    const ready = !!(lead.name && lead.phone && lead.email && lead.serviceType && lead.zipCode && lead.description);
+
+    return res.json({ lead, ready });
+  } catch (err) {
+    console.error('AI extract error:', err);
+    return res.status(200).json({ error: 'extract error' });
+  }
+});

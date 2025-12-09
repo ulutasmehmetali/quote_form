@@ -25,7 +25,8 @@ export default function ChatWidget() {
     urgency: '',
     description: '',
   });
-  const [savingLead, setSavingLead] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -67,6 +68,31 @@ export default function ChatWidget() {
         : "I'm here to help. Can you rephrase that?";
 
       setMessages([...nextMessages, { role: 'assistant', content: reply }]);
+      // Try to extract structured lead fields after AI reply
+      try {
+        const ex = await fetch(apiUrl('/api/chat/extract'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: [...nextMessages, { role: 'assistant', content: reply }] }),
+        });
+        const data = await ex.json();
+        if (data?.lead) {
+          setLead((prev) => ({ ...prev, ...data.lead }));
+          const ready =
+            data.ready ||
+            (data.lead?.name &&
+              data.lead?.phone &&
+              data.lead?.email &&
+              data.lead?.serviceType &&
+              data.lead?.zipCode &&
+              data.lead?.description);
+          if (ready && !submitted) {
+            await saveLead({ ...lead, ...data.lead });
+          }
+        }
+      } catch {
+        // ignore extraction errors
+      }
     } catch (err) {
       setError('I had trouble answering. Please try again.');
       setMessages([
@@ -82,6 +108,34 @@ export default function ChatWidget() {
     if (e.key === 'Enter') {
       e.preventDefault();
       runChat(input);
+    }
+  };
+
+  const saveLead = async (payload = lead) => {
+    if (submitting || submitted) return;
+    const ready =
+      payload.name &&
+      payload.phone &&
+      payload.email &&
+      payload.serviceType &&
+      payload.zipCode &&
+      payload.description;
+    if (!ready) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(apiUrl('/api/chat/submit'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok || data?.error) throw new Error(data?.error || 'Failed to save');
+      setSubmitted(true);
+      setMessages((prev) => [...prev, { role: 'assistant', content: 'Got it! I saved your details for our team.' }]);
+    } catch (err) {
+      setError('Could not save your details, please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -121,7 +175,7 @@ export default function ChatWidget() {
 
   return (
     <>
-      <div className="fixed bottom-6 right-6 z-50 w-full max-w-sm sm:max-w-md">
+      <div className="fixed bottom-6 right-6 z-50 w-full max-w-xs sm:max-w-sm">
         {!open && (
           <button
             onClick={() => setOpen(true)}
@@ -142,18 +196,18 @@ export default function ChatWidget() {
         )}
 
         {open && (
-          <div className="w-full max-w-md sm:max-w-lg bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 rounded-3xl shadow-[0_15px_45px_rgba(0,0,0,0.35)] overflow-hidden border border-slate-800/70">
-            <div className="flex items-center justify-between px-4 py-3 bg-slate-900/90 border-b border-slate-800/70">
+          <div className="w-full max-w-xs sm:max-w-sm bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 rounded-3xl shadow-[0_15px_45px_rgba(0,0,0,0.35)] overflow-hidden border border-slate-800/70">
+            <div className="flex items-center justify-between px-3 py-2.5 bg-slate-900/90 border-b border-slate-800/70">
               <div className="flex items-center gap-3">
                 <img
                   src="/robot-icon.svg"
                   alt="AI robot"
-                  className="h-10 w-10 rounded-full shadow-md shadow-sky-500/30 bg-white"
+                  className="h-8 w-8 rounded-full shadow-md shadow-sky-500/30 bg-white"
                   loading="lazy"
                 />
                 <div>
-                  <p className="text-white font-semibold text-sm">AI Assistant</p>
-                  <p className="text-xs text-slate-300">How can I help you?</p>
+                  <p className="text-white font-semibold text-sm leading-tight">AI Assistant</p>
+                  <p className="text-xs text-slate-300 leading-tight">How can I help you?</p>
                 </div>
               </div>
               <button
@@ -173,7 +227,7 @@ export default function ChatWidget() {
 
             <div
               ref={listRef}
-              className="max-h-[26rem] sm:max-h-[28rem] overflow-y-auto px-4 py-3 space-y-3 bg-slate-900/40"
+              className="max-h-[22rem] sm:max-h-[24rem] overflow-y-auto px-3 py-3 space-y-2 bg-slate-900/40"
             >
               {messages.map((m, idx) => (
                 <div
@@ -181,7 +235,7 @@ export default function ChatWidget() {
                   className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`px-3 py-2 rounded-2xl text-sm max-w-[85%] whitespace-pre-wrap ${
+                    className={`px-3 py-2 rounded-2xl text-sm max-w-[82%] whitespace-pre-wrap ${
                       m.role === 'user'
                         ? 'bg-slate-900 text-white shadow-lg shadow-black/40 rounded-br-sm'
                         : 'bg-slate-100 text-slate-900 border border-slate-200 shadow-md shadow-slate-200/80 rounded-bl-sm'
@@ -199,21 +253,6 @@ export default function ChatWidget() {
                   </div>
                 </div>
               )}
-            </div>
-
-            <div className="px-4 pb-2 space-y-2 bg-slate-900/60 text-slate-200 text-sm">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <input value={lead.name} onChange={(e) => setLead({ ...lead, name: e.target.value })} placeholder="Name *" className="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50" />
-                <input value={lead.phone} onChange={(e) => setLead({ ...lead, phone: e.target.value })} placeholder="Phone *" className="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50" />
-                <input value={lead.email} onChange={(e) => setLead({ ...lead, email: e.target.value })} placeholder="Email *" className="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50" />
-                <input value={lead.serviceType} onChange={(e) => setLead({ ...lead, serviceType: e.target.value })} placeholder="Service *" className="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50" />
-                <input value={lead.zipCode} onChange={(e) => setLead({ ...lead, zipCode: e.target.value })} placeholder="City/ZIP *" className="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50" />
-                <input value={lead.urgency} onChange={(e) => setLead({ ...lead, urgency: e.target.value })} placeholder="Urgency" className="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50" />
-              </div>
-              <textarea value={lead.description} onChange={(e) => setLead({ ...lead, description: e.target.value })} placeholder="Short description *" className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50" rows={2}></textarea>
-              <button onClick={saveLead} disabled={savingLead} className="w-full py-2 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-semibold shadow-lg shadow-sky-600/40 disabled:opacity-50">
-                {savingLead ? 'Saving...' : 'Save to submissions'}
-              </button>
             </div>
 
             <div className="p-3 bg-slate-900/90 border-t border-slate-800/70 space-y-2">
