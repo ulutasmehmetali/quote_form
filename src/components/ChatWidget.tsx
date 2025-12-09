@@ -339,21 +339,7 @@ export default function ChatWidget() {
                   className="p-2 rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 shadow-inner shadow-slate-200 disabled:opacity-50"
                   aria-label="Attach image"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M16.5 6.75v8a4.25 4.25 0 1 1-8.5 0v-6a2.75 2.75 0 0 1 5.5 0v6a1.25 1.25 0 1 1-2.5 0v-5.5" />
-                    <path d="M18.5 5.5v9a6.25 6.25 0 0 1-12.5 0v-7" />
-                    <path d="M18 8.5h3.5" />
-                    <path d="M19.75 6.75v3.5" />
-                  </svg>
+                  <img src="/icon-attach-plus.svg" alt="Attach" className="h-5 w-5" />
                 </button>
                 <input
                   type="text"
