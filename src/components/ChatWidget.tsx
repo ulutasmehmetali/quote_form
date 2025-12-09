@@ -187,7 +187,7 @@ export default function ChatWidget() {
         )}
 
         {open && (
-          <div className="w-full bg-white rounded-3xl shadow-[0_12px_28px_rgba(0,0,0,0.15)] overflow-hidden border border-slate-200">
+          <div className="w-full bg-white rounded-3xl shadow-[0_12px_28px_rgba(0,0,0,0.15)] overflow-hidden border border-slate-200 flex flex-col h-[32rem] max-h-[34rem]">
             <div className="flex items-center justify-between px-3.5 py-3 bg-teal-600 text-white">
               <div className="flex items-center gap-3">
                 <img
@@ -229,10 +229,7 @@ export default function ChatWidget() {
               </div>
             )}
 
-            <div
-              ref={listRef}
-              className="max-h-[22rem] sm:max-h-[24rem] overflow-y-auto px-3 py-3 space-y-2 bg-white"
-            >
+            <div ref={listRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2 bg-white">
               {messages.map((m, idx) => (
                 <div
                   key={idx}
