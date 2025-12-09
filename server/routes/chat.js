@@ -56,13 +56,21 @@ router.post('/chat', async (req, res) => {
     }
 
     const json = await ai.json();
-    const replyRaw =
+    let reply =
       json?.output_text ||
       (json?.output && json.output[0] && json.output[0].content) ||
       (json?.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) ||
       '';
 
-    const reply = typeof replyRaw === 'string' ? replyRaw : JSON.stringify(replyRaw || '');
+    if (Array.isArray(reply)) {
+      reply = reply.map((r) => (r && r.text ? r.text : r.content || '')).join('\n');
+    } else if (typeof reply === 'object' && reply !== null) {
+      reply = reply.text || reply.content || JSON.stringify(reply);
+    }
+
+    if (typeof reply !== 'string') {
+      reply = String(reply || '');
+    }
 
     return res.json({ reply: reply.trim() });
   } catch (err) {

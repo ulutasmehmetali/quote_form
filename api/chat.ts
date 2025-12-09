@@ -87,13 +87,24 @@ export default async function handler(req: Request): Promise<Response> {
     });
 
     const json = await ai.json();
-    const reply =
-      (json?.output_text as string) ||
-      (json?.output?.[0]?.content as string) ||
-      (json?.choices?.[0]?.message?.content as string) ||
+    let reply: unknown =
+      json?.output_text ||
+      (json?.output && json.output[0] && json.output[0].content) ||
+      (json?.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) ||
       "";
 
-    return new Response(JSON.stringify({ reply: reply?.trim() || "" }), {
+    if (Array.isArray(reply)) {
+      reply = reply.map((r: any) => (r && r.text ? r.text : r?.content || "")).join("\n");
+    } else if (reply && typeof reply === "object") {
+      const r = reply as any;
+      reply = r.text || r.content || JSON.stringify(reply);
+    }
+
+    if (typeof reply !== "string") {
+      reply = String(reply || "");
+    }
+
+    return new Response(JSON.stringify({ reply: (reply as string).trim() || "" }), {
       status: 200,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });
