@@ -168,6 +168,15 @@ router.post('/chat/image', async (req, res) => {
     return res.status(413).json({ error: 'Image too large (max 10MB)' });
   }
 
+  const incoming = Array.isArray(req.body?.messages) ? req.body.messages : [];
+  const textContext = incoming
+    .filter((m) => m && typeof m.content === 'string')
+    .map((m) => ({
+      role: m.role === 'assistant' ? 'assistant' : 'user',
+      content: redactText(m.content || ''),
+    }))
+    .slice(-8);
+
   const visionPrompt = `
 You triage home-service requests from images. Respond with JSON ONLY:
 {
@@ -187,6 +196,7 @@ If unclear, use serviceType "other" and a cautious summary. Never invent prices.
         model: MODEL,
         input: [
           { role: 'system', content: visionPrompt },
+          ...textContext,
           {
             role: 'user',
             content: [

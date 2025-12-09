@@ -4,6 +4,7 @@ import { apiUrl } from '../lib/api';
 type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
+  image?: string;
 };
 
 const initialAssistant = 'Hi there! How can I help you?';
@@ -194,12 +195,13 @@ export default function ChatWidget() {
       setUploadingImage(true);
       const dataUrl = await toDataUrl(file);
       const userNote = 'Uploaded an image for review.';
-      setMessages((prev) => [...prev, { role: 'user', content: userNote }]);
+      setMessages((prev) => [...prev, { role: 'user', content: userNote, image: dataUrl }]);
 
+      const context = messages.slice(-6).map((m) => ({ role: m.role, content: m.content }));
       const res = await fetch(apiUrl('/api/chat/image'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: dataUrl }),
+        body: JSON.stringify({ image: dataUrl, messages: context }),
       });
       const data = await res.json();
       const service = typeof data?.serviceType === 'string' ? data.serviceType : '';
@@ -306,6 +308,15 @@ export default function ChatWidget() {
                     }`}
                   >
                     {m.content}
+                    {m.image && (
+                      <div className="mt-2">
+                        <img
+                          src={m.image}
+                          alt="Uploaded"
+                          className="max-w-full max-h-40 rounded-xl border border-slate-200 shadow-sm object-contain"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

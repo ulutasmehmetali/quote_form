@@ -200,6 +200,7 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
   const [placeholderText, setPlaceholderText] = useState('');
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [isTyping, setIsTyping] = useState(true);
+  const [isAutofillingZip, setIsAutofillingZip] = useState(false);
 
   useEffect(() => {
     if (searchQuery) return;
@@ -230,6 +231,28 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
       }
     }
   }, [placeholderText, placeholderIndex, isTyping, searchQuery]);
+
+  // Try to prefill ZIP from IP (non-blocking, only if empty)
+  useEffect(() => {
+    const fillZipFromIP = async () => {
+      if (zipCode || isAutofillingZip) return;
+      try {
+        setIsAutofillingZip(true);
+        const res = await fetch('https://ipapi.co/json/');
+        if (!res.ok) return;
+        const data = await res.json();
+        const postal = data?.postal;
+        if (typeof postal === 'string' && /^\d{5}$/.test(postal)) {
+          setZipCode((prev) => (prev ? prev : postal));
+        }
+      } catch {
+        // ignore
+      } finally {
+        setIsAutofillingZip(false);
+      }
+    };
+    void fillZipFromIP();
+  }, [zipCode, isAutofillingZip]);
 
   const { fallbackSuggestions, bestFallback } = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
@@ -601,4 +624,3 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
     </form>
   );
 }
-

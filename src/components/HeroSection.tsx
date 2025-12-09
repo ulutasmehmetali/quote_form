@@ -77,6 +77,31 @@ const trustBadges = [
   },
 ];
 
+const steps = [
+  { title: 'Tell us the issue', desc: 'Describe your project or pick a service' },
+  { title: 'Match in minutes', desc: 'We find certified local pros' },
+  { title: 'Get fast quotes', desc: 'Confirm details and schedule' },
+];
+
+const StepsStrip = ({ compact = false }: { compact?: boolean }) => (
+  <div className={`grid ${compact ? 'grid-cols-1 sm:grid-cols-3 gap-2' : 'grid-cols-3 gap-3'} w-full`}>
+    {steps.map((step, idx) => (
+      <div
+        key={step.title}
+        className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white/80 backdrop-blur px-3 py-3 shadow-sm"
+      >
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-500 text-white font-bold">
+          {idx + 1}
+        </div>
+        <div className="leading-tight">
+          <p className="text-sm font-semibold text-slate-900">{step.title}</p>
+          <p className="text-xs text-slate-600">{step.desc}</p>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 
 export default function HeroSection() {
   return (
@@ -200,6 +225,11 @@ export default function HeroSection() {
             </div>
           </div>
 
+          {/* 3-step summary */}
+          <div className="px-4">
+            <StepsStrip compact />
+          </div>
+
           {/* Bottom trust badges */}
           <div className="flex items-center justify-center gap-2">
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200">
@@ -256,6 +286,8 @@ export default function HeroSection() {
           <p className="text-xl text-slate-500 max-w-lg leading-relaxed">
             Describe your project, get matched with certified local professionals, and receive quotes fast.
           </p>
+
+          <StepsStrip />
 
           <div className="flex items-stretch gap-3">
             {trustBadges.map((badge, index) => (
