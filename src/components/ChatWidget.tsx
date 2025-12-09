@@ -274,13 +274,13 @@ export default function ChatWidget() {
             </div>
 
             {showPrompts && (
-              <div className="px-3.5 py-2 bg-white flex flex-wrap gap-2">
+              <div className="px-3.5 py-2 bg-white grid grid-cols-2 gap-2">
                 {quickPrompts.map((p) => (
                   <button
                     key={p}
                     onClick={() => runChat(p)}
                     disabled={loading}
-                    className="text-[12px] px-3 py-1.5 rounded-full bg-teal-600 text-white hover:bg-teal-700 transition disabled:opacity-50 whitespace-nowrap shadow-md shadow-teal-200 border border-teal-500/30"
+                    className="text-[12px] px-3 py-1.5 rounded-full bg-teal-600 text-white hover:bg-teal-700 transition disabled:opacity-50 whitespace-nowrap shadow-md shadow-teal-200 border border-teal-500/30 text-center"
                   >
                     {p}
                   </button>

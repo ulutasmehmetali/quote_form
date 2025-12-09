@@ -508,25 +508,28 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
       {!searchQuery && (
         <div className="space-y-3">
           <div className="text-sm font-semibold text-slate-800">Or browse all services:</div>
-          <div className="max-h-64 overflow-y-auto overscroll-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+          <div
+            className="max-h-64 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent"
+            style={{ overscrollBehaviorY: 'auto', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+          >
             <div className="grid grid-cols-2 gap-2">
               {SERVICES.map((service) => (
                 <button
                   key={service}
                   type="button"
                   onClick={() => handleServiceSelect(service)}
-                  className={`group relative flex items-center gap-2 px-3 py-2.5 rounded-xl text-left transition-all duration-200 ${
+                  className={`group relative flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 ${
                     selectedService === service
                       ? 'bg-sky-500 text-white shadow-lg shadow-sky-200 ring-2 ring-sky-400 ring-offset-1'
                       : 'bg-white text-slate-900 border border-slate-200 hover:bg-sky-50 hover:border-sky-300 hover:shadow-md'
                   }`}
                 >
-                  <div className={`flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-lg ${
+                  <div className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg ${
                     selectedService === service ? 'text-white' : 'text-sky-600'
                   }`}>
                     {SERVICE_ICONS[service]}
                   </div>
-                  <span className="text-[13px] font-semibold leading-tight">{SHORT_NAMES[service]}</span>
+                  <span className="text-[14px] font-semibold leading-tight">{SHORT_NAMES[service]}</span>
                   {selectedService === service && (
                     <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 hover:bg-rose-600 flex items-center justify-center transition-colors shadow-md border-2 border-white">
                       <svg className="h-2.5 w-2.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
