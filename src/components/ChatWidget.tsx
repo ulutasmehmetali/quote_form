@@ -164,9 +164,13 @@ export default function ChatWidget() {
     }
   };
 
+  const wrapperClass = open
+    ? 'fixed bottom-6 right-6 z-50 w-[22rem] max-w-[22rem] sm:max-w-[23rem]'
+    : 'fixed bottom-6 right-6 z-50 w-[4rem] h-[4rem] sm:w-[4.5rem] sm:h-[4.5rem]';
+
   return (
     <>
-      <div className="fixed bottom-6 right-6 z-50 w-full max-w-[4rem] sm:max-w-[4.5rem]">
+      <div className={wrapperClass}>
         {!open && (
           <button
             onClick={() => setOpen(true)}
@@ -183,7 +187,7 @@ export default function ChatWidget() {
         )}
 
         {open && (
-          <div className="w-full max-w-[22rem] bg-white rounded-3xl shadow-[0_12px_28px_rgba(0,0,0,0.15)] overflow-hidden border border-slate-200">
+          <div className="w-full bg-white rounded-3xl shadow-[0_12px_28px_rgba(0,0,0,0.15)] overflow-hidden border border-slate-200">
             <div className="flex items-center justify-between px-3.5 py-3 bg-teal-600 text-white">
               <div className="flex items-center gap-3">
                 <img
@@ -202,17 +206,17 @@ export default function ChatWidget() {
                 className="text-white hover:text-white transition-colors"
                 aria-label="Close chat"
               >
-                x
+                ×
               </button>
             </div>
 
-            <div className="px-3.5 py-2 bg-white flex flex-col gap-2 items-end">
+            <div className="px-3.5 py-2 bg-white flex flex-wrap gap-2 max-h-24 overflow-y-auto">
               {quickPrompts.map((p) => (
                 <button
                   key={p}
                   onClick={() => runChat(p)}
                   disabled={loading}
-                  className="text-[12px] px-3 py-1.5 rounded-full bg-teal-600 text-white hover:bg-teal-700 transition disabled:opacity-50"
+                  className="text-[12px] px-3 py-1.5 rounded-full bg-teal-600 text-white hover:bg-teal-700 transition disabled:opacity-50 whitespace-nowrap"
                 >
                   {p}
                 </button>
