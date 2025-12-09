@@ -155,6 +155,83 @@ router.post('/chat/submit', async (req, res) => {
   }
 });
 
+router.post('/chat/image', async (req, res) => {
+  const apiKey = process.env.CHAT_API_KEY || process.env.OPENAI_API_KEY;
+  if (!apiKey) return res.status(503).json({ error: 'AI not configured' });
+
+  const image = req.body?.image;
+  if (!image || typeof image !== 'string' || !image.startsWith('data:image/')) {
+    return res.status(400).json({ error: 'Invalid image' });
+  }
+  const sizeBytes = Buffer.byteLength(image, 'utf8');
+  if (sizeBytes > 2 * 1024 * 1024) {
+    return res.status(413).json({ error: 'Image too large (max 2MB)' });
+  }
+
+  const visionPrompt = `
+You triage home-service requests from images. Respond with JSON ONLY:
+{
+ "serviceType": "plumbing|electrical|hvac|roofing|flooring|pest control|landscaping|painting|cleaning|remodeling|handyman|garage door|concrete|fencing|other",
+ "summary": "one short sentence about what you see and the likely service"
+}
+If unclear, use serviceType "other" and a cautious summary. Never invent prices.`;
+
+  try {
+    const ai = await fetch(OPENAI_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        input: [
+          { role: 'system', content: visionPrompt },
+          {
+            role: 'user',
+            content: [
+              { type: 'input_text', text: 'Analyze this image and classify the needed service.' },
+              { type: 'input_image', image_url: { url: image } },
+            ],
+          },
+        ],
+        temperature: 0,
+        max_output_tokens: 150,
+      }),
+    });
+
+    if (!ai.ok) return res.status(200).json({ error: 'vision failed' });
+    const json = await ai.json();
+    let reply =
+      json?.output_text ||
+      (json?.output && json.output[0] && json.output[0].content) ||
+      (json?.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) ||
+      '';
+
+    if (Array.isArray(reply)) reply = reply.map((r) => r?.text || r?.content || '').join('\n');
+    if (reply && typeof reply === 'object') reply = reply.text || reply.content || JSON.stringify(reply);
+    if (typeof reply !== 'string') reply = String(reply || '');
+
+    let parsed = {};
+    try {
+      parsed = JSON.parse(reply);
+    } catch {
+      parsed = {};
+    }
+
+    const clean = (v) => (typeof v === 'string' ? v.trim().slice(0, 200) : '');
+    const serviceType = clean(parsed.serviceType);
+    const summary = clean(parsed.summary);
+    return res.json({
+      serviceType,
+      summary: summary || reply,
+    });
+  } catch (err) {
+    console.error('AI image analyze error:', err);
+    return res.status(200).json({ error: 'analyze error' });
+  }
+});
+
 export default router;
 
 router.post('/chat/extract', async (req, res) => {

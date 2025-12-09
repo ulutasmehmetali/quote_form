@@ -34,7 +34,9 @@ export default function ChatWidget() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (open && listRef.current) {
@@ -164,6 +166,52 @@ export default function ChatWidget() {
     }
   };
 
+  const handleImageSelect = async (file?: File) => {
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Image too large (max 2MB).');
+      return;
+    }
+
+    const toDataUrl = (f: File) =>
+      new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Could not read image'));
+        reader.readAsDataURL(f);
+      });
+
+    try {
+      setUploadingImage(true);
+      const dataUrl = await toDataUrl(file);
+      const userNote = 'Uploaded an image for review.';
+      setMessages((prev) => [...prev, { role: 'user', content: userNote }]);
+
+      const res = await fetch(apiUrl('/api/chat/image'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataUrl }),
+      });
+      const data = await res.json();
+      const service = typeof data?.serviceType === 'string' ? data.serviceType : '';
+      const summary =
+        typeof data?.summary === 'string' && data.summary.trim()
+          ? data.summary.trim()
+          : 'I tried to analyze the image but need a short description.';
+      const suggestion = service ? `Suggested service: ${service}.` : '';
+      const replyText = [summary, suggestion].filter(Boolean).join(' ');
+
+      setMessages((prev) => [...prev, { role: 'assistant', content: replyText }]);
+      if (service) {
+        setLead((prev) => ({ ...prev, serviceType: prev.serviceType || service }));
+      }
+    } catch (err) {
+      setError('Could not analyze the image. Please try again.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const wrapperClass = open
     ? 'fixed bottom-6 right-6 z-50 w-[22rem] max-w-[22rem] sm:max-w-[23rem]'
     : 'fixed bottom-6 right-6 z-50 w-[4rem] h-[4rem] sm:w-[4.5rem] sm:h-[4.5rem]';
@@ -210,7 +258,7 @@ export default function ChatWidget() {
               </button>
             </div>
 
-            <div className="px-3.5 py-2 bg-white flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+            <div className="px-3.5 py-2 bg-white flex flex-wrap gap-2">
               {quickPrompts.map((p) => (
                 <button
                   key={p}
@@ -259,6 +307,26 @@ export default function ChatWidget() {
             <div className="p-3 bg-white border-t border-slate-200 space-y-2">
               <div className="flex items-center gap-2 rounded-full bg-white px-3 py-1 shadow-inner shadow-slate-200 border border-slate-200">
                 <input
+                  type="file"
+                  accept="image/*"
+                  ref={fileInputRef}
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    handleImageSelect(f);
+                    e.target.value = '';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={loading || uploadingImage}
+                  className="p-2 rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 shadow-inner shadow-slate-200 disabled:opacity-50"
+                  aria-label="Attach image"
+                >
+                  📎
+                </button>
+                <input
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -268,7 +336,7 @@ export default function ChatWidget() {
                 />
                 <button
                   onClick={() => runChat(input)}
-                  disabled={loading || !input.trim()}
+                  disabled={loading || uploadingImage || !input.trim()}
                   className="p-2 rounded-full bg-teal-600 text-white shadow-lg shadow-teal-500/40 disabled:opacity-50"
                   aria-label="Send message"
                 >
