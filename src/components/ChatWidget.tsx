@@ -232,7 +232,7 @@ export default function ChatWidget() {
         {!open && (
           <button
             onClick={() => setOpen(true)}
-            className="flex items-center justify-center h-14 w-14 rounded-full bg-gradient-to-r from-sky-500 via-indigo-500 to-blue-600 text-white shadow-xl shadow-sky-600/30 hover:shadow-sky-500/50 transition-all ring-2 ring-sky-500/30 hover:ring-sky-400/50 text-sm"
+            className="flex flex-col items-center justify-center h-14 w-14 rounded-full bg-gradient-to-r from-sky-500 via-indigo-500 to-blue-600 text-white shadow-xl shadow-sky-600/30 hover:shadow-sky-500/50 transition-all ring-2 ring-sky-500/30 hover:ring-sky-400/50 text-[11px]"
             aria-label="Open AI assistant"
           >
             <img
@@ -241,6 +241,7 @@ export default function ChatWidget() {
               className="h-7 w-7 rounded-full shadow-md shadow-sky-500/30"
               loading="lazy"
             />
+            <span className="mt-0.5 leading-none text-white drop-shadow-sm">Ask AI</span>
           </button>
         )}
 
