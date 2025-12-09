@@ -364,9 +364,11 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
   return (
     <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-6 lg:space-y-8 animate-fadeIn">
       <div className="text-center space-y-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200">
-          <span className="flex h-2 w-2 rounded-full bg-emerald-500"></span>
-          <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Step 1 of 3 · Choose Service</span>
+        <div className="inline-flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-slate-200 shadow-sm">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white text-sm font-bold">
+            1
+          </span>
+          <span className="text-sm font-semibold text-slate-800 tracking-tight">Step 1 of 3 · Choose Service</span>
         </div>
         <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-800">What do you need help with?</h2>
         <p className="text-slate-600 text-sm sm:text-base max-w-lg mx-auto">
@@ -558,9 +560,11 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
 
         <div className="space-y-3">
           <div className="flex justify-center mb-4">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-200">
-              <span className="flex h-2 w-2 rounded-full bg-emerald-500"></span>
-              <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Step 2 of 3 � Enter ZIP</span>
+            <div className="inline-flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-slate-200 shadow-sm">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white text-sm font-bold">
+                2
+              </span>
+              <span className="text-sm font-semibold text-slate-800 tracking-tight">Step 2 of 3 · Enter ZIP</span>
             </div>
           </div>
           <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
@@ -624,6 +628,7 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
     </form>
   );
 }
+
 
 
 
