@@ -224,7 +224,7 @@ export default function ChatWidget() {
 
   const wrapperClass = open
     ? 'fixed bottom-6 right-6 z-50 w-[22rem] max-w-[22rem] sm:max-w-[23rem]'
-    : 'fixed bottom-6 right-6 z-50 w-[4rem] h-[4rem] sm:w-[4.5rem] sm:h-[4.5rem]';
+    : 'fixed bottom-6 right-6 z-50 w-[4.4rem] h-[4.4rem] sm:w-[4.8rem] sm:h-[4.8rem]';
 
   return (
     <>
@@ -232,16 +232,18 @@ export default function ChatWidget() {
         {!open && (
           <button
             onClick={() => setOpen(true)}
-            className="flex flex-col items-center justify-center h-14 w-14 rounded-full bg-gradient-to-r from-sky-500 via-indigo-500 to-blue-600 text-white shadow-xl shadow-sky-600/30 hover:shadow-sky-500/50 transition-all ring-2 ring-sky-500/30 hover:ring-sky-400/50 text-[11px]"
+            className="flex flex-col items-center justify-center h-16 w-16 rounded-full bg-gradient-to-r from-sky-500 via-indigo-500 to-blue-600 text-white shadow-xl shadow-sky-600/30 hover:shadow-sky-500/50 transition-all ring-2 ring-sky-500/30 hover:ring-sky-400/50 text-[12px]"
             aria-label="Open AI assistant"
           >
             <img
               src="/robot-icon.svg"
               alt="AI robot"
-              className="h-7 w-7 rounded-full shadow-md shadow-sky-500/30"
+              className="h-8 w-8 rounded-full shadow-md shadow-sky-500/30"
               loading="lazy"
             />
-            <span className="mt-0.5 leading-none text-white drop-shadow-sm">Ask AI</span>
+            <span className="mt-0.5 leading-none text-white drop-shadow-sm font-bold uppercase tracking-tight">
+              Ask AI
+            </span>
           </button>
         )}
 
@@ -339,17 +341,18 @@ export default function ChatWidget() {
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 32 32"
+                    viewBox="0 0 24 24"
                     className="h-5 w-5"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="2"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   >
-                    <path d="M12 21.5V9.75a3.75 3.75 0 1 1 7.5 0v9a5.25 5.25 0 0 1-10.5 0V11.5" />
-                    <path d="M10.5 14.5v4.25a3.5 3.5 0 0 0 7 0V10.5" />
-                    <circle cx="21.5" cy="10.5" r="1.5" fill="currentColor" />
-                    <path d="M21.5 7v7" />
-                    <path d="M18 10.5h7" />
+                    <path d="M16.5 6.75v8a4.25 4.25 0 1 1-8.5 0v-6a2.75 2.75 0 0 1 5.5 0v6a1.25 1.25 0 1 1-2.5 0v-5.5" />
+                    <path d="M18.5 5.5v9a6.25 6.25 0 0 1-12.5 0v-7" />
+                    <path d="M18 8.5h3.5" />
+                    <path d="M19.75 6.75v3.5" />
                   </svg>
                 </button>
                 <input

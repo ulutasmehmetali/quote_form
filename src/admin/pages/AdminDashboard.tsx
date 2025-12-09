@@ -250,10 +250,6 @@ const COUNTRY_CODE_ALIASES: Record<string, string> = {
 
 
 
-  'TURKIYE': 'TR',
-
-
-
 
 
   'RUSSIA': 'RU',
@@ -612,7 +608,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-      
+
 
 
 
@@ -1349,7 +1345,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-          
+
 
 
 
@@ -2916,6 +2912,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 }
+
 
 
 
