@@ -21,7 +21,7 @@ const redactText = (text = '') =>
     .slice(0, 2000);
 
 router.post('/chat', async (req, res) => {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.CHAT_API_KEY || process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return res.status(503).json({ reply: 'AI is not configured right now. Please try again later.' });
   }
