@@ -6,13 +6,13 @@ type ChatMessage = {
   content: string;
 };
 
-const initialAssistant = `Hi there! How can I help you?`;
+const initialAssistant = 'Hi there! How can I help you?';
 const quickPrompts = [
   'I need emergency repair',
   'What services do you offer?',
   'How soon can you schedule?',
-  'Can I get a quote?',
-  'I want to speak to an expert',
+  'I need an expert to call me',
+  'I have another question',
 ];
 
 export default function ChatWidget() {
@@ -46,76 +46,17 @@ export default function ChatWidget() {
     setMessages([{ role: 'assistant', content: initialAssistant }]);
     setInput('');
     setError(null);
-  };
-
-  const runChat = async (userText: string) => {
-    const trimmed = userText.trim();
-    if (!trimmed || loading) return;
-    setError(null);
-
-    const nextMessages = [...messages, { role: 'user', content: trimmed }].slice(-40);
-    setMessages(nextMessages);
-    setInput('');
-    setLoading(true);
-
-    try {
-      const res = await fetch(apiUrl('/api/chat'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: nextMessages }),
-      });
-
-      if (!res.ok) {
-        throw new Error(`Request failed (${res.status})`);
-      }
-
-      const data = await res.json();
-      const reply = typeof data?.reply === 'string' && data.reply.trim()
-        ? data.reply.trim()
-        : "I'm here to help. Can you rephrase that?";
-
-      setMessages([...nextMessages, { role: 'assistant', content: reply }]);
-      // Try to extract structured lead fields after AI reply
-      try {
-        const ex = await fetch(apiUrl('/api/chat/extract'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: [...nextMessages, { role: 'assistant', content: reply }] }),
-        });
-        const data = await ex.json();
-        if (data?.lead) {
-          setLead((prev) => ({ ...prev, ...data.lead }));
-          const ready =
-            data.ready ||
-            (data.lead?.name &&
-              data.lead?.phone &&
-              data.lead?.email &&
-              data.lead?.serviceType &&
-              data.lead?.zipCode &&
-              data.lead?.description);
-          if (ready && !submitted) {
-            await saveLead({ ...lead, ...data.lead });
-          }
-        }
-      } catch {
-        // ignore extraction errors
-      }
-    } catch (err) {
-      setError('I had trouble answering. Please try again.');
-      setMessages([
-        ...nextMessages,
-        { role: 'assistant', content: 'Sorry, something went wrong. Please try again.' },
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      runChat(input);
-    }
+    setLead({
+      name: '',
+      phone: '',
+      email: '',
+      serviceType: '',
+      zipCode: '',
+      urgency: '',
+      description: '',
+    });
+    setSubmitted(false);
+    setSubmitting(false);
   };
 
   const saveLead = async (payload = lead) => {
@@ -152,9 +93,79 @@ export default function ChatWidget() {
     }
   };
 
+  const runChat = async (userText: string) => {
+    const trimmed = userText.trim();
+    if (!trimmed || loading) return;
+    setError(null);
+
+    const nextMessages = [...messages, { role: 'user', content: trimmed }].slice(-40);
+    setMessages(nextMessages);
+    setInput('');
+    setLoading(true);
+
+    try {
+      const res = await fetch(apiUrl('/api/chat'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: nextMessages }),
+      });
+
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+
+      const data = await res.json();
+      const reply = typeof data?.reply === 'string' && data.reply.trim()
+        ? data.reply.trim()
+        : "I'm here to help. Can you rephrase that?";
+
+      const allMessages = [...nextMessages, { role: 'assistant', content: reply }];
+      setMessages(allMessages);
+
+      // Extract lead fields and auto-save if ready
+      try {
+        const ex = await fetch(apiUrl('/api/chat/extract'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: allMessages }),
+        });
+        const exData = await ex.json();
+        if (exData?.lead) {
+          setLead((prev) => ({ ...prev, ...exData.lead }));
+          const ready =
+            exData.ready ||
+            (exData.lead?.name &&
+              exData.lead?.phone &&
+              exData.lead?.email &&
+              exData.lead?.serviceType &&
+              exData.lead?.zipCode &&
+              exData.lead?.description);
+          if (ready && !submitted) {
+            await saveLead({ ...lead, ...exData.lead });
+          }
+        }
+      } catch {
+        /* ignore extract errors */
+      }
+    } catch (err) {
+      setError('I had trouble answering. Please try again.');
+      setMessages([
+        ...nextMessages,
+        { role: 'assistant', content: 'Sorry, something went wrong. Please try again.' },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      runChat(input);
+    }
+  };
+
   return (
     <>
-      <div className="fixed bottom-6 right-6 z-50 w-full max-w-[14rem] sm:max-w-[16rem]">
+      <div className="fixed bottom-6 right-6 z-50 w-full max-w-[16rem] sm:max-w-[18rem]">
         {!open && (
           <button
             onClick={() => setOpen(true)}
@@ -175,8 +186,8 @@ export default function ChatWidget() {
         )}
 
         {open && (
-          <div className="w-full max-w-[19rem] sm:max-w-[20rem] bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 rounded-3xl shadow-[0_15px_45px_rgba(0,0,0,0.35)] overflow-hidden border border-slate-800/70">
-            <div className="flex items-center justify-between px-3 py-2.5 bg-slate-900/90 border-b border-slate-800/70">
+          <div className="w-full max-w-[20rem] sm:max-w-[22rem] bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 rounded-3xl shadow-[0_15px_45px_rgba(0,0,0,0.35)] overflow-hidden border border-slate-800/70">
+            <div className="flex items-center justify-between px-3.5 py-3 bg-slate-900/90 border-b border-slate-800/70">
               <div className="flex items-center gap-3">
                 <img
                   src="/robot-icon.svg"
@@ -194,8 +205,21 @@ export default function ChatWidget() {
                 className="text-slate-300 hover:text-white transition-colors"
                 aria-label="Close chat"
               >
-                ×
+                Ã—
               </button>
+            </div>
+
+            <div className="px-3.5 py-2 bg-slate-900/70 flex flex-wrap gap-2">
+              {quickPrompts.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => runChat(p)}
+                  disabled={loading}
+                  className="text-[11px] px-2.5 py-1 rounded-full bg-slate-800 text-slate-200 border border-slate-700 hover:border-sky-400 hover:text-white transition disabled:opacity-50"
+                >
+                  {p}
+                </button>
+              ))}
             </div>
 
             {error && (
@@ -250,7 +274,7 @@ export default function ChatWidget() {
                   className="p-2 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 text-white shadow-lg shadow-sky-500/40 disabled:opacity-50"
                   aria-label="Send message"
                 >
-                  ➤
+                  âž¤
                 </button>
               </div>
               <div className="flex items-center justify-end text-[11px] text-slate-400">
