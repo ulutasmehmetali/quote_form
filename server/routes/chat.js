@@ -177,13 +177,18 @@ router.post('/chat/image', async (req, res) => {
     }))
     .slice(-8);
 
-  const visionPrompt = `
-You triage home-service requests from images. Respond with JSON ONLY:
+const visionPrompt = `
+You triage home-service requests **only from the pixels of the image**. Never ask the user for more info.
+Respond with JSON ONLY:
 {
  "serviceType": "plumbing|electrical|hvac|roofing|flooring|pest control|landscaping|painting|cleaning|remodeling|handyman|garage door|concrete|fencing|other",
- "summary": "one short sentence describing what you see and the likely service needed; if unsure, still give your best guess without asking the user for more info"
+ "summary": "one sentence that cites 2-3 visual clues (object, material, location of damage) + likely service; include confidence (high/medium/low). If unsure, still describe what is visible and mark low confidence."
 }
-Always provide a summary even with low confidence. Never invent prices.`;
+Rules:
+- Use ONLY what you see; do not request clarification.
+- Mention the object/area and the visible issue (e.g., hole in wooden door at bottom, scuff on drywall, leaking pipe, broken tile).
+- If multiple possibilities, pick the top one and mark confidence low/medium/high.
+- Never invent prices.`;
 
   try {
     const ai = await fetch(OPENAI_URL, {
@@ -205,8 +210,8 @@ Always provide a summary even with low confidence. Never invent prices.`;
             ],
           },
         ],
-        temperature: 0,
-        max_output_tokens: 280,
+        temperature: 0.2,
+        max_output_tokens: 320,
         response_format: { type: 'json_object' },
       }),
     });

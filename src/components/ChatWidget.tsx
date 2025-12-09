@@ -208,11 +208,11 @@ export default function ChatWidget() {
       const summary =
         typeof data?.summary === 'string' && data.summary.trim()
           ? data.summary.trim()
-          : 'I am not fully certain, but it appears to be a home repair. My best guess: door/lock/handyman. If that is off, tell me briefly what the picture shows.';
+          : 'I could not read this image reliably. If you can, add a short note on what it shows.';
       const suggestion = service ? `Suggested service: ${service}.` : '';
       const replyText = [summary, suggestion].filter(Boolean).join(' ');
 
-      setMessages((prev) => [...prev, { role: 'assistant', content: replyText }]);
+      setMessages((prev) => [...prev, { role: 'assistant', content: replyText, image: undefined }]);
       setUploadedCount((c) => c + 1);
       if (service) {
         setLead((prev) => ({ ...prev, serviceType: prev.serviceType || service }));
