@@ -16,6 +16,16 @@ export default function ChatWidget() {
   ]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lead, setLead] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    serviceType: '',
+    zipCode: '',
+    urgency: '',
+    description: '',
+  });
+  const [savingLead, setSavingLead] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -75,13 +85,47 @@ export default function ChatWidget() {
     }
   };
 
+  const saveLead = async () => {
+    if (!lead.name || !lead.phone || !lead.email || !lead.serviceType || !lead.zipCode || !lead.description) {
+      setError('Please fill all required fields.');
+      return;
+    }
+    setSavingLead(true);
+    setError(null);
+    try {
+      const res = await fetch(apiUrl('/api/chat/submit'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lead),
+      });
+      const data = await res.json();
+      if (!res.ok || data?.error) {
+        throw new Error(data?.error || `Failed: ${res.status}`);
+      }
+      setMessages((prev) => [...prev, { role: 'assistant', content: 'Saved! We received your details.' }]);
+      setLead({
+        name: '',
+        phone: '',
+        email: '',
+        serviceType: '',
+        zipCode: '',
+        urgency: '',
+        description: '',
+      });
+    } catch (err: any) {
+      setError('Failed to save. Please try again.');
+    } finally {
+      setSavingLead(false);
+    }
+  };
+
   return (
     <>
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-6 right-6 z-50 w-full max-w-sm sm:max-w-md">
         {!open && (
           <button
             onClick={() => setOpen(true)}
-            className="flex items-center gap-3 px-4 py-3 rounded-full bg-gradient-to-r from-sky-500 via-indigo-500 to-blue-600 text-white shadow-2xl shadow-sky-600/40 hover:shadow-sky-500/60 transition-all ring-2 ring-sky-500/30 hover:ring-sky-400/50"
+            className="flex items-center gap-3 px-4 py-3 rounded-full bg-gradient-to-r from-sky-500 via-indigo-500 to-blue-600 text-white shadow-2xl shadow-sky-600/40 hover:shadow-sky-500/60 transition-all ring-2 ring-sky-500/30 hover:ring-sky-400/50 w-full justify-between"
             aria-label="Open AI assistant"
           >
             <img
@@ -155,6 +199,21 @@ export default function ChatWidget() {
                   </div>
                 </div>
               )}
+            </div>
+
+            <div className="px-4 pb-2 space-y-2 bg-slate-900/60 text-slate-200 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input value={lead.name} onChange={(e) => setLead({ ...lead, name: e.target.value })} placeholder="Name *" className="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50" />
+                <input value={lead.phone} onChange={(e) => setLead({ ...lead, phone: e.target.value })} placeholder="Phone *" className="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50" />
+                <input value={lead.email} onChange={(e) => setLead({ ...lead, email: e.target.value })} placeholder="Email *" className="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50" />
+                <input value={lead.serviceType} onChange={(e) => setLead({ ...lead, serviceType: e.target.value })} placeholder="Service *" className="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50" />
+                <input value={lead.zipCode} onChange={(e) => setLead({ ...lead, zipCode: e.target.value })} placeholder="City/ZIP *" className="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50" />
+                <input value={lead.urgency} onChange={(e) => setLead({ ...lead, urgency: e.target.value })} placeholder="Urgency" className="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50" />
+              </div>
+              <textarea value={lead.description} onChange={(e) => setLead({ ...lead, description: e.target.value })} placeholder="Short description *" className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50" rows={2}></textarea>
+              <button onClick={saveLead} disabled={savingLead} className="w-full py-2 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-semibold shadow-lg shadow-sky-600/40 disabled:opacity-50">
+                {savingLead ? 'Saving...' : 'Save to submissions'}
+              </button>
             </div>
 
             <div className="p-3 bg-slate-900/90 border-t border-slate-800/70 space-y-2">

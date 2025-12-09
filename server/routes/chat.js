@@ -1,4 +1,8 @@
 import express from 'express';
+import { db } from '../db.js';
+import { submissions } from '../../shared/schema.js';
+import { getClientIP, parseUserAgent } from '../utils/geoip.js';
+import { getGeoFromIP } from '../helpers/geo.js';
 
 const router = express.Router();
 
@@ -76,6 +80,67 @@ router.post('/chat', async (req, res) => {
   } catch (err) {
     console.error('AI chat error:', err);
     return res.status(200).json({ reply: 'I hit an error. Please try again.' });
+  }
+});
+
+router.post('/chat/submit', async (req, res) => {
+  try {
+    const {
+      name = '',
+      phone = '',
+      email = '',
+      serviceType = '',
+      zipCode = '',
+      urgency = '',
+      description = '',
+    } = req.body || {};
+
+    if (!name || !phone || !email || !serviceType || !zipCode || !description) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const ipAddress = getClientIP(req);
+    const userAgent = req.headers['user-agent'] || '';
+    const uaInfo = parseUserAgent(userAgent);
+    const geoInfo = await getGeoFromIP(ipAddress);
+
+    const now = new Date();
+    const [submission] = await db
+      .insert(submissions)
+      .values({
+        serviceType,
+        zipCode,
+        customerName: name,
+        name,
+        email,
+        phone,
+        status: 'new',
+        answers: {
+          urgency,
+          description,
+        },
+        ipAddress,
+        userAgent,
+        browser: uaInfo.browser,
+        browserVersion: uaInfo.browserVersion,
+        os: uaInfo.os,
+        osVersion: uaInfo.osVersion,
+        device: uaInfo.device,
+        deviceType: uaInfo.deviceType,
+        country: geoInfo.country,
+        countryCode: geoInfo.country_code,
+        city: geoInfo.city,
+        region: geoInfo.region,
+        timezone: geoInfo.timezone,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+
+    return res.json({ success: true, submissionId: submission.id });
+  } catch (err) {
+    console.error('AI chat submit error:', err);
+    return res.status(500).json({ error: 'Failed to save submission' });
   }
 });
 
