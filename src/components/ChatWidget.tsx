@@ -87,32 +87,45 @@ export default function ChatWidget() {
         {!open && (
           <button
             onClick={() => setOpen(true)}
-            className="flex items-center gap-2 px-4 py-3 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 text-white shadow-xl shadow-sky-500/30 hover:shadow-sky-500/50 transition-all"
+            className="flex items-center gap-3 px-4 py-3 rounded-full bg-gradient-to-r from-sky-500 via-indigo-500 to-blue-600 text-white shadow-2xl shadow-sky-600/40 hover:shadow-sky-500/60 transition-all ring-2 ring-sky-500/30 hover:ring-sky-400/50"
             aria-label="Open AI assistant"
           >
-            <span className="text-lg" aria-hidden="true">💬</span>
-            <span className="font-semibold">Ask AI</span>
+            <img
+              src="/robot-icon.svg"
+              alt="AI robot"
+              className="h-7 w-7 rounded-full shadow-md shadow-sky-500/30"
+              loading="lazy"
+            />
+            <div className="text-left leading-tight">
+              <p className="font-semibold">Ask AI</p>
+              <p className="text-[11px] text-white/80">24/7 guided help</p>
+            </div>
           </button>
         )}
 
         {open && (
-          <div className="w-80 sm:w-96 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 bg-slate-800/80 border-b border-white/10">
-              <div className="flex items-center gap-2">
-                <span className="text-lg" aria-hidden="true">💬</span>
+          <div className="w-full max-w-md sm:max-w-lg bg-gradient-to-br from-white via-slate-50 to-white border border-slate-200 rounded-2xl shadow-2xl shadow-sky-200/50 overflow-hidden backdrop-blur-xl">
+            <div className="flex items-center justify-between px-4 py-3 bg-white/90 border-b border-slate-200">
+              <div className="flex items-center gap-3">
+                <img
+                  src="/robot-icon.svg"
+                  alt="AI robot"
+                  className="h-8 w-8 rounded-full shadow-md shadow-sky-500/30 bg-white"
+                  loading="lazy"
+                />
                 <div>
-                  <p className="text-white font-semibold text-sm">AI Assistant</p>
-                  <p className="text-xs text-slate-400">Fast answers, safe guidance</p>
+                  <p className="text-slate-900 font-semibold text-sm">AI Assistant</p>
+                  <p className="text-xs text-slate-500">Fast answers, safe guidance</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-300 text-[11px] px-2 py-1 border border-emerald-500/30">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 text-emerald-700 text-[11px] px-2 py-1 border border-emerald-500/30">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   Online
                 </span>
                 <button
                   onClick={() => setOpen(false)}
-                  className="text-slate-400 hover:text-white transition-colors"
+                  className="text-slate-500 hover:text-slate-900 transition-colors"
                   aria-label="Close chat"
                 >
                   ×
@@ -120,13 +133,13 @@ export default function ChatWidget() {
               </div>
             </div>
 
-            <div className="px-4 py-2 bg-slate-900/80 border-b border-white/10 flex flex-wrap gap-2">
+            <div className="px-4 py-2 bg-white/85 border-b border-slate-200 flex flex-wrap gap-2 items-center">
               {quickPrompts.map((prompt) => (
                 <button
                   key={prompt}
                   onClick={() => runChat(prompt)}
                   disabled={loading}
-                  className="text-xs px-3 py-1.5 rounded-full bg-slate-800 text-slate-200 border border-white/10 hover:border-sky-500/50 hover:text-white transition disabled:opacity-50"
+                  className="text-xs px-3 py-1.5 rounded-full bg-slate-100 text-slate-800 border border-slate-200 hover:border-sky-400 hover:text-slate-900 transition disabled:opacity-50"
                 >
                   {prompt}
                 </button>
@@ -142,7 +155,7 @@ export default function ChatWidget() {
 
             <div
               ref={listRef}
-              className="max-h-80 overflow-y-auto px-4 py-3 space-y-3 bg-slate-900/80"
+              className="max-h-[26rem] sm:max-h-[28rem] overflow-y-auto px-4 py-3 space-y-3 bg-white/80"
             >
               {messages.map((m, idx) => (
                 <div
@@ -152,8 +165,8 @@ export default function ChatWidget() {
                   <div
                     className={`px-3 py-2 rounded-xl text-sm max-w-[85%] whitespace-pre-wrap border ${
                       m.role === 'user'
-                        ? 'bg-sky-500/15 text-sky-50 border-sky-500/30'
-                        : 'bg-slate-800 text-slate-100 border-white/10'
+                        ? 'bg-sky-50 text-sky-900 border-sky-200 shadow-md shadow-sky-100/70'
+                        : 'bg-slate-100 text-slate-900 border-slate-200 shadow-md shadow-slate-200/80'
                     }`}
                   >
                     <div className="text-[11px] uppercase tracking-wide opacity-70 mb-1">
@@ -181,12 +194,12 @@ export default function ChatWidget() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKey}
                   placeholder="Describe your issue or paste an error..."
-                  className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50"
+                  className="flex-1 px-3 py-2 rounded-2xl bg-white border border-slate-200 text-slate-900 placeholder-slate-500 focus:outline-none focus:border-sky-500/50 focus:ring-2 focus:ring-sky-500/30"
                 />
                 <button
                   onClick={() => runChat(input)}
                   disabled={loading || !input.trim()}
-                  className="px-3 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium shadow-lg shadow-sky-500/25 disabled:opacity-50"
+                  className="px-3 py-2 rounded-2xl bg-gradient-to-r from-sky-500 via-indigo-500 to-blue-600 text-white font-medium shadow-lg shadow-sky-500/30 disabled:opacity-50"
                 >
                   Send
                 </button>

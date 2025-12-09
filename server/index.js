@@ -9,6 +9,7 @@ import { dirname, join } from 'path';
 
 import uploadRoutes from './routes/upload.js';
 import suggestRoutes from './routes/suggest.js';
+import chatRoutes from './routes/chat.js';
 import statsRoutes from './routes/stats.js';
 import adminRoutes from './adminRoutes.js';
 import adminWebhooksRouter from './adminWebhooks.js';
@@ -317,6 +318,7 @@ app.use('/api/admin/dashboard', adminDashboard);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/automations', automationRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api', chatRoutes);
 
 /* -------------------------------------------
    STATIC UPLOADS
