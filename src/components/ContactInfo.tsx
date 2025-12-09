@@ -124,6 +124,15 @@ export default function ContactInfo({ onSubmit, onBack, isSubmitting, retryCount
     <section className="animate-slideInRight pb-6">
       <div className="max-w-2xl mx-auto px-1">
         <div className="space-y-4">
+          <div className="flex justify-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-200">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-500"></span>
+              <span className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider">
+                Step 3 · Complete the form and nearby pros will reach out soon
+              </span>
+            </div>
+          </div>
+
           <div className="mb-3">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-slate-600">{stepLabel}</span>

@@ -78,9 +78,9 @@ const trustBadges = [
 ];
 
 const steps = [
-  { title: 'Tell us the issue', desc: 'Describe your project or pick a service' },
-  { title: 'Match in minutes', desc: 'We find certified local pros' },
-  { title: 'Get fast quotes', desc: 'Confirm details and schedule' },
+  { title: 'Servisi seç veya sorunu anlat', desc: 'İhtiyacını kısaca yaz ya da listeden bir hizmet seç' },
+  { title: 'ZIP kodunu gir', desc: 'Konumuna en yakın profesyonelleri eşleştirelim' },
+  { title: 'Formu tamamla', desc: 'En kısa sürede yakınındaki pro’lar sana ulaşsın' },
 ];
 
 const StepsStrip = ({ compact = false }: { compact?: boolean }) => (
