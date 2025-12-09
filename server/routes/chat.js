@@ -57,9 +57,9 @@ router.post('/chat', async (req, res) => {
 
     const json = await ai.json();
     const reply =
-      (json?.output_text as string) ||
-      (json?.output?.[0]?.content as string) ||
-      (json?.choices?.[0]?.message?.content as string) ||
+      json?.output_text ||
+      (json?.output && json.output[0] && json.output[0].content) ||
+      (json?.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) ||
       '';
 
     return res.json({ reply: reply.trim() });
