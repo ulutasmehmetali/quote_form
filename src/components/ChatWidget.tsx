@@ -6,13 +6,7 @@ type ChatMessage = {
   content: string;
 };
 
-const initialAssistant = `Hi there! I can guide you. What service do you need, which city, and how urgent is it? I won't ask for passwords or card numbers.`;
-const quickPrompts = [
-  'Help me choose the right service',
-  'Ask me the key questions to debug my issue',
-  'Draft a response to a customer',
-  'Explain this error in plain English',
-];
+const initialAssistant = `Hi there! How can I help you?`;
 
 export default function ChatWidget() {
   const [open, setOpen] = useState(false);
@@ -104,47 +98,27 @@ export default function ChatWidget() {
         )}
 
         {open && (
-          <div className="w-full max-w-md sm:max-w-lg bg-gradient-to-br from-white via-slate-50 to-white border border-slate-200 rounded-2xl shadow-2xl shadow-sky-200/50 overflow-hidden backdrop-blur-xl">
-            <div className="flex items-center justify-between px-4 py-3 bg-white/90 border-b border-slate-200">
+          <div className="w-full max-w-md sm:max-w-lg bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 rounded-3xl shadow-[0_15px_45px_rgba(0,0,0,0.35)] overflow-hidden border border-slate-800/70">
+            <div className="flex items-center justify-between px-4 py-3 bg-slate-900/90 border-b border-slate-800/70">
               <div className="flex items-center gap-3">
                 <img
                   src="/robot-icon.svg"
                   alt="AI robot"
-                  className="h-8 w-8 rounded-full shadow-md shadow-sky-500/30 bg-white"
+                  className="h-10 w-10 rounded-full shadow-md shadow-sky-500/30 bg-white"
                   loading="lazy"
                 />
                 <div>
-                  <p className="text-slate-900 font-semibold text-sm">AI Assistant</p>
-                  <p className="text-xs text-slate-500">Fast answers, safe guidance</p>
+                  <p className="text-white font-semibold text-sm">AI Assistant</p>
+                  <p className="text-xs text-slate-300">How can I help you?</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 text-emerald-700 text-[11px] px-2 py-1 border border-emerald-500/30">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  Online
-                </span>
-                <button
-                  onClick={() => setOpen(false)}
-                  className="text-slate-500 hover:text-slate-900 transition-colors"
-                  aria-label="Close chat"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-
-            <div className="px-4 py-2 bg-white/85 border-b border-slate-200 flex flex-wrap gap-2 items-center">
-              {quickPrompts.map((prompt) => (
-                <button
-                  key={prompt}
-                  onClick={() => runChat(prompt)}
-                  disabled={loading}
-                  className="text-xs px-3 py-1.5 rounded-full bg-slate-100 text-slate-800 border border-slate-200 hover:border-sky-400 hover:text-slate-900 transition disabled:opacity-50"
-                >
-                  {prompt}
-                </button>
-              ))}
-              <span className="text-[11px] text-slate-500 ml-auto">Safety: never share passwords or card numbers.</span>
+              <button
+                onClick={() => setOpen(false)}
+                className="text-slate-300 hover:text-white transition-colors"
+                aria-label="Close chat"
+              >
+                ×
+              </button>
             </div>
 
             {error && (
@@ -155,7 +129,7 @@ export default function ChatWidget() {
 
             <div
               ref={listRef}
-              className="max-h-[26rem] sm:max-h-[28rem] overflow-y-auto px-4 py-3 space-y-3 bg-white/80"
+              className="max-h-[26rem] sm:max-h-[28rem] overflow-y-auto px-4 py-3 space-y-3 bg-slate-900/40"
             >
               {messages.map((m, idx) => (
                 <div
@@ -163,15 +137,12 @@ export default function ChatWidget() {
                   className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`px-3 py-2 rounded-xl text-sm max-w-[85%] whitespace-pre-wrap border ${
+                    className={`px-3 py-2 rounded-2xl text-sm max-w-[85%] whitespace-pre-wrap ${
                       m.role === 'user'
-                        ? 'bg-sky-50 text-sky-900 border-sky-200 shadow-md shadow-sky-100/70'
-                        : 'bg-slate-100 text-slate-900 border-slate-200 shadow-md shadow-slate-200/80'
+                        ? 'bg-slate-900 text-white shadow-lg shadow-black/40 rounded-br-sm'
+                        : 'bg-slate-100 text-slate-900 border border-slate-200 shadow-md shadow-slate-200/80 rounded-bl-sm'
                     }`}
                   >
-                    <div className="text-[11px] uppercase tracking-wide opacity-70 mb-1">
-                      {m.role === 'user' ? 'You' : 'AI'}
-                    </div>
                     {m.content}
                   </div>
                 </div>
@@ -186,26 +157,26 @@ export default function ChatWidget() {
               )}
             </div>
 
-            <div className="p-3 bg-slate-800/80 border-t border-white/10 space-y-2">
-              <div className="flex items-center gap-2">
+            <div className="p-3 bg-slate-900/90 border-t border-slate-800/70 space-y-2">
+              <div className="flex items-center gap-2 rounded-full bg-white px-3 py-1 shadow-inner shadow-slate-400/40">
                 <input
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKey}
-                  placeholder="Describe your issue or paste an error..."
-                  className="flex-1 px-3 py-2 rounded-2xl bg-white border border-slate-200 text-slate-900 placeholder-slate-500 focus:outline-none focus:border-sky-500/50 focus:ring-2 focus:ring-sky-500/30"
+                  placeholder="Write..."
+                  className="flex-1 px-2 py-2 rounded-full bg-transparent text-slate-900 placeholder-slate-500 focus:outline-none"
                 />
                 <button
                   onClick={() => runChat(input)}
                   disabled={loading || !input.trim()}
-                  className="px-3 py-2 rounded-2xl bg-gradient-to-r from-sky-500 via-indigo-500 to-blue-600 text-white font-medium shadow-lg shadow-sky-500/30 disabled:opacity-50"
+                  className="p-2 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 text-white shadow-lg shadow-sky-500/40 disabled:opacity-50"
+                  aria-label="Send message"
                 >
-                  Send
+                  ➤
                 </button>
               </div>
-              <div className="flex items-center justify-between text-[11px] text-slate-500">
-                <span>AI may be imperfect. Avoid sharing sensitive data.</span>
+              <div className="flex items-center justify-end text-[11px] text-slate-400">
                 <button
                   onClick={resetChat}
                   className="text-slate-300 hover:text-white transition-colors"
