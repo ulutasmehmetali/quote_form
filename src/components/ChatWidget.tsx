@@ -338,13 +338,17 @@ export default function ChatWidget() {
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    className="h-4 w-4"
+                    viewBox="0 0 32 32"
+                    className="h-5 w-5"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
                   >
-                    <path d="M21 15V6a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3v10a4 4 0 0 0 4 4h6a4 4 0 0 0 4-4v-4H9" />
+                    <path d="M12 21.5V9.75a3.75 3.75 0 1 1 7.5 0v9a5.25 5.25 0 0 1-10.5 0V11.5" />
+                    <path d="M10.5 14.5v4.25a3.5 3.5 0 0 0 7 0V10.5" />
+                    <circle cx="21.5" cy="10.5" r="1.5" fill="currentColor" />
+                    <path d="M21.5 7v7" />
+                    <path d="M18 10.5h7" />
                   </svg>
                 </button>
                 <input
