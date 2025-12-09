@@ -109,7 +109,6 @@ export default function ChatWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: nextMessages }),
       });
-
       if (!res.ok) throw new Error(`Request failed (${res.status})`);
 
       const data = await res.json();
@@ -165,7 +164,7 @@ export default function ChatWidget() {
 
   return (
     <>
-      <div className="fixed bottom-6 right-6 z-50 w-full max-w-[16rem] sm:max-w-[18rem]">
+      <div className="fixed bottom-6 right-6 z-50 w-full max-w-[18rem] sm:max-w-[20rem]">
         {!open && (
           <button
             onClick={() => setOpen(true)}
@@ -186,36 +185,36 @@ export default function ChatWidget() {
         )}
 
         {open && (
-          <div className="w-full max-w-[20rem] sm:max-w-[22rem] bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 rounded-3xl shadow-[0_15px_45px_rgba(0,0,0,0.35)] overflow-hidden border border-slate-800/70">
-            <div className="flex items-center justify-between px-3.5 py-3 bg-slate-900/90 border-b border-slate-800/70">
+          <div className="w-full max-w-[22rem] bg-white rounded-3xl shadow-[0_12px_28px_rgba(0,0,0,0.15)] overflow-hidden border border-slate-200">
+            <div className="flex items-center justify-between px-3.5 py-3 bg-teal-600 text-white">
               <div className="flex items-center gap-3">
                 <img
                   src="/robot-icon.svg"
                   alt="AI robot"
-                  className="h-8 w-8 rounded-full shadow-md shadow-sky-500/30 bg-white"
+                  className="h-8 w-8 rounded-full shadow-md shadow-white/30 bg-white"
                   loading="lazy"
                 />
                 <div>
-                  <p className="text-white font-semibold text-sm leading-tight">AI Assistant</p>
-                  <p className="text-xs text-slate-300 leading-tight">How can I help you?</p>
+                  <p className="text-white font-semibold text-sm leading-tight">Customer Service Agent</p>
+                  <p className="text-xs text-white/80 leading-tight">How can I help you?</p>
                 </div>
               </div>
               <button
                 onClick={() => setOpen(false)}
-                className="text-slate-300 hover:text-white transition-colors"
+                className="text-white hover:text-white transition-colors"
                 aria-label="Close chat"
               >
-                Ã—
+                ×
               </button>
             </div>
 
-            <div className="px-3.5 py-2 bg-slate-900/70 flex flex-wrap gap-2">
+            <div className="px-3.5 py-2 bg-white flex flex-col gap-2 items-end">
               {quickPrompts.map((p) => (
                 <button
                   key={p}
                   onClick={() => runChat(p)}
                   disabled={loading}
-                  className="text-[11px] px-2.5 py-1 rounded-full bg-slate-800 text-slate-200 border border-slate-700 hover:border-sky-400 hover:text-white transition disabled:opacity-50"
+                  className="text-[12px] px-3 py-1.5 rounded-full bg-teal-600 text-white hover:bg-teal-700 transition disabled:opacity-50"
                 >
                   {p}
                 </button>
@@ -223,14 +222,14 @@ export default function ChatWidget() {
             </div>
 
             {error && (
-              <div className="px-4 py-2 bg-red-500/10 border-b border-red-500/30 text-red-200 text-xs">
+              <div className="px-4 py-2 bg-red-500/10 border-b border-red-500/30 text-red-500 text-xs">
                 {error}
               </div>
             )}
 
             <div
               ref={listRef}
-              className="max-h-[22rem] sm:max-h-[24rem] overflow-y-auto px-3 py-3 space-y-2 bg-slate-900/40"
+              className="max-h-[22rem] sm:max-h-[24rem] overflow-y-auto px-3 py-3 space-y-2 bg-white"
             >
               {messages.map((m, idx) => (
                 <div
@@ -238,10 +237,10 @@ export default function ChatWidget() {
                   className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`px-3 py-2 rounded-2xl text-sm max-w-[82%] whitespace-pre-wrap ${
+                    className={`px-3 py-2 rounded-2xl text-sm max-w-[82%] whitespace-pre-wrap shadow ${
                       m.role === 'user'
-                        ? 'bg-slate-900 text-white shadow-lg shadow-black/40 rounded-br-sm'
-                        : 'bg-slate-100 text-slate-900 border border-slate-200 shadow-md shadow-slate-200/80 rounded-bl-sm'
+                        ? 'bg-teal-600 text-white rounded-br-sm'
+                        : 'bg-slate-100 text-slate-900 rounded-bl-sm'
                     }`}
                   >
                     {m.content}
@@ -250,37 +249,37 @@ export default function ChatWidget() {
               ))}
               {loading && (
                 <div className="flex justify-start">
-                  <div className="px-3 py-2 rounded-xl text-sm bg-slate-800 text-slate-100 border border-white/10 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
+                  <div className="px-3 py-2 rounded-xl text-sm bg-slate-200 text-slate-700 border border-slate-200 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-teal-500 animate-ping"></span>
                     Thinking...
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="p-3 bg-slate-900/90 border-t border-slate-800/70 space-y-2">
-              <div className="flex items-center gap-2 rounded-full bg-white px-3 py-1 shadow-inner shadow-slate-400/40">
+            <div className="p-3 bg-white border-t border-slate-200 space-y-2">
+              <div className="flex items-center gap-2 rounded-full bg-white px-3 py-1 shadow-inner shadow-slate-200 border border-slate-200">
                 <input
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKey}
-                  placeholder="Write..."
+                  placeholder="Write your message..."
                   className="flex-1 px-2 py-2 rounded-full bg-transparent text-slate-900 placeholder-slate-500 focus:outline-none"
                 />
                 <button
                   onClick={() => runChat(input)}
                   disabled={loading || !input.trim()}
-                  className="p-2 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 text-white shadow-lg shadow-sky-500/40 disabled:opacity-50"
+                  className="p-2 rounded-full bg-teal-600 text-white shadow-lg shadow-teal-500/40 disabled:opacity-50"
                   aria-label="Send message"
                 >
-                  âž¤
+                  ➤
                 </button>
               </div>
-              <div className="flex items-center justify-end text-[11px] text-slate-400">
+              <div className="flex items-center justify-end text-[11px] text-slate-500">
                 <button
                   onClick={resetChat}
-                  className="text-slate-300 hover:text-white transition-colors"
+                  className="text-slate-500 hover:text-slate-700 transition-colors"
                   disabled={loading}
                 >
                   New chat
