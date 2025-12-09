@@ -201,6 +201,7 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [isTyping, setIsTyping] = useState(true);
   const [isAutofillingZip, setIsAutofillingZip] = useState(false);
+  const [autoDetectZip, setAutoDetectZip] = useState(true);
 
   useEffect(() => {
     if (searchQuery) return;
@@ -232,10 +233,10 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
     }
   }, [placeholderText, placeholderIndex, isTyping, searchQuery]);
 
-  // Try to prefill ZIP from IP (non-blocking, only if empty)
+  // Try to prefill ZIP from IP when enabled and empty
   useEffect(() => {
     const fillZipFromIP = async () => {
-      if (zipCode || isAutofillingZip) return;
+      if (!autoDetectZip || zipCode || isAutofillingZip) return;
       try {
         setIsAutofillingZip(true);
         const res = await fetch('https://ipapi.co/json/');
@@ -252,7 +253,7 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
       }
     };
     void fillZipFromIP();
-  }, [zipCode, isAutofillingZip]);
+  }, [zipCode, isAutofillingZip, autoDetectZip]);
 
   const { fallbackSuggestions, bestFallback } = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
@@ -559,13 +560,22 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
         <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
 
         <div className="space-y-3">
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-between items-center mb-2">
             <div className="inline-flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-slate-200 shadow-sm">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white text-sm font-bold">
                 2
               </span>
               <span className="text-sm font-semibold text-slate-800 tracking-tight">Step 2 of 3 · Enter ZIP</span>
             </div>
+            <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700 cursor-pointer">
+              <input
+                type="checkbox"
+                className="h-4 w-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500"
+                checked={autoDetectZip}
+                onChange={(e) => setAutoDetectZip(e.target.checked)}
+              />
+              Auto-detect
+            </label>
           </div>
           <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
             <svg className="h-4 w-4 text-sky-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
