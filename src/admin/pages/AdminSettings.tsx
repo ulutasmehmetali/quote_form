@@ -119,7 +119,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
           <h2 className="text-3xl font-bold text-white flex items-center gap-3">
             ⚙️ Settings
           </h2>
-          <p className="text-slate-400 mt-1">Hesap ve sistem ayarlarını yönetin</p>
+          <p className="text-slate-400 mt-1">Manage your account and system settings</p>
         </div>
 
         <div className="space-y-6">
@@ -133,13 +133,13 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
                 <p className="text-slate-400">Admin Account</p>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-                  Aktif
+                  Active
                 </span>
               </div>
             </div>
 
             <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
-              <span className="text-lg">🔐</span> Password Değjobstir
+              <span className="text-lg">🔐</span> Change Password
             </h4>
 
             {message && (
@@ -157,7 +157,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
                     type={showPasswords ? 'text' : 'password'}
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="Mevcut şifrenizi girin"
+                    placeholder="Enter your current password"
                     className="w-full px-4 py-3 rounded-xl bg-slate-700/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50 transition-all"
                     required
                   />
@@ -170,7 +170,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
                   type={showPasswords ? 'text' : 'password'}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="New şifrenizi girin (min. 6 karakter)"
+                  placeholder="Enter a new password (min. 6 characters)"
                   className="w-full px-4 py-3 rounded-xl bg-slate-700/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50 transition-all"
                   required
                   minLength={6}
@@ -178,12 +178,12 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">New Password (Tekrar)</label>
+                <label className="block text-sm font-medium text-slate-400 mb-2">Confirm New Password</label>
                 <input
                   type={showPasswords ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="New şifrenizi tekrar girin"
+                  placeholder="Re-enter your new password"
                   className="w-full px-4 py-3 rounded-xl bg-slate-700/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50 transition-all"
                   required
                 />
@@ -207,7 +207,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
                   {isLoading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      Kaydediliyor...
+                      Saving...
                     </>
                   ) : (
                     <>
@@ -240,7 +240,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">👥</div>
                   <div>
-                    <p className="font-medium text-white">Admin Userları</p>
+                    <p className="font-medium text-white">Admin Users</p>
                     <p className="text-xs text-slate-400">Admin accounts</p>
                   </div>
                 </div>
@@ -250,7 +250,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
                   <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">🔗</div>
                   <div>
                     <p className="font-medium text-white">Webhooks</p>
-                    <p className="text-xs text-slate-400">Harici entegrasyonlar</p>
+                    <p className="text-xs text-slate-400">External integrations</p>
                   </div>
                 </div>
               </button>
@@ -258,8 +258,8 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">⚙️</div>
                   <div>
-                    <p className="font-medium text-white">Otomasyonlar</p>
-                    <p className="text-xs text-slate-400">Akis tasarimcisi</p>
+                    <p className="font-medium text-white">Automations</p>
+                    <p className="text-xs text-slate-400">Workflow designer</p>
                   </div>
                 </div>
               </button>
@@ -270,13 +270,13 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
             <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
               <span className="text-lg">🤝</span> Partner API Integration
             </h4>
-            <p className="text-slate-400 text-sm mb-4">Customer verilerini otomatik olarak anlaşmalı partnerlerinize gönderin ve tüm gönderileri takip edin.</p>
+            <p className="text-slate-400 text-sm mb-4">Send customer data to your contracted partners automatically and track all deliveries.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button onClick={() => onNavigate('partners')} className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 hover:border-emerald-500/40 transition-all text-left group">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">🔌</div>
                   <div>
-                    <p className="font-medium text-white">Partner API'ler</p>
+                    <p className="font-medium text-white">Partner APIs</p>
                     <p className="text-xs text-slate-400">API configuration and management</p>
                   </div>
                 </div>
@@ -299,7 +299,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
             </h4>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-slate-700/30 rounded-xl p-4 border border-white/5">
-                <p className="text-xs text-slate-500">Versiyon</p>
+                <p className="text-xs text-slate-500">Version</p>
                 <p className="text-white font-medium mt-1">v1.0.0</p>
               </div>
               <div className="bg-slate-700/30 rounded-xl p-4 border border-white/5">
@@ -314,7 +314,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
                 <p className="text-xs text-slate-500">Status</p>
                 <p className="text-emerald-400 font-medium mt-1 flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                  Aktif
+                  Active
                 </p>
               </div>
             </div>
