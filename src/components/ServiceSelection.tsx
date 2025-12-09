@@ -508,7 +508,7 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
       {!searchQuery && (
         <div className="space-y-3">
           <div className="text-sm font-semibold text-slate-800">Or browse all services:</div>
-          <div className="max-h-none overflow-visible sm:max-h-64 sm:overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent sm:overscroll-contain">
+          <div className="max-h-none overflow-visible lg:max-h-64 lg:overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent lg:overscroll-contain">
             <div className="grid grid-cols-2 gap-2">
               {SERVICES.map((service) => (
                 <button
