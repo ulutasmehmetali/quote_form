@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef, type FormEvent, type ReactNode } from 'react';
+ï»¿import { useEffect, useMemo, useState, useRef, type FormEvent, type ReactNode } from 'react';
 import Button from './Button';
 import type { ServiceType, QuoteFormData } from '../types/quote';
 import { suggestServicesWithAI, type ServiceSuggestion } from '../lib/aiSuggest';
@@ -366,7 +366,7 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
       <div className="text-center space-y-2">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200">
           <span className="flex h-2 w-2 rounded-full bg-emerald-500"></span>
-          <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Step 1 of 3 · Choose Service</span>
+          <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Step 1 of 3 ï¿½ Choose Service</span>
         </div>
         <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-800">What do you need help with?</h2>
         <p className="text-slate-600 text-sm sm:text-base max-w-lg mx-auto">
@@ -560,7 +560,7 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
           <div className="flex justify-center mb-4">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-200">
               <span className="flex h-2 w-2 rounded-full bg-emerald-500"></span>
-              <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Step 2 of 3 · Enter ZIP</span>
+              <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Step 2 of 3 ï¿½ Enter ZIP</span>
             </div>
           </div>
           <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
@@ -624,4 +624,5 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
     </form>
   );
 }
+
 
