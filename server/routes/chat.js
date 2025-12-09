@@ -177,13 +177,13 @@ router.post('/chat/image', async (req, res) => {
     }))
     .slice(-8);
 
-  const visionPrompt = `
+const visionPrompt = `
 You triage home-service requests from images. Respond with JSON ONLY:
 {
  "serviceType": "plumbing|electrical|hvac|roofing|flooring|pest control|landscaping|painting|cleaning|remodeling|handyman|garage door|concrete|fencing|other",
- "summary": "one short sentence about what you see and the likely service"
+ "summary": "one short sentence describing what you see and the likely service needed; if unsure, still give your best guess without asking the user for more info"
 }
-If unclear, use serviceType "other" and a cautious summary. Never invent prices.`;
+Always provide a summary even with low confidence. Never invent prices.`;
 
   try {
     const ai = await fetch(OPENAI_URL, {
@@ -206,7 +206,7 @@ If unclear, use serviceType "other" and a cautious summary. Never invent prices.
           },
         ],
         temperature: 0,
-        max_output_tokens: 150,
+        max_output_tokens: 220,
       }),
     });
 

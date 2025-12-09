@@ -208,7 +208,9 @@ export default function ChatWidget() {
       const summary =
         typeof data?.summary === 'string' && data.summary.trim()
           ? data.summary.trim()
-          : 'I tried to analyze the image but need a short description.';
+          : data?.error
+          ? 'I could not analyze the image automatically.'
+          : 'Here is my best read of the image.';
       const suggestion = service ? `Suggested service: ${service}.` : '';
       const replyText = [summary, suggestion].filter(Boolean).join(' ');
 
