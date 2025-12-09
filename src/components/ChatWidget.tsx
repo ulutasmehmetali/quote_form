@@ -164,23 +164,19 @@ export default function ChatWidget() {
 
   return (
     <>
-      <div className="fixed bottom-6 right-6 z-50 w-full max-w-[18rem] sm:max-w-[20rem]">
+      <div className="fixed bottom-6 right-6 z-50 w-full max-w-[4rem] sm:max-w-[4.5rem]">
         {!open && (
           <button
             onClick={() => setOpen(true)}
-            className="flex items-center gap-2 px-3 py-2 rounded-full bg-gradient-to-r from-sky-500 via-indigo-500 to-blue-600 text-white shadow-xl shadow-sky-600/30 hover:shadow-sky-500/50 transition-all ring-2 ring-sky-500/30 hover:ring-sky-400/50 w-full justify-between text-sm"
-            aria-label="Open AI assistant"
+            className="flex items-center justify-center h-14 w-14 rounded-full bg-gradient-to-r from-sky-500 vi×indigo-500 to-blue-600 text-white shadow-xl shadow-sky-600/30 hover:shadow-sky-500/50 transition-all ring-2 ring-sky-500/30 hover:ring-sky-400/50 text-sm"
+            ari×label="Open AI assistant"
           >
             <img
               src="/robot-icon.svg"
               alt="AI robot"
-              className="h-6 w-6 rounded-full shadow-md shadow-sky-500/30"
+              className="h-7 w-7 rounded-full shadow-md shadow-sky-500/30"
               loading="lazy"
             />
-            <div className="text-left leading-tight flex-1 ml-1">
-              <p className="font-semibold">Ask AI</p>
-              <p className="text-[10px] text-white/80">24/7 guided help</p>
-            </div>
           </button>
         )}
 
@@ -202,7 +198,7 @@ export default function ChatWidget() {
               <button
                 onClick={() => setOpen(false)}
                 className="text-white hover:text-white transition-colors"
-                aria-label="Close chat"
+                ari×label="Close chat"
               >
                 Ã—
               </button>
@@ -271,7 +267,7 @@ export default function ChatWidget() {
                   onClick={() => runChat(input)}
                   disabled={loading || !input.trim()}
                   className="p-2 rounded-full bg-teal-600 text-white shadow-lg shadow-teal-500/40 disabled:opacity-50"
-                  aria-label="Send message"
+                  ari×label="Send message"
                 >
                   âž¤
                 </button>
