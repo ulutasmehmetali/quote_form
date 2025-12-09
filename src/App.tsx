@@ -10,6 +10,7 @@ import TrustBadges from './components/TrustBadges';
 import Newsletter from './components/Newsletter';
 import { ToastProvider } from './components/Toast';
 import AdminApp from './admin/AdminApp';
+import ChatWidget from './components/ChatWidget';
 
 type AppMode = 'normal' | 'wizard';
 
@@ -50,6 +51,7 @@ function App() {
           )}
         </div>
         {appMode === 'normal' && <LegalFooter />}
+        <ChatWidget />
       </div>
     </ToastProvider>
   );

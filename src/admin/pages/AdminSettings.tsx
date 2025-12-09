@@ -19,7 +19,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
     e.preventDefault();
     
     if (newPassword !== confirmPassword) {
-      setMessage({ type: 'error', text: 'New şifreler eşleşmiyor!' });
+      setMessage({ type: 'error', text: 'New passwords do not match!' });
       return;
     }
     
@@ -82,19 +82,19 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
           
           <nav className="hidden md:flex items-center gap-1 bg-slate-800/50 rounded-2xl p-1">
             <button onClick={() => onNavigate('dashboard')} className="px-5 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 font-medium transition-all">
-              <span className="flex items-center gap-2">📊 Dashboard</span>
+              <span className="flex items-center gap-2">Dashboard</span>
             </button>
             <button onClick={() => onNavigate('submissions')} className="px-5 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 font-medium transition-all">
-              <span className="flex items-center gap-2">📋 Submissions</span>
+              <span className="flex items-center gap-2">Submissions</span>
             </button>
             <button onClick={() => onNavigate('reports')} className="px-5 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 font-medium transition-all">
-              <span className="flex items-center gap-2">📈 Reports</span>
+              <span className="flex items-center gap-2">Reports</span>
             </button>
             <button onClick={() => onNavigate('logs')} className="px-5 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 font-medium transition-all">
-              <span className="flex items-center gap-2">📜 Logs</span>
+              <span className="flex items-center gap-2">Logs</span>
             </button>
             <button onClick={() => onNavigate('settings')} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium shadow-lg shadow-sky-500/20">
-              <span className="flex items-center gap-2">⚙️ Settings</span>
+              <span className="flex items-center gap-2">Settings</span>
             </button>
           </nav>
 
@@ -117,7 +117,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
       <main className="max-w-3xl mx-auto px-6 py-8">
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-            ⚙️ Settings
+            Settings
           </h2>
           <p className="text-slate-400 mt-1">Manage your account and system settings</p>
         </div>
@@ -139,7 +139,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
             </div>
 
             <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
-              <span className="text-lg">🔐</span> Change Password
+              Change Password
             </h4>
 
             {message && (
@@ -170,10 +170,10 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
                   type={showPasswords ? 'text' : 'password'}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter a new password (min. 6 characters)"
+                  placeholder="Enter a new password (min. 8 characters)"
                   className="w-full px-4 py-3 rounded-xl bg-slate-700/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50 transition-all"
                   required
-                  minLength={6}
+                  minLength={8}
                 />
               </div>
 
@@ -224,12 +224,12 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
 
           <div className="bg-slate-800/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
             <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
-              <span className="text-lg">🔧</span> Admin Tools
+              Admin Tools
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <button onClick={() => onNavigate('professionals')} className="p-4 rounded-xl bg-gradient-to-br from-sky-500/10 to-indigo-500/10 border border-sky-500/20 hover:border-sky-500/40 transition-all text-left group">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-sky-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">👷</div>
+                  <div className="w-10 h-10 rounded-lg bg-sky-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">PR</div>
                   <div>
                     <p className="font-medium text-white">Professionals</p>
                     <p className="text-xs text-slate-400">Professionals and company management</p>
@@ -238,7 +238,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
               </button>
               <button onClick={() => onNavigate('users')} className="p-4 rounded-xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 hover:border-purple-500/40 transition-all text-left group">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">👥</div>
+                  <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">AU</div>
                   <div>
                     <p className="font-medium text-white">Admin Users</p>
                     <p className="text-xs text-slate-400">Admin accounts</p>
@@ -247,7 +247,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
               </button>
               <button onClick={() => onNavigate('webhooks')} className="p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 hover:border-amber-500/40 transition-all text-left group">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">🔗</div>
+                  <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">WH</div>
                   <div>
                     <p className="font-medium text-white">Webhooks</p>
                     <p className="text-xs text-slate-400">External integrations</p>
@@ -256,7 +256,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
               </button>
               <button onClick={() => onNavigate('automations')} className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-500/20 hover:border-emerald-500/40 transition-all text-left group">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">⚙️</div>
+                  <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">AT</div>
                   <div>
                     <p className="font-medium text-white">Automations</p>
                     <p className="text-xs text-slate-400">Workflow designer</p>
@@ -268,13 +268,13 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
 
           <div className="bg-slate-800/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
             <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
-              <span className="text-lg">🤝</span> Partner API Integration
+              Partner API Integration
             </h4>
             <p className="text-slate-400 text-sm mb-4">Send customer data to your contracted partners automatically and track all deliveries.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button onClick={() => onNavigate('partners')} className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 hover:border-emerald-500/40 transition-all text-left group">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">🔌</div>
+                  <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">PA</div>
                   <div>
                     <p className="font-medium text-white">Partner APIs</p>
                     <p className="text-xs text-slate-400">API configuration and management</p>
@@ -283,7 +283,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
               </button>
               <button onClick={() => onNavigate('distribution-logs')} className="p-4 rounded-xl bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 hover:border-cyan-500/40 transition-all text-left group">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📊</div>
+                  <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">DL</div>
                   <div>
                     <p className="font-medium text-white">Distribution Logs</p>
                     <p className="text-xs text-slate-400">Delivery tracking and monitoring</p>
@@ -295,7 +295,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
 
           <div className="bg-slate-800/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
             <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
-              <span className="text-lg">ℹ️</span> System Info
+              System Info
             </h4>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-slate-700/30 rounded-xl p-4 border border-white/5">
@@ -322,7 +322,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
 
           <div className="bg-slate-800/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
             <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
-              <span className="text-lg">⌨️</span> Keyboard Shortcuts
+              Keyboard Shortcuts
             </h4>
             <div className="space-y-2">
               {[
@@ -330,7 +330,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
                 { keys: ['Alt', 'S'], action: 'Submissions' },
                 { keys: ['Alt', 'R'], action: 'Reports' },
                 { keys: ['Alt', 'L'], action: 'Logs' },
-                { keys: ['Esc'], action: 'Modal Kapat' },
+                { keys: ['Esc'], action: 'Close modal' },
               ].map(({ keys, action }) => (
                 <div key={action} className="flex items-center justify-between py-2">
                   <span className="text-slate-400 text-sm">{action}</span>
@@ -349,7 +349,7 @@ export default function AdminSettings({ onNavigate }: AdminSettingsProps) {
 
           <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-6">
             <h4 className="font-semibold text-red-400 mb-4 flex items-center gap-2">
-              <span className="text-lg">⚠️</span> Danger Zone
+              Danger Zone
             </h4>
             <p className="text-slate-400 text-sm mb-4">Logging out will end your session and you will need to sign in again.</p>
             <button
