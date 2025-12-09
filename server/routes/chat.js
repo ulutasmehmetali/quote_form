@@ -164,8 +164,8 @@ router.post('/chat/image', async (req, res) => {
     return res.status(400).json({ error: 'Invalid image' });
   }
   const sizeBytes = Buffer.byteLength(image, 'utf8');
-  if (sizeBytes > 2 * 1024 * 1024) {
-    return res.status(413).json({ error: 'Image too large (max 2MB)' });
+  if (sizeBytes > 10 * 1024 * 1024) {
+    return res.status(413).json({ error: 'Image too large (max 10MB)' });
   }
 
   const visionPrompt = `

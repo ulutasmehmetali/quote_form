@@ -35,6 +35,7 @@ export default function ChatWidget() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [showPrompts, setShowPrompts] = useState(true);
   const listRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -59,6 +60,7 @@ export default function ChatWidget() {
     });
     setSubmitted(false);
     setSubmitting(false);
+    setShowPrompts(true);
   };
 
   const saveLead = async (payload = lead) => {
@@ -100,6 +102,7 @@ export default function ChatWidget() {
     const trimmed = userText.trim();
     if (!trimmed || loading) return;
     setError(null);
+    setShowPrompts(false);
 
     const nextMessages = [...messages, { role: 'user', content: trimmed }].slice(-40);
     setMessages(nextMessages);
@@ -166,10 +169,16 @@ export default function ChatWidget() {
     }
   };
 
+  const [uploadedCount, setUploadedCount] = useState(0);
+
   const handleImageSelect = async (file?: File) => {
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      setError('Image too large (max 2MB).');
+    if (uploadedCount >= 3) {
+      setError('You can upload up to 3 images.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Image too large (max 10MB).');
       return;
     }
 
@@ -202,6 +211,7 @@ export default function ChatWidget() {
       const replyText = [summary, suggestion].filter(Boolean).join(' ');
 
       setMessages((prev) => [...prev, { role: 'assistant', content: replyText }]);
+      setUploadedCount((c) => c + 1);
       if (service) {
         setLead((prev) => ({ ...prev, serviceType: prev.serviceType || service }));
       }
@@ -258,18 +268,20 @@ export default function ChatWidget() {
               </button>
             </div>
 
-            <div className="px-3.5 py-2 bg-white flex flex-wrap gap-2">
-              {quickPrompts.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => runChat(p)}
-                  disabled={loading}
-                  className="text-[12px] px-3 py-1.5 rounded-full bg-teal-600 text-white hover:bg-teal-700 transition disabled:opacity-50 whitespace-nowrap"
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
+            {showPrompts && (
+              <div className="px-3.5 py-2 bg-white flex flex-wrap gap-2">
+                {quickPrompts.map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => runChat(p)}
+                    disabled={loading}
+                    className="text-[12px] px-3 py-1.5 rounded-full bg-teal-600 text-white hover:bg-teal-700 transition disabled:opacity-50 whitespace-nowrap shadow-md shadow-teal-200 border border-teal-500/30"
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {error && (
               <div className="px-4 py-2 bg-red-500/10 border-b border-red-500/30 text-red-500 text-xs">
@@ -324,7 +336,16 @@ export default function ChatWidget() {
                   className="p-2 rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 shadow-inner shadow-slate-200 disabled:opacity-50"
                   aria-label="Attach image"
                 >
-                  📎
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M21 15V6a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3v10a4 4 0 0 0 4 4h6a4 4 0 0 0 4-4v-4H9" />
+                  </svg>
                 </button>
                 <input
                   type="text"
@@ -340,7 +361,7 @@ export default function ChatWidget() {
                   className="p-2 rounded-full bg-teal-600 text-white shadow-lg shadow-teal-500/40 disabled:opacity-50"
                   aria-label="Send message"
                 >
-                  &gt;
+                  ➤
                 </button>
               </div>
               <div className="flex items-center justify-end text-[11px] text-slate-500">
