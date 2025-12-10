@@ -328,6 +328,12 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
     const photo2 = photoUrls[1] || '';
     const photo3 = photoUrls[2] || '';
     const photo4 = photoUrls[3] || '';
+    const summaryWithPhotos = [
+      buildAnswerRows()
+        .map((row) => `${row.question}: ${row.answer || 'n/a'}`)
+        .join(' | '),
+      photoUrls.length ? `Photos: ${photoUrls.join(', ')}` : ''
+    ].filter(Boolean).join(' | ');
 
     const sheetPayload = {
       name,
@@ -338,9 +344,7 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
       responses: formData.responses,
       raw_responses_json: JSON.stringify(formData.responses || {}),
       answers: buildAnswerRows(),
-      responseSummary: buildAnswerRows()
-        .map((row) => `${row.question}: ${row.answer || 'n/a'}`)
-        .join(' | '),
+      responseSummary: summaryWithPhotos,
       photos: photoUrls,
       photoCount: photoUrls.length,
       linked_photo: primaryPhoto,
