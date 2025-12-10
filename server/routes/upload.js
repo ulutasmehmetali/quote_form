@@ -121,7 +121,17 @@ router.post('/upload/photos', upload.array('photos', 6), async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Upload error:', error.message);
+    const fileSummary = (req.files || []).map(f => ({
+      name: f.originalname,
+      size: f.size,
+      mimetype: f.mimetype,
+    }));
+
+    console.error('Upload error:', {
+      message: error?.message,
+      stack: error?.stack,
+      files: fileSummary,
+    });
     
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
@@ -140,6 +150,7 @@ router.post('/upload/photos', upload.array('photos', 6), async (req, res) => {
     res.status(500).json({
       error: 'Upload failed',
       message: 'An error occurred during upload. Please try again.',
+      detail: error?.message || 'Unknown error',
     });
   }
 });

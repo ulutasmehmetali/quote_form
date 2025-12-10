@@ -104,7 +104,7 @@ export default function PhotoUpload({ onSubmit, onBack, onNext, currentStep, tot
         const contentType = response.headers.get('content-type');
         if (contentType?.includes('application/json')) {
           const errorData = await response.json();
-          throw new Error(errorData.message || 'Upload failed');
+          throw new Error(errorData.detail || errorData.message || 'Upload failed');
         } else {
           throw new Error(response.status === 413 
             ? 'Upload too large. Please reduce file size or number of photos.'
