@@ -336,6 +336,7 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
     ].filter(Boolean).join(' | ');
 
     const sheetPayload = {
+      // Orijinal alanlar
       name,
       email,
       phone,
@@ -353,6 +354,15 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
       linked_photo4: photo4,
       submittedAt: new Date().toISOString(),
       submittedAtLocal: new Date().toLocaleString(),
+      // Sheet başlıklarıyla birebir eşleşen snake_case alanlar
+      submitted_at_utc: new Date().toISOString(),
+      submitted_at_local: new Date().toLocaleString(),
+      full_name: name,
+      service_type: formData.serviceType,
+      zip_code: formData.zipCode,
+      response_summary: summaryWithPhotos,
+      answers_json: JSON.stringify(buildAnswerRows()),
+      // raw_responses_json zaten yukarıda var; sheet tarafı snake_case de istiyor
     };
 
     const dbPayload = {
