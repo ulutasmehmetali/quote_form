@@ -1,14 +1,20 @@
 export class CloudinaryStorageService {
   constructor() {
-    this.cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'demo';
-    this.uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET || 'docs_upload_example_us_preset';
+    this.cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    this.uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET;
+
+    if (!this.cloudName) {
+      throw new Error('CLOUDINARY_CLOUD_NAME is not set');
+    }
+
+    if (!this.uploadPreset) {
+      throw new Error('CLOUDINARY_UPLOAD_PRESET is not set');
+    }
+
+    console.log(`Cloudinary configured: cloud_name=${this.cloudName}, upload_preset=${this.uploadPreset}`);
   }
 
   async uploadFile(buffer, filename, mimetype) {
-    if (!this.cloudName) {
-      throw new Error('Cloudinary cloud name missing');
-    }
-
     const formData = new FormData();
     formData.append('file', new Blob([buffer], { type: mimetype }), filename);
     formData.append('upload_preset', this.uploadPreset);

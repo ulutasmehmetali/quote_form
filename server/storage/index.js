@@ -6,7 +6,7 @@ let storageInstance = null;
 export function getStorageService() {
   if (storageInstance) return storageInstance;
 
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'demo';
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
   if (cloudName) {
     storageInstance = new CloudinaryStorageService();
     console.log(`Using Cloudinary (${cloudName}) for uploads`);
