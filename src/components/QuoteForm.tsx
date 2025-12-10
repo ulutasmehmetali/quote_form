@@ -325,6 +325,9 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
 
     const photoUrls = formData.uploadedPhotos?.map((p) => p.url) || [];
     const primaryPhoto = photoUrls[0] || '';
+    const photo2 = photoUrls[1] || '';
+    const photo3 = photoUrls[2] || '';
+    const photo4 = photoUrls[3] || '';
 
     const sheetPayload = {
       name,
@@ -340,9 +343,10 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
         .join(' | '),
       photos: photoUrls,
       photoCount: photoUrls.length,
-      linked_photo: photoUrls.join(', '),
-      linked_photo_first: primaryPhoto,
-      linked_photo_multiline: photoUrls.join('\n'),
+      linked_photo: primaryPhoto,
+      linked_photo2: photo2,
+      linked_photo3: photo3,
+      linked_photo4: photo4,
       submittedAt: new Date().toISOString(),
       submittedAtLocal: new Date().toLocaleString(),
     };
