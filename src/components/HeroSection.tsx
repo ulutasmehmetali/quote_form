@@ -78,30 +78,32 @@ const trustBadges = [
 ];
 
 const steps = [
-  { title: 'Tell us the issue or pick a service', desc: 'Describe your need briefly or choose from the list' },
-  { title: 'Enter your ZIP code', desc: 'We’ll match you with nearby certified pros' },
-  { title: 'Finish the form', desc: 'Local pros will reach out to you shortly' },
+  { title: 'Tell us your project', desc: 'Share the issue or pick a service to start' },
+  { title: 'Enter your ZIP code', desc: "We'll match you with nearby certified pros" },
+  { title: 'Finish the form', desc: 'Local pros will reach out shortly' },
 ];
 
 const StepsStrip = ({ compact = false }: { compact?: boolean }) => (
-  <div className={`grid ${compact ? 'grid-cols-1 sm:grid-cols-3 gap-2' : 'grid-cols-3 gap-3'} w-full`}>
+  <div className={`w-full ${compact ? 'grid grid-cols-1 sm:grid-cols-3 gap-3' : 'grid grid-cols-3 gap-5'}`}>
     {steps.map((step, idx) => (
       <div
         key={step.title}
-        className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white/80 backdrop-blur px-3 py-3 shadow-sm"
+        className="relative overflow-hidden rounded-2xl bg-white/95 border border-slate-200 shadow-[0_10px_24px_rgba(15,23,42,0.12)] px-4 py-5"
       >
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-500 text-white font-bold">
-          {idx + 1}
-        </div>
-        <div className="leading-tight">
-          <p className="text-sm font-semibold text-slate-900">{step.title}</p>
-          <p className="text-xs text-slate-600">{step.desc}</p>
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-sky-50 pointer-events-none" />
+        <div className="relative flex items-start gap-3">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-600 text-white font-extrabold text-lg flex items-center justify-center shadow-[0_6px_16px_rgba(59,130,246,0.35)]">
+            {idx + 1}
+          </div>
+          <div className="space-y-1 leading-snug">
+            <p className="text-[18px] font-bold text-slate-900 tracking-tight">{step.title}</p>
+            <p className="text-[14px] text-slate-600">{step.desc}</p>
+          </div>
         </div>
       </div>
     ))}
   </div>
 );
-
 
 export default function HeroSection() {
   return (
@@ -289,19 +291,19 @@ export default function HeroSection() {
 
           <StepsStrip />
 
-          <div className="flex items-stretch gap-3">
+          <div className="flex items-stretch gap-4">
             {trustBadges.map((badge, index) => (
               <div
                 key={badge.label}
-                className="group flex-1 flex flex-col items-center justify-center gap-2 px-3 py-4 rounded-xl bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300 hover:-translate-y-0.5 transition-all duration-200 text-center cursor-default"
+                className="group flex-1 flex flex-col items-center justify-center gap-3 px-4 py-5 rounded-2xl bg-white border border-slate-200 shadow-md hover:shadow-lg hover:border-slate-300 hover:-translate-y-0.5 transition-all duration-200 text-center cursor-default"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-50">
-                  <div className="scale-75">{badge.icon}</div>
+                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-slate-50">
+                  <div className="scale-90">{badge.icon}</div>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-slate-800">{badge.label}</p>
-                  <p className="text-[10px] text-slate-500">{badge.desc}</p>
+                  <p className="text-sm font-semibold text-slate-800">{badge.label}</p>
+                  <p className="text-xs text-slate-500">{badge.desc}</p>
                 </div>
               </div>
             ))}
