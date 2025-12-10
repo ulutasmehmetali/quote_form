@@ -329,24 +329,36 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
     const photo3 = photoUrls[2] || '';
     const photo4 = photoUrls[3] || '';
 
+    const answersRows = buildAnswerRows();
+    const answersJson = JSON.stringify(formData.answers || []);
+    const rawResponsesJson = JSON.stringify(formData.responses || {});
+
     const sheetPayload = {
-      name,
+      // Sheet başlıklarıyla birebir eşleşen alanlar
+      submitted_at_utc: new Date().toISOString(),
+      submitted_at_local: new Date().toLocaleString(),
+      full_name: name,
       email,
       phone,
-      serviceType: formData.serviceType,
-      zipCode: formData.zipCode,
-      responses: formData.responses,
-      raw_responses_json: JSON.stringify(formData.responses || {}),
-      answers: buildAnswerRows(),
-      responseSummary: buildAnswerRows()
+      service_type: formData.serviceType,
+      zip_code: formData.zipCode,
+      response_summary: answersRows
         .map((row) => `${row.question}: ${row.answer || 'n/a'}`)
         .join(' | '),
-      photos: photoUrls,
-      photoCount: photoUrls.length,
+      answers_json: answersJson,
+      raw_responses_json: rawResponsesJson,
       linked_photo: primaryPhoto,
       linked_photo2: photo2,
       linked_photo3: photo3,
       linked_photo4: photo4,
+      // Orijinal alanları da gönderiyoruz (script farklıysa)
+      name,
+      serviceType: formData.serviceType,
+      zipCode: formData.zipCode,
+      responses: formData.responses,
+      answers: answersRows,
+      photos: photoUrls,
+      photoCount: photoUrls.length,
       submittedAt: new Date().toISOString(),
       submittedAtLocal: new Date().toLocaleString(),
     };
