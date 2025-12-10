@@ -262,7 +262,7 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
   };
 
   const handlePhotos = (uploadedPhotos: UploadedPhoto[]) => {
-    setFormData({ ...formData, uploadedPhotos });
+    setFormData((prev) => ({ ...prev, uploadedPhotos }));
   };
 
   const handleBack = () => {
@@ -324,6 +324,7 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
     setSubmitError(null);
 
     const photoUrls = formData.uploadedPhotos?.map((p) => p.url) || [];
+    const primaryPhoto = photoUrls[0] || '';
 
     const sheetPayload = {
       name,
@@ -340,6 +341,8 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
       photos: photoUrls,
       photoCount: photoUrls.length,
       linked_photo: photoUrls.join(', '),
+      linked_photo_first: primaryPhoto,
+      linked_photo_multiline: photoUrls.join('\n'),
       submittedAt: new Date().toISOString(),
       submittedAtLocal: new Date().toLocaleString(),
     };
