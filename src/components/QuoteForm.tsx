@@ -11,7 +11,7 @@ import HeroSection from './HeroSection';
 import StepIndicator from './StepIndicator';
 import { apiUrl } from '../lib/api';
 
-const GOOGLE_SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyuhjVSv1hE-YVyf6Pbl5Dhztt84m3eGJppOO1H0dHMFaaXFs0ll1naYzoHVVJ8tauN3g/exec';
+const GOOGLE_SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxF3byLylGeLSTZTsTmeVEUwz-rFhNrA0hhypaJrx-XxcW9pzg7EfYGmafEhsDPFF7YLA/exec';
 const STORAGE_KEY = 'miyomint_form_draft';
 const DRAFT_ENDPOINT = apiUrl('/api/draft');
 const INCOMPLETE_ENDPOINT = apiUrl('/api/incomplete');
