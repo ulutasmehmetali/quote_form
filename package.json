@@ -7,6 +7,7 @@
     "dev": "vite --host 0.0.0.0 --port 5000",
     "server": "node server/index.js",
     "build": "vite build",
+    "analyze": "ANALYZE=true vite build",
     "preview": "vite preview",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
@@ -47,6 +48,7 @@
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.22",
+    "rollup-plugin-visualizer": "^5.12.0",
     "tailwindcss": "^4.1.17",
     "vite": "^7.2.4"
   }

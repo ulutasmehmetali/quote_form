@@ -157,8 +157,14 @@ export default function PhotoUpload({ onSubmit, onBack, onNext, currentStep, tot
 
           <div className="text-center space-y-2">
             <h2 className="text-xl sm:text-2xl font-bold text-slate-800">Upload Photos or Videos (Optional)</h2>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-50 border border-sky-200 text-xs font-semibold text-sky-700">
+              Max 4 files · 20MB total
+            </div>
             <p className="text-slate-600 text-sm">
               Add photos or short clips (total up to 20MB) to help pros understand your project.
+            </p>
+            <p className="text-slate-500 text-xs">
+              Tip: Keep videos short (under ~2 minutes / 1080p) so they upload quickly.
             </p>
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-3">
@@ -208,7 +214,7 @@ export default function PhotoUpload({ onSubmit, onBack, onNext, currentStep, tot
               </div>
               
               <p className="text-xs text-slate-500">
-                PNG, JPG, HEIC, MP4, MOV, WEBM (up to 4 files, 20MB total)
+                Images: PNG, JPG, HEIC · Video: MP4, MOV, WEBM · Up to 4 files, 20MB total
               </p>
             </div>
           </div>
@@ -225,7 +231,7 @@ export default function PhotoUpload({ onSubmit, onBack, onNext, currentStep, tot
                           <path d="M4 4h16v16H4z" />
                           <path d="M10 8l6 4-6 4V8z" />
                         </svg>
-                        Video
+                        Video selected · keep it short
                       </div>
                     ) : (
                       <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />

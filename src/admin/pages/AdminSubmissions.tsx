@@ -772,7 +772,15 @@ export default function AdminSubmissions({ onNavigate }: AdminSubmissionsProps) 
                   </h4>
                   <div className="grid grid-cols-4 gap-3">
                     {selectedSubmission.photoUrls.map((url, index) => (
-                      <img key={index} src={url} alt={`Photo ${index + 1}`} className="rounded-xl w-full h-24 object-cover cursor-pointer hover:opacity-80 transition-all hover:scale-105" onClick={() => window.open(url, '_blank')} />
+                      <img
+                        key={index}
+                        src={url}
+                        alt={`Photo ${index + 1}`}
+                        loading="lazy"
+                        decoding="async"
+                        className="rounded-xl w-full h-24 object-cover cursor-pointer hover:opacity-80 transition-all hover:scale-105"
+                        onClick={() => window.open(url, '_blank')}
+                      />
                     ))}
                   </div>
                 </div>

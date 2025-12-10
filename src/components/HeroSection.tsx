@@ -213,7 +213,13 @@ export default function HeroSection() {
                   {[...topRowServices, ...topRowServices].map((service, idx) => (
                     <div key={`top-${idx}`} className="flex-shrink-0 w-[130px] sm:w-40">
                       <div className="carousel-card relative h-24 sm:h-28">
-                        <img src={service.img} alt={service.name} className="w-full h-full object-cover" />
+                        <img
+                          src={service.img}
+                          alt={service.name}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          decoding="async"
+                        />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent pointer-events-none"></div>
                         <div className="absolute bottom-2 left-2 right-2">
                           <div className="flex items-center gap-1.5">
@@ -237,7 +243,13 @@ export default function HeroSection() {
                   {[...bottomRowServices, ...bottomRowServices].map((service, idx) => (
                     <div key={`bottom-${idx}`} className="flex-shrink-0 w-[130px] sm:w-40">
                       <div className="carousel-card relative h-24 sm:h-28">
-                        <img src={service.img} alt={service.name} className="w-full h-full object-cover" />
+                        <img
+                          src={service.img}
+                          alt={service.name}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          decoding="async"
+                        />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent pointer-events-none"></div>
                         <div className="absolute bottom-2 left-2 right-2">
                           <div className="flex items-center gap-1.5">
@@ -274,7 +286,13 @@ export default function HeroSection() {
               <div className="flex -space-x-1.5">
                 {[roofingImg, electricianImg, remodelingImg].map((img, i) => (
                   <div key={i} className="w-6 h-6 rounded-full border-2 border-white overflow-hidden shadow-sm">
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  <img
+                    src={img}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
                   </div>
                 ))}
               </div>
@@ -390,7 +408,13 @@ export default function HeroSection() {
                   key={i}
                   className="w-8 h-8 rounded-full border-2 border-white overflow-hidden shadow-md"
                 >
-                  <img src={img} alt="" className="w-full h-full object-cover" />
+                  <img
+                    src={img}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
                 </div>
               ))}
             </div>
@@ -410,6 +434,7 @@ export default function HeroSection() {
                   src={plumberImg}
                   alt="Professional plumber"
                   className="w-full h-full object-cover"
+                  decoding="async"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
                 <div className="absolute bottom-1.5 left-1.5 lg:bottom-3 lg:left-3 lg:right-3">
@@ -421,6 +446,8 @@ export default function HeroSection() {
                   src={hvacImg}
                   alt="HVAC technician"
                   className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
                 <div className="absolute bottom-1.5 left-1.5 lg:bottom-3 lg:left-3 lg:right-3">
@@ -434,6 +461,8 @@ export default function HeroSection() {
                   src={electricianImg}
                   alt="Professional electrician"
                   className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
                 <div className="absolute bottom-1.5 left-1.5 lg:bottom-3 lg:left-3 lg:right-3">
@@ -445,6 +474,8 @@ export default function HeroSection() {
                   src={contractorImg}
                   alt="Home contractor"
                   className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
                 <div className="absolute bottom-1.5 left-1.5 lg:bottom-3 lg:left-3 lg:right-3">
