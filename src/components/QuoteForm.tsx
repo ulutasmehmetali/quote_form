@@ -328,12 +328,10 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
     const photo2 = photoUrls[1] || '';
     const photo3 = photoUrls[2] || '';
     const photo4 = photoUrls[3] || '';
-    const summaryWithPhotos = [
-      buildAnswerRows()
-        .map((row) => `${row.question}: ${row.answer || 'n/a'}`)
-        .join(' | '),
-      photoUrls.length ? `Photos: ${photoUrls.join(', ')}` : ''
-    ].filter(Boolean).join(' | ');
+    const answersRows = buildAnswerRows();
+    const summaryAnswersOnly = answersRows
+      .map((row) => `${row.question}: ${row.answer || 'n/a'}`)
+      .join(' | ');
 
     const sheetPayload = {
       // Orijinal alanlar
@@ -344,8 +342,8 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
       zipCode: formData.zipCode,
       responses: formData.responses,
       raw_responses_json: JSON.stringify(formData.responses || {}),
-      answers: buildAnswerRows(),
-      responseSummary: summaryWithPhotos,
+      answers: answersRows,
+      responseSummary: summaryAnswersOnly,
       photos: photoUrls,
       photoCount: photoUrls.length,
       linked_photo: primaryPhoto,
@@ -360,8 +358,8 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
       full_name: name,
       service_type: formData.serviceType,
       zip_code: formData.zipCode,
-      response_summary: summaryWithPhotos,
-      answers_json: JSON.stringify(buildAnswerRows()),
+      response_summary: summaryAnswersOnly,
+      answers_json: JSON.stringify(answersRows),
       // raw_responses_json zaten yukarıda var; sheet tarafı snake_case de istiyor
     };
 
