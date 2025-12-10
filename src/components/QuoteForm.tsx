@@ -352,7 +352,10 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
       linked_photo2: photo2,
       linked_photo3: photo3,
       linked_photo4: photo4,
-      photo_url: photoUrlCombined, // single-column sheet: include all URLs
+      photo_url: primaryPhoto,
+      photo_url_2: photo2,
+      photo_url_3: photo3,
+      photo_url_4: photo4,
       submittedAt: new Date().toISOString(),
       submittedAtLocal: new Date().toLocaleString(),
       // Sheet başlıklarıyla birebir eşleşen snake_case alanlar
