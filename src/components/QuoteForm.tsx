@@ -323,6 +323,8 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
     setIsSubmitting(true);
     setSubmitError(null);
 
+    const photoUrls = formData.uploadedPhotos?.map((p) => p.url) || [];
+
     const sheetPayload = {
       name,
       email,
@@ -330,12 +332,14 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
       serviceType: formData.serviceType,
       zipCode: formData.zipCode,
       responses: formData.responses,
+      raw_responses_json: JSON.stringify(formData.responses || {}),
       answers: buildAnswerRows(),
       responseSummary: buildAnswerRows()
         .map((row) => `${row.question}: ${row.answer || 'n/a'}`)
         .join(' | '),
-      photos: formData.uploadedPhotos?.map(p => p.url) || [],
-      photoCount: formData.uploadedPhotos?.length || 0,
+      photos: photoUrls,
+      photoCount: photoUrls.length,
+      linked_photo: photoUrls.join(', '),
       submittedAt: new Date().toISOString(),
       submittedAtLocal: new Date().toLocaleString(),
     };

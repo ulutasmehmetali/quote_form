@@ -113,8 +113,14 @@ export default function PhotoUpload({ onSubmit, onBack, onNext, currentStep, tot
       }
 
       const data = await response.json();
+      const files = Array.isArray(data.files) ? data.files : [];
+      const uploadedPhotos: UploadedPhoto[] = files.map((file: any) => ({
+        url: file.url,
+        key: file.key || file.url,
+        provider: file.provider || 'local',
+      }));
       
-      onSubmit(data.files);
+      onSubmit(uploadedPhotos);
       onNext();
     } catch (err) {
       console.error('Upload error:', err);

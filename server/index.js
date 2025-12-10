@@ -319,6 +319,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/admin/automations', automationRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api', chatRoutes);
+app.use('/api', uploadLimiter, uploadRoutes);
 
 /* -------------------------------------------
    STATIC UPLOADS

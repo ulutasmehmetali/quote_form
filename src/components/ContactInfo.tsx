@@ -251,6 +251,14 @@ export default function ContactInfo({ onSubmit, onBack, isSubmitting, retryCount
             </div>
             <div className="flex flex-col sm:flex-row gap-2.5 pt-2 items-stretch">
               <Button
+                type="submit"
+                isLoading={isSubmitting}
+                className={`w-full sm:flex-1 h-12 text-base rounded-2xl transition-all ${allValid ? 'animate-pulse-subtle' : ''}`}
+                size="lg"
+              >
+                {isSubmitting ? 'Submitting...' : allValid ? 'Get My Free Quotes' : 'Complete All Fields'}
+              </Button>
+              <Button
                 type="button"
                 onClick={onBack}
                 disabled={isSubmitting}
@@ -260,14 +268,6 @@ export default function ContactInfo({ onSubmit, onBack, isSubmitting, retryCount
                 icon={<ArrowLeftIcon className="h-4 w-4 text-slate-500" />}
               >
                 Back
-              </Button>
-              <Button
-                type="submit"
-                isLoading={isSubmitting}
-                className={`w-full sm:flex-1 h-12 text-base rounded-2xl transition-all ${allValid ? 'animate-pulse-subtle' : ''}`}
-                size="lg"
-              >
-                {isSubmitting ? 'Submitting...' : allValid ? 'Get My Free Quotes' : 'Complete All Fields'}
               </Button>
             </div>
 
