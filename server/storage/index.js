@@ -7,14 +7,12 @@ export function getStorageService() {
   if (storageInstance) return storageInstance;
 
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-  if (cloudName) {
-    storageInstance = new CloudinaryStorageService();
-    console.log(`Using Cloudinary (${cloudName}) for uploads`);
-    return storageInstance;
+  if (!cloudName) {
+    throw new Error('CLOUDINARY_CLOUD_NAME is not set; public photo uploads require Cloudinary.');
   }
 
-  storageInstance = new LocalStorageService();
-  console.log('Using local file storage for uploads');
+  storageInstance = new CloudinaryStorageService();
+  console.log(`Using Cloudinary (${cloudName}) for uploads`);
   
   return storageInstance;
 }
