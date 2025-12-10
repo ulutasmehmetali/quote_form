@@ -303,8 +303,9 @@ const submitLimiter = rateLimit({
 });
 
 const uploadLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 30,
+  // Relaxed: allow plenty of photo uploads during a session
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // effectively open for normal usage
   message: { error: 'Too many uploads.' },
   standardHeaders: true,
   legacyHeaders: false,
