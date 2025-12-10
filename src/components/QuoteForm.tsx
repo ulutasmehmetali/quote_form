@@ -328,6 +328,7 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
     const photo2 = photoUrls[1] || '';
     const photo3 = photoUrls[2] || '';
     const photo4 = photoUrls[3] || '';
+    const photoUrlCombined = photoUrls.join(', ');
     const answersRows = buildAnswerRows();
     const summaryAnswersOnly = answersRows
       .map((row) => `${row.question}: ${row.answer || 'n/a'}`)
@@ -351,7 +352,7 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
       linked_photo2: photo2,
       linked_photo3: photo3,
       linked_photo4: photo4,
-      photo_url: primaryPhoto, // single-column sheet fallback
+      photo_url: photoUrlCombined, // single-column sheet: include all URLs
       submittedAt: new Date().toISOString(),
       submittedAtLocal: new Date().toLocaleString(),
       // Sheet başlıklarıyla birebir eşleşen snake_case alanlar

@@ -32,22 +32,26 @@ export default function PhotoUpload({ onSubmit, onBack, onNext, currentStep, tot
   const handleFiles = (files: FileList | null) => {
     if (!files) return;
     
-    const newFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
-    const totalFiles = [...photos, ...newFiles].slice(0, 6);
+    const newFiles = Array.from(files).filter(file => file.type.startsWith('image/') || file.type.startsWith('video/'));
+    const totalFiles = [...photos, ...newFiles].slice(0, 4); // max 4 files
     
-    const MAX_FILE_SIZE = 2 * 1024 * 1024;
-    const MAX_TOTAL_SIZE = 2.5 * 1024 * 1024;
+    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+    const MAX_TOTAL_SIZE = 20 * 1024 * 1024; // 20MB total
     
     for (const file of totalFiles) {
       if (file.size > MAX_FILE_SIZE) {
-        setError(`File "${file.name}" exceeds 2MB. Please compress or select a smaller photo.`);
+        setError(`"${file.name}" exceeds 20MB. Please choose a smaller file.`);
         return;
       }
     }
     
     const totalSize = totalFiles.reduce((sum, file) => sum + file.size, 0);
     if (totalSize > MAX_TOTAL_SIZE) {
-      setError('Total file size exceeds 2.5MB. Please select fewer or smaller photos.');
+      setError('Total upload size exceeds 20MB. Please remove or compress files.');
+      return;
+    }
+    if (totalFiles.length > 4) {
+      setError('You can upload up to 4 files.');
       return;
     }
     
@@ -152,9 +156,9 @@ export default function PhotoUpload({ onSubmit, onBack, onNext, currentStep, tot
           </div>
 
           <div className="text-center space-y-2">
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-800">Upload Photos (Optional)</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-800">Upload Photos or Videos (Optional)</h2>
             <p className="text-slate-600 text-sm">
-              Help professionals better understand your project by uploading photos. This step is optional.
+              Add photos or short clips (total up to 20MB) to help pros understand your project.
             </p>
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-3">
@@ -177,7 +181,7 @@ export default function PhotoUpload({ onSubmit, onBack, onNext, currentStep, tot
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,video/*"
               multiple
               onChange={handleChange}
               className="hidden"
@@ -204,30 +208,43 @@ export default function PhotoUpload({ onSubmit, onBack, onNext, currentStep, tot
               </div>
               
               <p className="text-xs text-slate-500">
-                PNG, JPG, HEIC (max 6 photos, 2MB each, 2.5MB total)
+                PNG, JPG, HEIC, MP4, MOV, WEBM (up to 4 files, 20MB total)
               </p>
             </div>
           </div>
 
           {previews.length > 0 && (
             <div className="grid grid-cols-3 gap-3">
-              {previews.map((preview, index) => (
-                <div key={index} className="relative group aspect-square rounded-xl overflow-hidden border-2 border-slate-200">
-                  <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => removePhoto(index)}
-                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900/60 to-transparent p-2">
-                    <p className="text-xs text-white truncate">{photos[index]?.name}</p>
+              {previews.map((preview, index) => {
+                const isVideo = photos[index]?.type?.startsWith('video/');
+                return (
+                  <div key={index} className="relative group aspect-square rounded-xl overflow-hidden border-2 border-slate-200">
+                    {isVideo ? (
+                      <div className="w-full h-full bg-slate-900/80 text-white flex items-center justify-center text-xs">
+                        <svg className="w-6 h-6 mr-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path d="M4 4h16v16H4z" />
+                          <path d="M10 8l6 4-6 4V8z" />
+                        </svg>
+                        Video
+                      </div>
+                    ) : (
+                      <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(index)}
+                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900/60 to-transparent p-2">
+                      <p className="text-xs text-white truncate">{photos[index]?.name}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
