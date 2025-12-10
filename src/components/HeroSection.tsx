@@ -87,7 +87,7 @@ const steps = [
 const StepsStrip = ({ compact = false }: { compact?: boolean }) => {
   const containerClass = compact
     ? 'w-full space-y-2.5'
-    : 'w-full grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5';
+    : 'w-full grid grid-cols-1 md:grid-cols-3 gap-3.5 lg:gap-4';
 
   return (
     <div className={containerClass}>
@@ -96,29 +96,31 @@ const StepsStrip = ({ compact = false }: { compact?: boolean }) => {
         const isCompact = compact;
         const cardBase = isCompact
           ? 'relative overflow-hidden rounded-xl border border-sky-100/80 bg-white/90 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-sm'
-          : 'group relative overflow-hidden rounded-2xl border border-sky-100/80 bg-white/95 shadow-[0_16px_48px_rgba(59,130,246,0.15)] backdrop-blur';
+          : 'group relative overflow-hidden rounded-xl border border-sky-100/70 bg-white/90 shadow-[0_12px_30px_rgba(59,130,246,0.12)] backdrop-blur-sm';
         return (
           <div key={step.title} className={cardBase}>
             <div className="absolute inset-0 opacity-65 bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.12),transparent_45%),radial-gradient(circle_at_80%_0%,rgba(99,102,241,0.12),transparent_38%)]" />
             {isCompact && idx < steps.length - 1 && (
               <div className="absolute left-6 bottom-0 h-4 w-px bg-slate-200/90" />
             )}
-            <div className={`relative ${isCompact ? 'flex items-start gap-3 p-3' : 'p-4 sm:p-5 space-y-3'}`}>
+            <div className={`relative ${isCompact ? 'flex items-start gap-3 p-3' : 'p-3 sm:p-3.5 space-y-2'}`}>
               <div className="flex-shrink-0">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 via-blue-500 to-indigo-600 text-white font-bold shadow-md shadow-sky-500/25">
-                  {idx + 1}
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 via-blue-500 to-indigo-600 text-white shadow-md shadow-sky-500/15">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12.5l4 4 10-9" />
+                  </svg>
                 </div>
               </div>
-              <div className={`${isCompact ? 'flex-1 space-y-1.5' : 'space-y-2 leading-snug'}`}>
-                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-sky-50 text-[10px] font-semibold uppercase tracking-wide text-sky-700 shadow-sm shadow-sky-100">
+              <div className={`${isCompact ? 'flex-1 space-y-1.5' : 'space-y-1.5 leading-snug'}`}>
+                <div className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-full bg-sky-50 text-[10px] font-semibold uppercase tracking-wide text-sky-700 shadow-sm shadow-sky-100">
                   <span className="h-1.5 w-1.5 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500" />
                   <span>{`Step ${idx + 1}`}</span>
                 </div>
                 <div className="space-y-0.5">
-                  <p className={`${isCompact ? 'text-sm font-semibold' : 'text-base sm:text-lg font-semibold'} tracking-tight`}>{step.title}</p>
-                  <p className={`${isCompact ? 'text-[11px] text-slate-600' : 'text-sm text-slate-600'}`}>{step.desc}</p>
+                  <p className={`${isCompact ? 'text-sm font-semibold' : 'text-sm font-semibold'} tracking-tight`}>{step.title}</p>
+                  <p className={`${isCompact ? 'text-[11px] text-slate-600' : 'text-xs text-slate-600'}`}>{step.desc}</p>
                 </div>
-                <div className={`${isCompact ? 'h-1' : 'h-1.5'} rounded-full bg-slate-100 overflow-hidden`}>
+                <div className={`${isCompact ? 'h-1' : 'h-0.5'} rounded-full bg-slate-100 overflow-hidden`}>
                   <div
                     className="h-full bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-600"
                     style={{ width: progress }}
@@ -201,8 +203,8 @@ export default function HeroSection() {
           {/* Two-row flowing carousel - seamless infinite with edge fade */}
           <div className="relative py-4 carousel-container">
             {/* Edge fade overlays */}
-            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-slate-50 to-transparent z-10 pointer-events-none"></div>
-            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-50 to-transparent z-10 pointer-events-none"></div>
+            <div className="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-white/60 to-transparent z-10 pointer-events-none"></div>
+            <div className="absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-white/60 to-transparent z-10 pointer-events-none"></div>
             
             <div className="space-y-3">
               {/* Top row - flows left */}
