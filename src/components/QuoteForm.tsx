@@ -345,11 +345,13 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
       answers: answersRows,
       responseSummary: summaryAnswersOnly,
       photos: photoUrls,
+      photoUrls: photoUrls, // Sheets endpoint fallback
       photoCount: photoUrls.length,
       linked_photo: primaryPhoto,
       linked_photo2: photo2,
       linked_photo3: photo3,
       linked_photo4: photo4,
+      photo_url: primaryPhoto, // single-column sheet fallback
       submittedAt: new Date().toISOString(),
       submittedAtLocal: new Date().toLocaleString(),
       // Sheet başlıklarıyla birebir eşleşen snake_case alanlar
