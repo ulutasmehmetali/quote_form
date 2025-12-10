@@ -196,6 +196,8 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
   const [aiSuggestions, setAiSuggestions] = useState<ServiceSuggestion[]>([]);
   const [aiStatus, setAiStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const zipRef = useRef<HTMLInputElement | null>(null);
+  const serviceListRef = useRef<HTMLDivElement | null>(null);
+  const lastTouchYRef = useRef<number | null>(null);
   
   const [placeholderText, setPlaceholderText] = useState('');
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -361,8 +363,59 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
     }, 100);
   };
 
+  const handleServiceListWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    const el = serviceListRef.current;
+    if (!el) return;
+    const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight);
+    const prev = el.scrollTop;
+    const next = Math.min(maxScroll, Math.max(0, prev + event.deltaY));
+    const used = next - prev;
+    const remaining = event.deltaY - used;
+
+    if (next !== prev) {
+      el.scrollTop = next;
+    }
+    if (remaining !== 0) {
+      window.scrollBy({ top: remaining, behavior: 'auto' });
+    }
+  };
+
+  const handleServiceListTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    lastTouchYRef.current = event.touches[0]?.clientY ?? null;
+  };
+
+  const handleServiceListTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+    const el = serviceListRef.current;
+    if (!el) return;
+    const currentY = event.touches[0]?.clientY ?? null;
+    if (currentY === null || lastTouchYRef.current === null) {
+      lastTouchYRef.current = currentY;
+      return;
+    }
+
+    const deltaY = lastTouchYRef.current - currentY;
+    const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight);
+    const prev = el.scrollTop;
+    const next = Math.min(maxScroll, Math.max(0, prev + deltaY));
+    const used = next - prev;
+    const remaining = deltaY - used;
+
+    if (next !== prev) {
+      el.scrollTop = next;
+    }
+    if (remaining !== 0) {
+      window.scrollBy({ top: remaining, behavior: 'auto' });
+    }
+
+    lastTouchYRef.current = currentY;
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-6 lg:space-y-8 animate-fadeIn">
+    <form
+      id="service-step"
+      onSubmit={handleSubmit}
+      className="space-y-3 sm:space-y-6 lg:space-y-8 animate-fadeIn"
+    >
       <div className="text-center space-y-2">
         <div className="inline-flex items-center gap-3 px-3.5 py-2.5 rounded-2xl bg-sky-50/70 border border-sky-100 shadow-sm">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white text-sm font-bold shadow">
@@ -509,8 +562,16 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
         <div className="space-y-3">
           <div className="text-sm font-semibold text-slate-800">Or browse all services:</div>
           <div
-            className="max-h-64 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent"
-            style={{ overscrollBehaviorY: 'auto', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+            ref={serviceListRef}
+            className="relative max-h-64 overflow-y-scroll pr-3 scrollbar-visible"
+            style={{
+              overscrollBehaviorY: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              touchAction: 'pan-y',
+            }}
+            onWheel={handleServiceListWheel}
+            onTouchStart={handleServiceListTouchStart}
+            onTouchMove={handleServiceListTouchMove}
           >
             <div className="grid grid-cols-2 gap-2">
               {SERVICES.map((service) => (

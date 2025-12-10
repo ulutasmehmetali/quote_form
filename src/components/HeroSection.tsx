@@ -1,3 +1,4 @@
+import Button from './Button';
 import plumberImg from '@assets/roofing services_1764316007803.webp';
 import electricianImg from '@assets/electric_1764315995946.jpg';
 import hvacImg from '@assets/hvac_1764316003781.jpg';
@@ -83,31 +84,65 @@ const steps = [
   { title: 'Finish the form', desc: 'Local pros will reach out shortly' },
 ];
 
-const StepsStrip = ({ compact = false }: { compact?: boolean }) => (
-  <div className={`w-full ${compact ? 'grid grid-cols-1 sm:grid-cols-3 gap-3' : 'grid grid-cols-3 gap-5'}`}>
-    {steps.map((step, idx) => (
-      <div
-        key={step.title}
-        className="relative overflow-hidden rounded-2xl bg-white/95 border border-slate-200 shadow-[0_10px_24px_rgba(15,23,42,0.12)] px-4 py-5"
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-sky-50 pointer-events-none" />
-        <div className="relative flex items-start gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-600 text-white font-extrabold text-lg flex items-center justify-center shadow-[0_6px_16px_rgba(59,130,246,0.35)]">
-            {idx + 1}
+const StepsStrip = ({ compact = false }: { compact?: boolean }) => {
+  const containerClass = compact
+    ? 'w-full space-y-2.5'
+    : 'w-full grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5';
+
+  return (
+    <div className={containerClass}>
+      {steps.map((step, idx) => {
+        const progress = `${Math.round(((idx + 1) / steps.length) * 100)}%`;
+        const isCompact = compact;
+        const cardBase = isCompact
+          ? 'relative overflow-hidden rounded-xl border border-sky-100/80 bg-white/90 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-sm'
+          : 'group relative overflow-hidden rounded-2xl border border-sky-100/80 bg-white/95 shadow-[0_16px_48px_rgba(59,130,246,0.15)] backdrop-blur';
+        return (
+          <div key={step.title} className={cardBase}>
+            <div className="absolute inset-0 opacity-65 bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.12),transparent_45%),radial-gradient(circle_at_80%_0%,rgba(99,102,241,0.12),transparent_38%)]" />
+            {isCompact && idx < steps.length - 1 && (
+              <div className="absolute left-6 bottom-0 h-4 w-px bg-slate-200/90" />
+            )}
+            <div className={`relative ${isCompact ? 'flex items-start gap-3 p-3' : 'p-4 sm:p-5 space-y-3'}`}>
+              <div className="flex-shrink-0">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 via-blue-500 to-indigo-600 text-white font-bold shadow-md shadow-sky-500/25">
+                  {idx + 1}
+                </div>
+              </div>
+              <div className={`${isCompact ? 'flex-1 space-y-1.5' : 'space-y-2 leading-snug'}`}>
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-sky-50 text-[10px] font-semibold uppercase tracking-wide text-sky-700 shadow-sm shadow-sky-100">
+                  <span className="h-1.5 w-1.5 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500" />
+                  <span>{`Step ${idx + 1}`}</span>
+                </div>
+                <div className="space-y-0.5">
+                  <p className={`${isCompact ? 'text-sm font-semibold' : 'text-base sm:text-lg font-semibold'} tracking-tight`}>{step.title}</p>
+                  <p className={`${isCompact ? 'text-[11px] text-slate-600' : 'text-sm text-slate-600'}`}>{step.desc}</p>
+                </div>
+                <div className={`${isCompact ? 'h-1' : 'h-1.5'} rounded-full bg-slate-100 overflow-hidden`}>
+                  <div
+                    className="h-full bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-600"
+                    style={{ width: progress }}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="space-y-1 leading-snug">
-            <p className="text-[18px] font-bold text-slate-900 tracking-tight">{step.title}</p>
-            <p className="text-[14px] text-slate-600">{step.desc}</p>
-          </div>
-        </div>
-      </div>
-    ))}
-  </div>
-);
+        );
+      })}
+    </div>
+  );
+};
+
+const scrollToServiceStep = () => {
+  const target = document.getElementById('service-step');
+  if (!target) return;
+  const top = target.getBoundingClientRect().top + window.scrollY - 20;
+  window.scrollTo({ top, behavior: 'smooth' });
+};
 
 export default function HeroSection() {
   return (
-    <section className="relative overflow-visible">
+    <section className="relative overflow-visible page-shell">
       {/* Mobile: Two-row flowing card carousel */}
       <div className="lg:hidden">
         <div className="relative space-y-5 pt-4">
@@ -125,7 +160,7 @@ export default function HeroSection() {
 
           {/* Hero text - Premium styling */}
           <div className="text-center space-y-3 px-5 animate-fadeIn" style={{ animationDelay: '0.1s' }}>
-            <h1 className="text-[28px] sm:text-4xl font-extrabold leading-[1.2] tracking-tight">
+            <h1 className="text-[30px] sm:text-4xl font-extrabold leading-[1.15] tracking-tight">
               <span className="text-slate-800">Find Certified</span>
               <br />
               <span className="relative inline-block mt-1">
@@ -143,6 +178,24 @@ export default function HeroSection() {
             <p className="text-[15px] text-slate-500 leading-relaxed max-w-[280px] mx-auto">
               Get matched with certified local professionals and receive quotes fast.
             </p>
+          </div>
+
+          <div className="px-5 space-y-2.5 animate-fadeIn" style={{ animationDelay: '0.2s' }}>
+            <div className="flex flex-col gap-2">
+              <Button
+                size="lg"
+                className="w-full h-12 text-base rounded-xl cta-glow shadow-lg shadow-sky-500/25"
+                onClick={scrollToServiceStep}
+              >
+                Get Free Quotes in 3 Steps
+              </Button>
+              <button
+                className="w-full h-11 rounded-xl border border-slate-200 bg-white/90 text-slate-700 text-sm font-semibold shadow-sm hover:border-slate-300 transition"
+                onClick={scrollToServiceStep}
+              >
+                View Local Pros
+              </button>
+            </div>
           </div>
 
           {/* Two-row flowing carousel - seamless infinite with edge fade */}
@@ -258,7 +311,7 @@ export default function HeroSection() {
       </div>
 
       {/* Desktop: Side by side layout */}
-      <div className="hidden lg:grid relative z-10 grid-cols-2 gap-12 items-center">
+      <div className="hidden lg:grid relative z-10 grid-cols-2 gap-12 items-center max-w-6xl mx-auto px-6 xl:px-8 py-10">
         <div className="space-y-6 animate-fadeIn">
           {/* Brand Logo - Premium with icon */}
           <div className="flex items-center gap-2.5">
@@ -289,20 +342,39 @@ export default function HeroSection() {
             Describe your project, get matched with certified local professionals, and receive quotes fast.
           </p>
 
+          <div className="flex items-center gap-3">
+            <Button
+              size="lg"
+              className="h-12 px-7 text-base rounded-2xl cta-glow shadow-lg shadow-sky-500/25"
+              onClick={scrollToServiceStep}
+            >
+              Get Free Quotes in 3 Steps
+            </Button>
+            <Button
+              variant="secondary"
+              size="lg"
+              className="h-12 px-6 text-base rounded-2xl"
+              onClick={scrollToServiceStep}
+            >
+              View Local Pros
+            </Button>
+          </div>
+
           <StepsStrip />
 
-          <div className="flex items-stretch gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {trustBadges.map((badge, index) => (
               <div
                 key={badge.label}
-                className="group flex-1 flex flex-col items-center justify-center gap-3 px-4 py-5 rounded-2xl bg-white border border-slate-200 shadow-md hover:shadow-lg hover:border-slate-300 hover:-translate-y-0.5 transition-all duration-200 text-center cursor-default"
-                style={{ animationDelay: `${index * 0.1}s` }}
+                className="group flex items-center gap-3 rounded-2xl border border-slate-100 bg-white/90 backdrop-blur shadow-[0_16px_48px_rgba(15,23,42,0.12)] hover:shadow-[0_20px_60px_rgba(59,130,246,0.18)] hover:-translate-y-0.5 transition-all duration-200 px-4 py-4"
+                style={{ animationDelay: `${index * 0.08}s` }}
               >
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-slate-50">
-                  <div className="scale-90">{badge.icon}</div>
+                <div className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white shadow-lg shadow-slate-900/20">
+                  <div className="absolute inset-0 rounded-xl bg-[radial-gradient(circle_at_30%_30%,rgba(56,189,248,0.22),transparent_50%)]" />
+                  <div className="relative scale-90">{badge.icon}</div>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-800">{badge.label}</p>
+                <div className="leading-tight">
+                  <p className="text-sm font-semibold text-slate-900">{badge.label}</p>
                   <p className="text-xs text-slate-500">{badge.desc}</p>
                 </div>
               </div>

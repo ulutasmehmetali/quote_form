@@ -1,4 +1,18 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
+
+:root {
+  --primary: #0ea5e9;
+  --primary-2: #2563eb;
+  --accent: #6366f1;
+  --bg-soft: #f8fafc;
+  --surface: rgba(255, 255, 255, 0.9);
+  --border-soft: rgba(148, 163, 184, 0.25);
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --shadow-soft: 0 22px 70px rgba(15, 23, 42, 0.12);
+  --shadow-cta: 0 16px 45px rgba(14, 165, 233, 0.28);
+}
 
 html {
   scroll-behavior: smooth;
@@ -6,13 +20,40 @@ html {
 
 html, body {
   @apply bg-white text-slate-900 antialiased min-h-screen;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Manrope', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 @media (min-width: 1024px) {
   html, body {
     background: linear-gradient(to bottom right, #f8fafc, #ffffff, #f0f9ff);
   }
+}
+
+.page-shell {
+  position: relative;
+  background: radial-gradient(120% 120% at 20% 10%, rgba(14, 165, 233, 0.08), transparent 40%),
+    radial-gradient(120% 120% at 80% 0%, rgba(99, 102, 241, 0.08), transparent 38%),
+    linear-gradient(180deg, #f8fbff 0%, #ffffff 48%, #f3f7fb 100%);
+}
+
+.page-shell::before,
+.page-shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.page-shell::before {
+  background: radial-gradient(280px 260px at 12% 24%, rgba(14, 165, 233, 0.12), transparent 55%),
+    radial-gradient(260px 240px at 88% 22%, rgba(99, 102, 241, 0.12), transparent 55%);
+  filter: blur(4px);
+  opacity: 0.9;
+}
+
+.page-shell::after {
+  background: radial-gradient(340px 320px at 45% 8%, rgba(56, 189, 248, 0.16), transparent 60%);
+  opacity: 0.4;
 }
 
 body {
@@ -533,4 +574,56 @@ input:focus, textarea:focus, select:focus {
 
 .animate-ripple {
   animation: ripple 0.6s linear;
+}
+
+.scrollbar-visible {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #e2e8f0;
+}
+
+.scrollbar-visible::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollbar-visible::-webkit-scrollbar-track {
+  background: #e2e8f0;
+  border-radius: 999px;
+}
+
+.scrollbar-visible::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.scrollbar-visible::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+@keyframes border-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.2), 0 0 0 0 rgba(99, 102, 241, 0.25);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgba(14, 165, 233, 0), 0 0 0 24px rgba(99, 102, 241, 0);
+  }
+}
+
+.cta-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-glow::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(14, 165, 233, 0.35), rgba(99, 102, 241, 0.35));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.cta-glow:hover::after {
+  opacity: 0.35;
+  animation: border-glow 1.4s ease-out;
 }
