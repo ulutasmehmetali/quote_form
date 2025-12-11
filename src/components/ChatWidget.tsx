@@ -8,16 +8,14 @@ type ChatMessage = {
 };
 
 const initialAssistant = 'Hi there! How can I help you?';
-
 const MAX_CHARS = Number(import.meta.env.VITE_CHAT_MAX_CHARS || 1000);
 
 export default function ChatWidget() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', content: initialAssistant },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [typing, setTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rateLimited, setRateLimited] = useState(false);
   const [lang, setLang] = useState<'en' | 'tr' | 'es'>('en');
@@ -36,6 +34,20 @@ export default function ChatWidget() {
       listRef.current.scrollTop = listRef.current.scrollHeight;
     }
   }, [messages, open]);
+
+  useEffect(() => {
+    if (open && messages.length === 0 && !typing) {
+      addAssistantMessage(initialAssistant);
+    }
+  }, [open, messages.length, typing]);
+
+  const addAssistantMessage = (text: string) => {
+    setTyping(true);
+    setTimeout(() => {
+      setMessages((prev) => [...prev, { role: 'assistant', content: text }].slice(-40));
+      setTyping(false);
+    }, 1100);
+  };
 
   const t = (key: string) => {
     const dict: Record<string, Record<string, string>> = {
@@ -68,9 +80,10 @@ export default function ChatWidget() {
   };
 
   const resetChat = () => {
-    setMessages([{ role: 'assistant', content: initialAssistant }]);
+    setMessages([]);
     setInput('');
     setError(null);
+    addAssistantMessage(initialAssistant);
   };
 
   const runChat = async (userText: string) => {
@@ -118,8 +131,7 @@ export default function ChatWidget() {
           ? data.reply.trim()
           : "I'm here to help. Can you rephrase that?";
 
-      const allMessages = [...nextMessages, { role: 'assistant', content: reply }];
-      setMessages(allMessages);
+      addAssistantMessage(reply);
     } catch (err) {
       setError('I had trouble answering. Please try again.');
     } finally {
@@ -253,11 +265,11 @@ export default function ChatWidget() {
               </div>
             ))}
 
-            {loading && (
+            {(typing || loading) && (
               <div className="flex justify-start">
                 <div className="px-3 py-2 rounded-[8px] text-sm bg-[#F5F7FA] text-[#6F6F6F] border border-[#E2E2E2] flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#3A8DFF] animate-ping"></span>
-                  Thinking...
+                  Typing...
                 </div>
               </div>
             )}
