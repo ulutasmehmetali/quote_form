@@ -75,7 +75,7 @@ const detectLanguage = () => 'en';
 const SERVICE_KEYWORDS = [
   'repair', 'install', 'service', 'quote', 'plumb', 'roof', 'hvac', 'electric', 'clean', 'remodel', 'paint',
   'landscap', 'door', 'window', 'fence', 'floor', 'garage', 'concrete', 'tile', 'handyman', 'handymen', 'handy man',
-  'yard', 'water leak',
+  'yard', 'water leak', 'help', 'assist', 'assistance',
   'air conditioning', 'heat', 'cool', 'furnace', 'carpentry', 'drywall', 'pest', 'gate', 'fence',
   // Turkish roots
   'tamir', 'onar', 'usta', 'tesisat', 'klima', 'cati', 'boya', 'temiz', 'insaat', 'tadilat', 'bahce', 'kapi', 'pencere',
@@ -86,7 +86,7 @@ const serviceListMessage =
 
 const LANG_MESSAGES = {
   en: {
-    nonService: `This chat is for home services only. ${serviceListMessage}`,
+    nonService: `I can help with home services. Which one do you need? ${serviceListMessage} Please share your city/ZIP and a short description.`,
     tooLong: 'Message is too long.',
     pii: 'Personal data detected.',
     langBlocked: 'Language not supported for chat.',
