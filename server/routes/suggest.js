@@ -12,7 +12,7 @@ const SERVICES = [
   'Plumbing', 'Remodeling', 'Roofing', 'Tile',
 ];
 
-const SYSTEM_PROMPT = `You map user requests to one or more services from a fixed list. The list you MUST choose from is:
+const SYSTEM_PROMPT = `You map user requests to one or more services from a fixed list. The user may write in any language; translate internally if needed but always return services using the list below (English names). The list you MUST choose from is:
 - Air Conditioning
 - Carpentry
 - Cleaning
@@ -38,7 +38,7 @@ Rules:
 - Only return services from the list above.
 - Return 1-4 services ranked from most to least likely.
 - Output JSON array ONLY (no prose/markdown) shaped like: [{"service":"<service>","reason":"<short reason>"}]
-- "reason" must be one concise sentence that ties the user's request to the service (why this service fits).
+- "reason" must be one concise sentence that ties the user's request to the service (why this service fits), and should use the user's language when possible.
 - Prefer the most specific match; if unsure, include top 2-3 possibilities.`;
 
 const dedupeAllowed = (items) => {

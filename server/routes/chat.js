@@ -10,11 +10,13 @@ const OPENAI_URL = 'https://api.openai.com/v1/responses';
 const MODEL = 'gpt-4o-mini';
 
 const SYSTEM_PROMPT = `
-You are a concise assistant. Detect intent:
-- If the user clearly wants a home-service/quote, guide them by asking 1–2 questions at a time until you have: name, phone, email, service needed, city/ZIP, urgency, short description. Ask only missing fields, and only when the user signals they want the service. Never list all questions at once.
-- If the user is asking anything else, answer normally without pushing the quote flow.
-- Never ask for passwords, card numbers, or secret tokens. If a user shares secrets, warn and do not reuse the secret.
-- Keep replies short (1–3 sentences) and avoid promising prices; say the team will confirm.
+You are a concise, multilingual home-services assistant.
+Rules:
+- Detect the user's language (for example: English, Turkish, Spanish, French) and always reply in that language. Never force English.
+- If the user clearly wants a home-service/quote, ask only 1-2 short questions at a time to gather: name, phone, email, service needed, city/ZIP, urgency, short description. Ask only missing fields when the user is ready.
+- If the user is asking anything else, answer briefly and helpfully in their language without pushing the quote flow.
+- Never ask for passwords, card numbers, or secrets. If a user shares secrets, warn and do not reuse them.
+- Keep replies short (1-3 sentences) and avoid promising prices; say the team will confirm.
 `;
 
 const redactText = (text = '') =>
@@ -39,14 +41,9 @@ router.post('/chat', async (req, res) => {
     }))
     .slice(-40);
 
-  const lastUser = [...messages].reverse().find((m) => m.role === 'user');
-  const relevantKeywords = ['repair', 'install', 'service', 'quote', 'plumb', 'roof', 'hvac', 'electric', 'clean', 'remodel', 'paint', 'landscap', 'door', 'window', 'fence', 'floor', 'garage'];
-  const isRelevant =
-    lastUser &&
-    relevantKeywords.some((k) => lastUser.content.toLowerCase().includes(k));
-  if (!isRelevant) {
+  if (!messages.length) {
     return res.json({
-      reply: 'I can help with home services and quotes. Tell me what you need (service, city/ZIP, brief issue).',
+      reply: 'Tell me what you need (service + city/ZIP + short issue) and I will help.',
     });
   }
 
@@ -177,12 +174,12 @@ router.post('/chat/image', async (req, res) => {
     }))
     .slice(-8);
 
-const visionPrompt = `
+  const visionPrompt = `
 You triage home-service requests **only from the pixels of the image**. Never ask the user for more info.
 Respond with JSON ONLY:
 {
  "serviceType": "plumbing|electrical|hvac|roofing|flooring|pest control|landscaping|painting|cleaning|remodeling|handyman|garage door|concrete|fencing|other",
- "summary": "one sentence that cites 2-3 visual clues (object, material, location of damage) + likely service; include confidence (high/medium/low). If unsure, still describe what is visible and mark low confidence."
+ "summary": "one sentence that cites 2-3 visual clues (object, material, location of damage) + likely service; include confidence (high/medium/low). If unsure, still describe what is visible and mark low confidence. Summary should use the same language as the most recent user message if available; otherwise English."
 }
 Rules:
 - Use ONLY what you see; do not request clarification.
@@ -248,8 +245,6 @@ Rules:
   }
 });
 
-export default router;
-
 router.post('/chat/extract', async (req, res) => {
   const apiKey = process.env.CHAT_API_KEY || process.env.OPENAI_API_KEY;
   if (!apiKey) return res.status(503).json({ error: 'AI not configured' });
@@ -275,7 +270,7 @@ Extract lead fields from the conversation if present. Output ONLY JSON:
  "description": "",
  "ready": true|false
 }
-Fill what you can; leave missing as "". "ready" is true only if all required (name, phone, email, serviceType, zipCode, description) are non-empty.
+User may write in any language; still fill the fields above. "ready" is true only if all required (name, phone, email, serviceType, zipCode, description) are non-empty.
 `;
 
   try {
@@ -330,3 +325,5 @@ Fill what you can; leave missing as "". "ready" is true only if all required (na
     return res.status(200).json({ error: 'extract error' });
   }
 });
+
+export default router;
