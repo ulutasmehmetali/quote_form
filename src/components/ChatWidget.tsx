@@ -29,6 +29,7 @@ export default function ChatWidget() {
   });
   const [leadReady, setLeadReady] = useState(false);
   const [leadSubmitted, setLeadSubmitted] = useState(false);
+  const [submittingLead, setSubmittingLead] = useState(false);
   const [lang, setLang] = useState<'en' | 'tr' | 'es'>('en');
   const listRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -188,8 +189,8 @@ export default function ChatWidget() {
   };
 
   const submitLead = async () => {
-    if (leadSubmitted) return;
-    setLeadSubmitted(true);
+    if (leadSubmitted || submittingLead) return;
+    setSubmittingLead(true);
     try {
       const res = await fetch(apiUrl('/api/chat/submit'), {
         method: 'POST',
@@ -208,10 +209,18 @@ export default function ChatWidget() {
         const data = await res.json().catch(() => ({}));
         const msg = data?.error || `Submit failed (${res.status})`;
         setError(msg);
+        addAssistantMessage('Could not share your details with pros right now. Please confirm again.');
+        setSubmittingLead(false);
+        return;
       }
+      setLeadSubmitted(true);
+      addAssistantMessage('Thanks! I shared your details with local pros. They will reach out shortly.');
     } catch (err) {
       console.warn('lead submit failed', err);
       setError('Could not submit your details. Please try again.');
+      addAssistantMessage('I could not send your details. Please confirm again in a moment.');
+    } finally {
+      setSubmittingLead(false);
     }
   };
 
