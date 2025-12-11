@@ -21,7 +21,7 @@ const LANG_WHITELIST = (process.env.CHAT_LANGS_WHITELIST || '')
 
 const rateBuckets = new Map(); // ip -> timestamps
 const sendToSheet = async (payload = {}, url = CHAT_SHEETS_URL) => {
-  if (!url) return;
+  if (!url) throw new Error('Sheet URL not configured');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 5000);
   try {
@@ -35,6 +35,7 @@ const sendToSheet = async (payload = {}, url = CHAT_SHEETS_URL) => {
       const text = await res.text().catch(() => '');
       throw new Error(`Sheet sync failed (${res.status}): ${text.slice(0, 200)}`);
     }
+    console.info('chat_sheet_sync_success', { url });
   } catch (err) {
     console.warn('Sheet sync failed (chat):', err?.message || err);
     throw err;
@@ -222,6 +223,11 @@ router.post('/chat', async (req, res) => {
 
 router.post('/chat/submit', async (req, res) => {
   try {
+    if (!CHAT_SHEETS_URL) {
+      console.error('Chat sheet URL missing; set CHAT_SHEETS_URL or SHEETS_URL');
+      return res.status(500).json({ error: 'Sheet sync not configured' });
+    }
+
     const {
       name = '',
       phone = '',
