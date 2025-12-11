@@ -201,6 +201,19 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
     }
   }, [clearStorage, deleteDraftOnServer, draftId]);
 
+  // Listen for chat-selected service to auto-fill and skip service step
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ serviceType?: string }>).detail;
+      const svc = detail?.serviceType as ServiceType | undefined;
+      if (!svc) return;
+      setFormData((prev) => ({ ...prev, serviceType: svc }));
+      setCurrentStep(1);
+    };
+    window.addEventListener('chat-service-selected', handler as EventListener);
+    return () => window.removeEventListener('chat-service-selected', handler as EventListener);
+  }, []);
+
   useEffect(() => {
     const photoStep = questions.length + 1;
     if (formData.serviceType && currentStep > 0 && currentStep < photoStep) {

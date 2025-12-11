@@ -17,6 +17,28 @@ const quickPrompts = [
 ];
 
 const MAX_CHARS = Number(import.meta.env.VITE_CHAT_MAX_CHARS || 1000);
+const SERVICE_MAP = [
+  'Air Conditioning',
+  'Carpentry',
+  'Cleaning',
+  'Concrete',
+  'Drywall',
+  'Electrician',
+  'Fencing',
+  'Flooring',
+  'Garage Door Installation',
+  'Garage Door Repair',
+  'Handyman',
+  'Heating & Furnace',
+  'HVAC Contractors',
+  'Landscaping',
+  'Painting',
+  'Pest Control',
+  'Plumbing',
+  'Remodeling',
+  'Roofing',
+  'Tile',
+];
 const SERVICE_KEYWORDS = [
   'plumb', 'electric', 'hvac', 'roof', 'floor', 'fence', 'garage', 'door', 'gate', 'tile', 'drywall',
   'clean', 'remodel', 'paint', 'landscap', 'pest', 'handyman', 'concrete', 'carpentry', 'ac', 'air',
@@ -218,7 +240,7 @@ export default function ChatWidget() {
         typeof data?.summary === 'string' && data.summary.trim()
           ? data.summary.trim()
           : 'I could not read this image reliably. If you can, add a short note on what it shows.';
-      const suggestion = service ? `Suggested service: ${service}.` : '';
+      const suggestion = service ? `Suggested service: ${service}. Tap “Select service” to continue.` : '';
       const replyText = [summary, suggestion].filter(Boolean).join(' ');
 
       setMessages((prev) => [...prev, { role: 'assistant', content: replyText, image: undefined }]);
@@ -253,22 +275,33 @@ export default function ChatWidget() {
     setOpen(false);
   };
 
-  const scrollToForm = () => {
-    const el = document.getElementById('quote-form') || document.getElementById('service-step');
-    if (el) {
-      const top = el.getBoundingClientRect().top + window.scrollY - 10;
-      window.scrollTo({ top, behavior: 'smooth' });
-    }
-    setOpen(false);
-  };
-
   const isNonServiceMessage = (txt: string) =>
     txt.toLowerCase().includes('sadece ev hizmetleri') ||
     txt.toLowerCase().includes('only for home services');
 
-  const isServiceSuggestion = (txt: string) => {
+  const normalizeService = (txt: string) => {
     const lower = txt.toLowerCase();
-    return SERVICE_KEYWORDS.some((k) => lower.includes(k));
+    const direct = SERVICE_MAP.find((s) => s.toLowerCase() === lower);
+    if (direct) return direct;
+    const includes = SERVICE_MAP.find((s) => lower.includes(s.toLowerCase()));
+    if (includes) return includes;
+    const keywordHit = SERVICE_MAP.find((s) =>
+      SERVICE_KEYWORDS.some((k) => lower.includes(k) && s.toLowerCase().includes(k.split(' ')[0] || k))
+    );
+    return keywordHit || '';
+  };
+
+  const isServiceSuggestion = (txt: string) => !!normalizeService(txt);
+
+  const handleSelectService = (serviceHint: string) => {
+    const service = normalizeService(serviceHint) || normalizeService(input) || serviceHint;
+    if (!service) {
+      setError('Service not recognized. Please type the service name.');
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('chat-service-selected', { detail: { serviceType: service } }));
+    setMessages((prev) => [...prev, { role: 'assistant', content: `Selected service: ${service}` }]);
+    scrollToService();
   };
 
   return (
@@ -293,23 +326,23 @@ export default function ChatWidget() {
         )}
 
         {open && (
-          <div className="w-full bg-white rounded-3xl shadow-[0_12px_28px_rgba(0,0,0,0.15)] overflow-hidden border border-slate-200 flex flex-col h-[32rem] max-h-[34rem]">
-            <div className="flex items-center justify-between px-3.5 py-3 bg-teal-600 text-white">
-              <div className="flex items-center gap-3">
+          <div className="w-full bg-[#f9fafb] rounded-2xl shadow-[0_10px_30px_rgba(15,23,42,0.12)] overflow-hidden border border-slate-200 flex flex-col h-[30rem] max-h-[32rem]">
+            <div className="flex items-center justify-between px-3 py-3 bg-white border-b border-slate-200">
+              <div className="flex items-center gap-2.5">
                 <img
                   src="/robot-icon.svg"
                   alt="AI robot"
-                  className="h-8 w-8 rounded-full shadow-md shadow-white/30 bg-white"
+                  className="h-8 w-8 rounded-full shadow-sm bg-white border border-slate-200"
                   loading="lazy"
                 />
                 <div>
-                  <p className="text-white font-semibold text-sm leading-tight">Customer Service Agent</p>
-                  <p className="text-xs text-white/80 leading-tight">How can I help you?</p>
+                  <p className="text-[15px] font-semibold text-slate-900 leading-tight">Customer Service Agent</p>
+                  <p className="text-[13px] text-slate-500 leading-tight">How can I help you?</p>
                 </div>
               </div>
               <button
                 onClick={() => setOpen(false)}
-                className="text-white hover:text-white transition-colors"
+                className="text-slate-500 hover:text-slate-800 transition-colors"
                 aria-label="Close chat"
               >
                 ×
@@ -317,76 +350,73 @@ export default function ChatWidget() {
             </div>
 
             {showPrompts && (
-              <div className="px-3.5 py-2 bg-white grid grid-cols-2 gap-2">
-                {quickPrompts.map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => runChat(p)}
-                    disabled={loading}
-                    className="text-[12px] px-3 py-1.5 rounded-full bg-teal-600 text-white hover:bg-teal-700 transition disabled:opacity-50 whitespace-nowrap shadow-md shadow-teal-200 border border-teal-500/30 text-center"
-                  >
-                    {p}
-                  </button>
-                ))}
+              <div className="px-3 py-2 bg-[#f9fafb] border-b border-slate-200">
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                  {quickPrompts.map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => runChat(p)}
+                      disabled={loading}
+                      className="text-[12px] px-3 py-2 rounded-lg bg-white text-slate-800 hover:bg-sky-50 transition disabled:opacity-50 whitespace-nowrap shadow-sm border border-slate-200"
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
             {error && (
-              <div className="px-4 py-2 bg-red-500/10 border-b border-red-500/30 text-red-500 text-xs">
+              <div className="px-4 py-2 bg-red-50 border-b border-red-200 text-red-600 text-xs">
                 {error}
               </div>
             )}
 
-            <div ref={listRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2 bg-white">
+            <div ref={listRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2 bg-[#f9fafb]">
               {messages.map((m, idx) => {
                 const showActions =
                   m.role === 'assistant' &&
                   (isNonServiceMessage(m.content) || isServiceSuggestion(m.content));
-                return (
+                const suggestedService = normalizeService(m.content);
+              return (
+                <div
+                  key={idx}
+                  className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
                   <div
-                    key={idx}
-                    className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`px-3 py-2 rounded-xl text-[14px] max-w-[82%] whitespace-pre-wrap break-words shadow ${
+                      m.role === 'user'
+                        ? 'bg-teal-600 text-white rounded-br-lg'
+                        : 'bg-white text-slate-900 border border-slate-200'
+                    }`}
                   >
-                    <div
-                      className={`px-3 py-2 rounded-2xl text-sm max-w-[82%] whitespace-pre-wrap shadow ${
-                        m.role === 'user'
-                          ? 'bg-teal-600 text-white rounded-br-sm'
-                          : 'bg-slate-100 text-slate-900 rounded-bl-sm'
-                      }`}
-                    >
-                      {m.content}
-                      {m.image && (
-                        <div className="mt-2">
-                          <img
-                            src={m.image}
-                            alt="Uploaded"
-                            className="max-w-full max-h-40 rounded-xl border border-slate-200 shadow-sm object-contain"
-                          />
-                        </div>
-                      )}
-                      {showActions && (
-                        <div className="mt-2 flex gap-2 flex-wrap">
-                          <button
-                            onClick={scrollToService}
-                            className="text-[11px] px-2.5 py-1 rounded-full bg-sky-100 text-sky-700 border border-sky-200"
-                          >
-                            {t('selectService')}
-                          </button>
-                          <button
-                            onClick={scrollToForm}
-                            className="text-[11px] px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200"
-                          >
-                            {t('goForm')}
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    {m.content}
+                    {m.image && (
+                      <div className="mt-2">
+                        <img
+                          src={m.image}
+                          alt="Uploaded"
+                          className="max-w-full max-h-40 rounded-xl border border-slate-200 shadow-sm object-contain"
+                        />
+                      </div>
+                    )}
+                    {showActions && (
+                      <div className="mt-2 flex gap-2 flex-wrap">
+                        <button
+                          onClick={() => handleSelectService(suggestedService || m.content)}
+                          className="text-[12px] px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm"
+                        >
+                          {t('selectService')}
+                        </button>
+                      </div>
+                    )}
                   </div>
-                );
-              })}
+                </div>
+              );
+            })}
               {loading && (
                 <div className="flex justify-start">
-                  <div className="px-3 py-2 rounded-xl text-sm bg-slate-200 text-slate-700 border border-slate-200 flex items-center gap-2">
+                  <div className="px-3 py-2 rounded-lg text-sm bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-teal-500 animate-ping"></span>
                     Thinking...
                   </div>
@@ -395,7 +425,7 @@ export default function ChatWidget() {
             </div>
 
             <div className="p-3 bg-white border-t border-slate-200 space-y-2">
-              <div className="flex items-center gap-2 rounded-full bg-white px-3 py-1 shadow-inner shadow-slate-200 border border-slate-200">
+              <div className="flex items-center gap-2 rounded-[16px] bg-white px-3 py-2 shadow-inner shadow-slate-200 border border-slate-200">
                 <input
                   type="file"
                   accept="image/*"
@@ -414,7 +444,9 @@ export default function ChatWidget() {
                   className="p-2 rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 shadow-inner shadow-slate-200 disabled:opacity-50"
                   aria-label="Attach image"
                 >
-                  <img src="/icon-attach-plus.svg" alt="Attach" className="h-5 w-5" />
+                  <svg className="h-5 w-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 12V7.5a4.5 4.5 0 00-9 0V16a2.5 2.5 0 005 0V8.5a1.5 1.5 0 10-3 0V15M6 8v8a4 4 0 108 0V9.5" />
+                  </svg>
                 </button>
                 <input
                   type="text"
@@ -429,11 +461,11 @@ export default function ChatWidget() {
                   placeholder={t('placeholder')}
                   className="flex-1 px-2 py-2 rounded-full bg-transparent text-slate-900 placeholder-slate-500 focus:outline-none"
                 />
-                <span className={`text-[11px] ${counterColor}`}>{input.length}/{MAX_CHARS}</span>
+                <span className={`text-[11px] ${counterColor} min-w-[58px] text-right`}>{input.length}/{MAX_CHARS}</span>
                 <button
                   onClick={() => runChat(input)}
                   disabled={loading || uploadingImage || !input.trim() || input.length > MAX_CHARS || rateLimited}
-                  className="p-2 rounded-full bg-teal-600 text-white shadow-lg shadow-teal-500/40 disabled:opacity-50"
+                  className="px-3 py-2 rounded-[12px] bg-teal-600 text-white shadow-lg shadow-teal-500/40 disabled:opacity-50 text-sm font-semibold whitespace-nowrap"
                   aria-label="Send message"
                 >
                   {t('send')}
