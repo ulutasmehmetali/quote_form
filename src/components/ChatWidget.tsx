@@ -18,6 +18,17 @@ export default function ChatWidget() {
   const [typing, setTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rateLimited, setRateLimited] = useState(false);
+  const [lead, setLead] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    serviceType: '',
+    zipCode: '',
+    urgency: '',
+    description: '',
+  });
+  const [leadReady, setLeadReady] = useState(false);
+  const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [lang, setLang] = useState<'en' | 'tr' | 'es'>('en');
   const listRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -83,6 +94,17 @@ export default function ChatWidget() {
     setMessages([]);
     setInput('');
     setError(null);
+    setLead({
+      name: '',
+      phone: '',
+      email: '',
+      serviceType: '',
+      zipCode: '',
+      urgency: '',
+      description: '',
+    });
+    setLeadReady(false);
+    setLeadSubmitted(false);
     addAssistantMessage(initialAssistant);
   };
 
@@ -138,6 +160,74 @@ export default function ChatWidget() {
       setLoading(false);
     }
   };
+
+  const extractLead = async (history: ChatMessage[]) => {
+    try {
+      const res = await fetch(apiUrl('/api/chat/extract'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: history.slice(-40) }),
+      });
+      const data = await res.json();
+      if (data?.lead) {
+        setLead(data.lead);
+        setLeadReady(Boolean(data.ready));
+      }
+    } catch (err) {
+      console.warn('lead extract failed', err);
+    }
+  };
+
+  const hasConsent = (history: ChatMessage[]) => {
+    const lastUser = [...history].reverse().find((m) => m.role === 'user');
+    if (!lastUser) return false;
+    const txt = (lastUser.content || '').toLowerCase();
+    return ['yes', 'sure', 'ok', 'okay', 'go ahead', 'share', 'evet', 'tamam', 'onay'].some((p) =>
+      txt.includes(p)
+    );
+  };
+
+  const submitLead = async () => {
+    if (leadSubmitted) return;
+    setLeadSubmitted(true);
+    try {
+      const res = await fetch(apiUrl('/api/chat/submit'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: lead.name,
+          phone: lead.phone,
+          email: lead.email,
+          serviceType: lead.serviceType,
+          zipCode: lead.zipCode,
+          urgency: lead.urgency,
+          description: lead.description,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const msg = data?.error || `Submit failed (${res.status})`;
+        setError(msg);
+      }
+    } catch (err) {
+      console.warn('lead submit failed', err);
+      setError('Could not submit your details. Please try again.');
+    }
+  };
+
+  useEffect(() => {
+    if (!messages.length) return;
+    void extractLead(messages);
+    if (leadReady && hasConsent(messages) && !leadSubmitted) {
+      void submitLead();
+    }
+  }, [messages, leadReady, leadSubmitted]);
+
+  useEffect(() => {
+    if (leadReady && !leadSubmitted && hasConsent(messages)) {
+      void submitLead();
+    }
+  }, [leadReady, leadSubmitted, messages]);
 
   const handleKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
