@@ -186,7 +186,7 @@ export default function ChatWidget() {
   };
 
   const wrapperClass = open
-    ? 'fixed bottom-6 right-6 z-50 w-[25rem] max-w-[25rem] sm:max-w-[26rem]'
+    ? 'fixed bottom-6 right-6 z-50 w-[24rem] max-w-[24rem] sm:max-w-[26rem]'
     : 'fixed bottom-6 right-6 z-50 w-[3.5rem] h-[3.5rem]';
   const counterColor =
     input.length > MAX_CHARS
@@ -236,7 +236,7 @@ export default function ChatWidget() {
                   key={p}
                   onClick={() => runChat(p)}
                   disabled={loading}
-                  className="h-8 px-3 rounded-[8px] bg-[#F1F4F9] text-[#3A3A3A] text-[13px] whitespace-nowrap flex items-center border border-[#E2E2E2] shadow-[0_2px_6px_rgba(0,0,0,0.08)] hover:bg-[#EDF0F5] transition disabled:opacity-50"
+                  className="h-8 px-3 rounded-[8px] bg-[#F1F4F9] text-[#3A3A3A] text-[13px] whitespace-nowrap flex items-center transition disabled:opacity-50"
                 >
                   {p}
                 </button>
