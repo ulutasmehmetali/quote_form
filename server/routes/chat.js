@@ -20,12 +20,12 @@ const LANG_WHITELIST = (process.env.CHAT_LANGS_WHITELIST || '')
 const rateBuckets = new Map(); // ip -> timestamps
 
 const SYSTEM_PROMPT = `
-You are a concise, multilingual home-services assistant.
+You are a concise home-services assistant.
 Rules:
-- Detect the user's language (for example: English, Turkish, Spanish, French) and always reply in that language. Never force English.
+- Always respond in English only.
 - We only handle home services: Plumbing, Electrical, HVAC, Roofing, Flooring, Fencing, Concrete, Handyman, Cleaning, Remodeling, Painting, Landscaping, Garage Door, Pest Control, Carpentry, Drywall, Tile.
 - If the user clearly wants a home-service/quote, ask only 1-2 short questions at a time to gather: name, phone, email, service needed, city/ZIP, urgency, short description. Ask only missing fields when the user is ready.
-- If the user is asking anything else, answer briefly and helpfully in their language without pushing the quote flow.
+- If the user is asking anything else, answer briefly and helpfully without pushing the quote flow.
 - Never ask for passwords, card numbers, or secrets. If a user shares secrets, warn and do not reuse them.
 - Keep replies short (1-3 sentences) and avoid promising prices; say the team will confirm.
 - If the topic is outside home services, respond once with a brief apology and list of services we offer, then wait.
@@ -44,48 +44,9 @@ const isAllowedLanguage = (lang = '') => {
   return LANG_WHITELIST.includes(norm);
 };
 
-const normalizeLang = (lang = '') => {
-  const norm = lang.toLowerCase();
-  if (norm.startsWith('tr')) return 'tr';
-  if (norm.startsWith('es')) return 'es';
-  if (norm.startsWith('fr')) return 'fr';
-  return 'en';
-};
-
-const guessLanguageFromText = (text = '') => {
-  const lower = text.toLowerCase();
-  if (
-    /[ğışüöçİĞÜŞÖÇ]/.test(text) ||
-    /(kapi|tamir|usta|tesisat|klima|cati|boya|bahce|pencere|tadilat)/.test(lower)
-  ) {
-    return 'tr';
-  }
-  if (
-    /[áéíóúñü]/.test(text) ||
-    /(hola|gracias|por favor|puerta|casa)/.test(lower)
-  ) {
-    return 'es';
-  }
-  if (
-    /[àâçéèêëîïôûùüÿœ]/.test(text) ||
-    /(bonjour|merci|svp|porte)/.test(lower)
-  ) {
-    return 'fr';
-  }
-  return 'en';
-};
-
-const detectLanguage = (req, messages) => {
-  const headerLang = normalizeLang((req.headers['accept-language'] || '').split(',')[0] || '');
-  const last = [...messages].reverse().find((m) => m.role === 'user' && m.content);
-  const guessed = normalizeLang(guessLanguageFromText(last?.content || ''));
-
-  // If we clearly detect a non-English language, honor it.
-  if (guessed !== 'en') return guessed;
-  // Otherwise, prefer the header unless it would force Turkish; default to English.
-  if (headerLang && headerLang !== 'tr') return headerLang;
-  return 'en';
-};
+const normalizeLang = () => 'en';
+const guessLanguageFromText = () => 'en';
+const detectLanguage = () => 'en';
 
 const SERVICE_KEYWORDS = [
   'repair', 'install', 'service', 'quote', 'plumb', 'roof', 'hvac', 'electric', 'clean', 'remodel', 'paint',
@@ -107,30 +68,6 @@ const LANG_MESSAGES = {
     langBlocked: 'Language not supported for chat.',
     rateLimit: 'Please slow down.',
     intro: 'Tell me what you need (service + city/ZIP + short issue) and I will help.',
-  },
-  es: {
-    nonService: `Este chat es solo para servicios del hogar. ${serviceListMessage}`,
-    tooLong: 'El mensaje es demasiado largo.',
-    pii: 'Se detectaron datos personales.',
-    langBlocked: 'El idioma no es compatible para el chat.',
-    rateLimit: 'Por favor escribe m\u00e1s despacio.',
-    intro: 'Cu\u00e9ntame qu\u00e9 necesitas (servicio + ciudad/CP + breve descripci\u00f3n) y te ayudar\u00e9.',
-  },
-  tr: {
-    nonService: `Bu sohbet yaln\u0131zca ev hizmetleri i\u00e7in. ${serviceListMessage}`,
-    tooLong: 'Mesaj \u00e7ok uzun.',
-    pii: 'Ki\u015fisel veri tespit edildi.',
-    langBlocked: 'Bu dil sohbet i\u00e7in desteklenmiyor.',
-    rateLimit: 'L\u00fctfen daha yava\u015f yaz\u0131n.',
-    intro: 'Ne istedi\u011fini s\u00f6yle (hizmet + \u015fehir/posta kodu + k\u0131sa a\u00e7\u0131klama), yard\u0131mc\u0131 olay\u0131m.',
-  },
-  fr: {
-    nonService: `Cette discussion est uniquement pour les services \u00e0 domicile. ${serviceListMessage}`,
-    tooLong: 'Le message est trop long.',
-    pii: 'Donn\u00e9es personnelles d\u00e9tect\u00e9es.',
-    langBlocked: 'Langue non prise en charge pour le chat.',
-    rateLimit: 'Merci de ralentir.',
-    intro: "Dites-moi ce dont vous avez besoin (service + ville/CP + bref souci) et j'aiderai.",
   },
 };
 
