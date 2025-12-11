@@ -12,19 +12,43 @@ const MODEL = 'gpt-4o-mini';
 const MAX_CHARS = Number(process.env.CHAT_MAX_CHARS || '1000');
 const RATE_WINDOW_MS = Number(process.env.CHAT_RATE_WINDOW || '1000');
 const RATE_MAX_REQUESTS = Number(process.env.CHAT_MAX_REQUESTS || '4');
+const SHEETS_URL = process.env.SHEETS_URL || process.env.VITE_SHEETS_URL || '';
 const LANG_WHITELIST = (process.env.CHAT_LANGS_WHITELIST || '')
   .split(',')
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
 
 const rateBuckets = new Map(); // ip -> timestamps
+const sendToSheet = async (payload = {}) => {
+  if (!SHEETS_URL) return;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch(SHEETS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`Sheet sync failed (${res.status}): ${text.slice(0, 200)}`);
+    }
+  } catch (err) {
+    console.warn('Sheet sync failed (chat):', err?.message || err);
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+};
 
 const SYSTEM_PROMPT = `
 You are a concise home-services assistant.
 Rules:
 - Always respond in English only.
 - We only handle home services: Plumbing, Electrical, HVAC, Roofing, Flooring, Fencing, Concrete, Handyman, Cleaning, Remodeling, Painting, Landscaping, Garage Door, Pest Control, Carpentry, Drywall, Tile.
-- Never ask questions. If info is missing, give one short sentence telling the user what to share (name, phone, email, service, city/ZIP, urgency, short description) without using question marks.
+- Collect these fields in order, one per reply: 1) name, 2) phone, 3) email, 4) service, 5) city/ZIP, 6) urgency, 7) short description. Ask EXACTLY one short question per reply—never combine fields.
+- After you have all required fields, ask for permission to share their details with local pros before proceeding.
 - If the user is asking anything else, answer briefly and helpfully without pushing the quote flow.
 - Never ask for passwords, card numbers, or secrets. If a user shares secrets, warn and do not reuse them.
 - Keep replies short (1-3 sentences) and avoid promising prices; say the team will confirm.
@@ -246,6 +270,30 @@ router.post('/chat/submit', async (req, res) => {
         updatedAt: now,
       })
       .returning();
+
+    const responses = { urgency, description };
+    const sheetPayload = {
+      name,
+      email,
+      phone,
+      serviceType,
+      zipCode,
+      responses,
+      raw_responses_json: JSON.stringify(responses),
+      response_summary: [urgency && `Urgency: ${urgency}`, description && `Desc: ${description}`]
+        .filter(Boolean)
+        .join(' | '),
+      submittedAt: now.toISOString(),
+      source: 'chat',
+      submissionId: submission.id,
+    };
+    try {
+      await sendToSheet(sheetPayload);
+    } catch (err) {
+      const detail = err?.message || 'Sheet sync failed';
+      console.error('Chat sheet sync error:', detail);
+      return res.status(500).json({ error: 'Failed to sync to sheet', detail });
+    }
 
     return res.json({ success: true, submissionId: submission.id });
   } catch (err) {
