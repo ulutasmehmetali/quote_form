@@ -11,10 +11,12 @@ const MODEL = 'gpt-4o-mini';
 
 const MAX_CHARS = Number(process.env.CHAT_MAX_CHARS || '1000');
 // Rate limit eased to reduce accidental throttling during chat turns
-const RATE_WINDOW_MS = Number(process.env.CHAT_RATE_WINDOW || '3000');
-const RATE_MAX_REQUESTS = Number(process.env.CHAT_MAX_REQUESTS || '8');
+const RATE_WINDOW_MS = Number(process.env.CHAT_RATE_WINDOW || '10000');
+const RATE_MAX_REQUESTS = Number(process.env.CHAT_MAX_REQUESTS || '20');
+const DEFAULT_CHAT_SHEETS_URL =
+  'https://script.google.com/macros/s/AKfycbyO6-tW17jJ_i9qhOThaOgPHCPUHPHSX4xSBpquSAerQBp3tr37_tehB_0Pj-AGFL09/exec';
 const CHAT_SHEETS_URL =
-  process.env.CHAT_SHEETS_URL || process.env.SHEETS_URL || process.env.VITE_SHEETS_URL || '';
+  process.env.CHAT_SHEETS_URL || process.env.SHEETS_URL || process.env.VITE_SHEETS_URL || DEFAULT_CHAT_SHEETS_URL;
 const LANG_WHITELIST = (process.env.CHAT_LANGS_WHITELIST || '')
   .split(',')
   .map((s) => s.trim().toLowerCase())
@@ -36,7 +38,7 @@ const sendToSheet = async (payload = {}, url = CHAT_SHEETS_URL) => {
       const text = await res.text().catch(() => '');
       throw new Error(`Sheet sync failed (${res.status}): ${text.slice(0, 200)}`);
     }
-    console.info('chat_sheet_sync_success', { url });
+    console.info('chat_sheet_sync_success', { url: url.slice(0, 50) + '...' });
   } catch (err) {
     console.warn('Sheet sync failed (chat):', err?.message || err);
     throw err;
