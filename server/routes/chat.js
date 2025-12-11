@@ -76,16 +76,21 @@ const guessLanguageFromText = (text = '') => {
 };
 
 const detectLanguage = (req, messages) => {
-  const headerLang = (req.headers['accept-language'] || '').split(',')[0] || '';
-  if (headerLang) return normalizeLang(headerLang);
+  const headerLang = normalizeLang((req.headers['accept-language'] || '').split(',')[0] || '');
   const last = [...messages].reverse().find((m) => m.role === 'user' && m.content);
-  if (!last) return 'en';
-  return normalizeLang(guessLanguageFromText(last.content || ''));
+  const guessed = normalizeLang(guessLanguageFromText(last?.content || ''));
+
+  // If we clearly detect a non-English language, honor it.
+  if (guessed !== 'en') return guessed;
+  // Otherwise, prefer the header unless it would force Turkish; default to English.
+  if (headerLang && headerLang !== 'tr') return headerLang;
+  return 'en';
 };
 
 const SERVICE_KEYWORDS = [
   'repair', 'install', 'service', 'quote', 'plumb', 'roof', 'hvac', 'electric', 'clean', 'remodel', 'paint',
-  'landscap', 'door', 'window', 'fence', 'floor', 'garage', 'concrete', 'tile', 'handyman', 'yard', 'water leak',
+  'landscap', 'door', 'window', 'fence', 'floor', 'garage', 'concrete', 'tile', 'handyman', 'handymen', 'handy man',
+  'yard', 'water leak',
   'air conditioning', 'heat', 'cool', 'furnace', 'carpentry', 'drywall', 'pest', 'gate', 'fence',
   // Turkish roots
   'tamir', 'onar', 'usta', 'tesisat', 'klima', 'cati', 'boya', 'temiz', 'insaat', 'tadilat', 'bahce', 'kapi', 'pencere',
