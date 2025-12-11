@@ -8,13 +8,6 @@ type ChatMessage = {
 };
 
 const initialAssistant = 'Hi there! How can I help you?';
-const quickPrompts = [
-  'I need emergency repair',
-  'What services do you offer?',
-  'How soon can you schedule?',
-  'I need an expert to call me',
-  'I have another question',
-];
 
 const MAX_CHARS = Number(import.meta.env.VITE_CHAT_MAX_CHARS || 1000);
 
@@ -226,22 +219,6 @@ export default function ChatWidget() {
             >
               ×
             </button>
-          </div>
-
-          {/* QUICK REPLIES */}
-          <div className="px-3 py-2 border-b border-[#E2E2E2] bg-white">
-            <div className="flex flex-wrap gap-2 pb-1">
-              {quickPrompts.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => runChat(p)}
-                  disabled={loading}
-                  className="h-8 px-3 rounded-[8px] bg-[#F1F4F9] text-[#3A3A3A] text-[13px] whitespace-nowrap flex items-center border border-[#E2E2E2] shadow-[0_2px_6px_rgba(0,0,0,0.08)] hover:bg-[#EDF0F5] transition disabled:opacity-50"
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* ERROR MESSAGE */}
