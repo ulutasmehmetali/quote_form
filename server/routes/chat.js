@@ -79,12 +79,8 @@ const looksLikeService = (text = '') => {
   return SERVICE_KEYWORDS.some((k) => lower.includes(k));
 };
 
-const hasPII = (text = '') => {
-  const email = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i.test(text);
-  const phone = /(\+?\d[\d\-\s]{8,}\d)/.test(text);
-  const card = /\b\d{13,19}\b/.test(text);
-  return email || phone || card;
-};
+// Only block likely payment card numbers; allow phone/email so users can share contact info.
+const hasPII = (text = '') => /\b\d{13,19}\b/.test(text);
 
 const rateCheck = (key) => {
   const now = Date.now();
