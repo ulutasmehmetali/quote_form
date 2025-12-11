@@ -52,7 +52,7 @@ const trustBadges = [
     label: 'Verified Pros',
     desc: 'Background checked',
     icon: (
-      <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <svg className="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
       </svg>
     ),
@@ -61,7 +61,7 @@ const trustBadges = [
     label: 'Fast Quotes',
     desc: 'Within hours',
     icon: (
-      <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
       </svg>
     ),
@@ -70,7 +70,7 @@ const trustBadges = [
     label: 'Local Experts',
     desc: 'In your area',
     icon: (
-      <svg className="w-5 h-5 text-sky-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <svg className="w-6 h-6 text-sky-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
       </svg>
@@ -389,9 +389,8 @@ export default function HeroSection() {
                 className="group flex items-center gap-3 rounded-2xl border border-slate-100 bg-white/90 backdrop-blur shadow-[0_16px_48px_rgba(15,23,42,0.12)] hover:shadow-[0_20px_60px_rgba(59,130,246,0.18)] hover:-translate-y-0.5 transition-all duration-200 px-4 py-4"
                 style={{ animationDelay: `${index * 0.08}s` }}
               >
-                <div className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white shadow-lg shadow-slate-900/20">
-                  <div className="absolute inset-0 rounded-xl bg-[radial-gradient(circle_at_30%_30%,rgba(56,189,248,0.22),transparent_50%)]" />
-                  <div className="relative scale-90">{badge.icon}</div>
+                <div className="relative flex h-11 w-11 items-center justify-center">
+                  <div className="relative">{badge.icon}</div>
                 </div>
                 <div className="leading-tight">
                   <p className="text-sm font-semibold text-slate-900">{badge.label}</p>
