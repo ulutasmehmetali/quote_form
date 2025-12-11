@@ -79,7 +79,8 @@ const detectLanguage = () => 'en';
 
 const SERVICE_KEYWORDS = [
   'repair', 'install', 'service', 'quote', 'plumb', 'roof', 'hvac', 'electric', 'clean', 'remodel', 'paint',
-  'landscap', 'door', 'window', 'fence', 'floor', 'garage', 'concrete', 'tile', 'handyman', 'handymen', 'handy man',
+  'landscap', 'door', 'window', 'fence', 'floor', 'garage', 'concrete', 'tile',
+  'handyman', 'handymen', 'handy man', 'handy-men', 'handy men', 'handy',
   'yard', 'water leak', 'help', 'assist', 'assistance',
   'air conditioning', 'heat', 'cool', 'furnace', 'carpentry', 'drywall', 'pest', 'gate', 'fence',
   // Turkish roots
@@ -163,13 +164,6 @@ router.post('/chat', async (req, res) => {
   if (!isAllowedLanguage(lang)) {
     console.warn(JSON.stringify({ event: 'chat_lang_block', ip: ipKey, lang, reason: 'lang_not_allowed' }));
     return res.status(400).json({ reply: getMessage(lang, 'langBlocked') });
-  }
-
-  if (text && !looksLikeService(text) && !serviceSeen) {
-    console.warn(JSON.stringify({ event: 'chat_non_service', ip: ipKey, lang, reason: 'not_service' }));
-    return res.json({
-      reply: getMessage(lang, 'nonService'),
-    });
   }
 
   if (!messages.length) {
