@@ -44,16 +44,43 @@ const isAllowedLanguage = (lang = '') => {
   return LANG_WHITELIST.includes(norm);
 };
 
+const normalizeLang = (lang = '') => {
+  const norm = lang.toLowerCase();
+  if (norm.startsWith('tr')) return 'tr';
+  if (norm.startsWith('es')) return 'es';
+  if (norm.startsWith('fr')) return 'fr';
+  return 'en';
+};
+
+const guessLanguageFromText = (text = '') => {
+  const lower = text.toLowerCase();
+  if (
+    /[ğışüöçİĞÜŞÖÇ]/.test(text) ||
+    /(kapi|tamir|usta|tesisat|klima|cati|boya|bahce|pencere|tadilat)/.test(lower)
+  ) {
+    return 'tr';
+  }
+  if (
+    /[áéíóúñü]/.test(text) ||
+    /(hola|gracias|por favor|puerta|casa)/.test(lower)
+  ) {
+    return 'es';
+  }
+  if (
+    /[àâçéèêëîïôûùüÿœ]/.test(text) ||
+    /(bonjour|merci|svp|porte)/.test(lower)
+  ) {
+    return 'fr';
+  }
+  return 'en';
+};
+
 const detectLanguage = (req, messages) => {
   const headerLang = (req.headers['accept-language'] || '').split(',')[0] || '';
-  if (headerLang) return headerLang;
+  if (headerLang) return normalizeLang(headerLang);
   const last = [...messages].reverse().find((m) => m.role === 'user' && m.content);
   if (!last) return 'en';
-  const txt = last.content || '';
-  if (/[çğıöşü]/i.test(txt)) return 'tr';
-  if (/[áéíóúñü]/i.test(txt)) return 'es';
-  if (/[àâçéèêëîïôûùüÿœ]/i.test(txt)) return 'fr';
-  return 'en';
+  return normalizeLang(guessLanguageFromText(last.content || ''));
 };
 
 const SERVICE_KEYWORDS = [
@@ -65,7 +92,45 @@ const SERVICE_KEYWORDS = [
 ];
 
 const serviceListMessage =
-  'I can help with: Plumbing, Electrical, HVAC, Roofing, Flooring, Fencing, Concrete, Handyman, Cleaning, Remodeling, Painting, Landscaping, Garage Door, Pest Control.';
+  'I can help with: Plumbing, Electrical, HVAC, Roofing, Flooring, Fencing, Concrete, Handyman, Cleaning, Remodeling, Painting, Landscaping, Garage Door, Pest Control, Carpentry, Drywall, Tile.';
+
+const LANG_MESSAGES = {
+  en: {
+    nonService: `This chat is for home services only. ${serviceListMessage}`,
+    tooLong: 'Message is too long.',
+    pii: 'Personal data detected.',
+    langBlocked: 'Language not supported for chat.',
+    rateLimit: 'Please slow down.',
+    intro: 'Tell me what you need (service + city/ZIP + short issue) and I will help.',
+  },
+  es: {
+    nonService: `Este chat es solo para servicios del hogar. ${serviceListMessage}`,
+    tooLong: 'El mensaje es demasiado largo.',
+    pii: 'Se detectaron datos personales.',
+    langBlocked: 'El idioma no es compatible para el chat.',
+    rateLimit: 'Por favor escribe m\u00e1s despacio.',
+    intro: 'Cu\u00e9ntame qu\u00e9 necesitas (servicio + ciudad/CP + breve descripci\u00f3n) y te ayudar\u00e9.',
+  },
+  tr: {
+    nonService: `Bu sohbet yaln\u0131zca ev hizmetleri i\u00e7in. ${serviceListMessage}`,
+    tooLong: 'Mesaj \u00e7ok uzun.',
+    pii: 'Ki\u015fisel veri tespit edildi.',
+    langBlocked: 'Bu dil sohbet i\u00e7in desteklenmiyor.',
+    rateLimit: 'L\u00fctfen daha yava\u015f yaz\u0131n.',
+    intro: 'Ne istedi\u011fini s\u00f6yle (hizmet + \u015fehir/posta kodu + k\u0131sa a\u00e7\u0131klama), yard\u0131mc\u0131 olay\u0131m.',
+  },
+  fr: {
+    nonService: `Cette discussion est uniquement pour les services \u00e0 domicile. ${serviceListMessage}`,
+    tooLong: 'Le message est trop long.',
+    pii: 'Donn\u00e9es personnelles d\u00e9tect\u00e9es.',
+    langBlocked: 'Langue non prise en charge pour le chat.',
+    rateLimit: 'Merci de ralentir.',
+    intro: "Dites-moi ce dont vous avez besoin (service + ville/CP + bref souci) et j'aiderai.",
+  },
+};
+
+const getMessage = (lang, key) =>
+  (LANG_MESSAGES[lang] && LANG_MESSAGES[lang][key]) || LANG_MESSAGES.en[key] || '';
 
 const looksLikeService = (text = '') => {
   const lower = text.toLowerCase();
@@ -98,12 +163,6 @@ router.post('/chat', async (req, res) => {
     return res.status(503).json({ reply: 'AI is not configured right now. Please try again later.' });
   }
 
-  const ipKey = req.ip || req.headers['x-forwarded-for'] || 'unknown';
-  if (!rateCheck(ipKey)) {
-    console.warn(JSON.stringify({ event: 'chat_rate_limit', ip: ipKey, reason: 'too_many', lang: 'unknown' }));
-    return res.status(429).json({ reply: 'Lütfen yavaş yazın' });
-  }
-
   const incoming = Array.isArray(req.body?.messages) ? req.body.messages : [];
   const messages = incoming
     .filter((m) => m && typeof m.content === 'string')
@@ -117,31 +176,37 @@ router.post('/chat', async (req, res) => {
   const text = lastUser?.content || '';
   const lang = detectLanguage(req, messages);
 
+  const ipKey = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+  if (!rateCheck(ipKey)) {
+    console.warn(JSON.stringify({ event: 'chat_rate_limit', ip: ipKey, reason: 'too_many', lang }));
+    return res.status(429).json({ reply: getMessage(lang, 'rateLimit') });
+  }
+
   if (text.length > MAX_CHARS) {
     console.warn(JSON.stringify({ event: 'chat_too_long', ip: ipKey, lang, len: text.length }));
-    return res.status(413).json({ reply: 'Mesaj çok uzun' });
+    return res.status(413).json({ reply: getMessage(lang, 'tooLong') });
   }
 
   if (hasPII(text)) {
     console.warn(JSON.stringify({ event: 'chat_pii_block', ip: ipKey, lang, reason: 'pii_detected' }));
-    return res.status(400).json({ reply: 'Kişisel veri tespit edildi' });
+    return res.status(400).json({ reply: getMessage(lang, 'pii') });
   }
 
   if (!isAllowedLanguage(lang)) {
     console.warn(JSON.stringify({ event: 'chat_lang_block', ip: ipKey, lang, reason: 'lang_not_allowed' }));
-    return res.status(400).json({ reply: 'Kişisel veri tespit edildi' });
+    return res.status(400).json({ reply: getMessage(lang, 'langBlocked') });
   }
 
   if (text && !looksLikeService(text)) {
     console.warn(JSON.stringify({ event: 'chat_non_service', ip: ipKey, lang, reason: 'not_service' }));
     return res.json({
-      reply: `Bu sohbet sadece ev hizmetleri için. ${serviceListMessage}`,
+      reply: getMessage(lang, 'nonService'),
     });
   }
 
   if (!messages.length) {
     return res.json({
-      reply: 'Tell me what you need (service + city/ZIP + short issue) and I will help.',
+      reply: getMessage(lang, 'intro'),
     });
   }
 
