@@ -30,6 +30,7 @@ export default function ChatWidget() {
   const [leadReady, setLeadReady] = useState(false);
   const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [submittingLead, setSubmittingLead] = useState(false);
+  const [lastConsentIndex, setLastConsentIndex] = useState<number>(-1);
   const [lang, setLang] = useState<'en' | 'tr' | 'es'>('en');
   const listRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -106,6 +107,8 @@ export default function ChatWidget() {
     });
     setLeadReady(false);
     setLeadSubmitted(false);
+    setSubmittingLead(false);
+    setLastConsentIndex(-1);
     addAssistantMessage(initialAssistant);
   };
 
@@ -179,13 +182,18 @@ export default function ChatWidget() {
     }
   };
 
-  const hasConsent = (history: ChatMessage[]) => {
-    const lastUser = [...history].reverse().find((m) => m.role === 'user');
-    if (!lastUser) return false;
-    const txt = (lastUser.content || '').toLowerCase();
-    return ['yes', 'sure', 'ok', 'okay', 'go ahead', 'share', 'evet', 'tamam', 'onay'].some((p) =>
-      txt.includes(p)
-    );
+  const getConsentIndex = (history: ChatMessage[]) => {
+    for (let i = history.length - 1; i >= 0; i--) {
+      const m = history[i];
+      if (m.role !== 'user') continue;
+      const txt = (m.content || '').toLowerCase();
+      const ok = ['yes', 'sure', 'ok', 'okay', 'go ahead', 'share', 'evet', 'tamam', 'onay'].some((p) =>
+        txt.includes(p)
+      );
+      if (ok) return i;
+      break; // stop at last user even if not consent
+    }
+    return -1;
   };
 
   const submitLead = async () => {
@@ -227,16 +235,12 @@ export default function ChatWidget() {
   useEffect(() => {
     if (!messages.length) return;
     void extractLead(messages);
-    if (leadReady && hasConsent(messages) && !leadSubmitted) {
+    const consentIdx = getConsentIndex(messages);
+    if (leadReady && !leadSubmitted && consentIdx >= 0 && consentIdx !== lastConsentIndex) {
+      setLastConsentIndex(consentIdx);
       void submitLead();
     }
-  }, [messages, leadReady, leadSubmitted]);
-
-  useEffect(() => {
-    if (leadReady && !leadSubmitted && hasConsent(messages)) {
-      void submitLead();
-    }
-  }, [leadReady, leadSubmitted, messages]);
+  }, [messages, leadReady, leadSubmitted, lastConsentIndex]);
 
   const handleKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {

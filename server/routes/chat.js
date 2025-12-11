@@ -10,8 +10,9 @@ const OPENAI_URL = 'https://api.openai.com/v1/responses';
 const MODEL = 'gpt-4o-mini';
 
 const MAX_CHARS = Number(process.env.CHAT_MAX_CHARS || '1000');
-const RATE_WINDOW_MS = Number(process.env.CHAT_RATE_WINDOW || '1000');
-const RATE_MAX_REQUESTS = Number(process.env.CHAT_MAX_REQUESTS || '4');
+// Rate limit eased to reduce accidental throttling during chat turns
+const RATE_WINDOW_MS = Number(process.env.CHAT_RATE_WINDOW || '3000');
+const RATE_MAX_REQUESTS = Number(process.env.CHAT_MAX_REQUESTS || '8');
 const CHAT_SHEETS_URL =
   process.env.CHAT_SHEETS_URL || process.env.SHEETS_URL || process.env.VITE_SHEETS_URL || '';
 const LANG_WHITELIST = (process.env.CHAT_LANGS_WHITELIST || '')
