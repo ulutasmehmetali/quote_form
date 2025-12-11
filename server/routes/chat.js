@@ -9,6 +9,16 @@ const router = express.Router();
 const OPENAI_URL = 'https://api.openai.com/v1/responses';
 const MODEL = 'gpt-4o-mini';
 
+const MAX_CHARS = Number(process.env.CHAT_MAX_CHARS || '1000');
+const RATE_WINDOW_MS = Number(process.env.CHAT_RATE_WINDOW || '1000');
+const RATE_MAX_REQUESTS = Number(process.env.CHAT_MAX_REQUESTS || '4');
+const LANG_WHITELIST = (process.env.CHAT_LANGS_WHITELIST || '')
+  .split(',')
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
+
+const rateBuckets = new Map(); // key -> array of timestamps
+
 const SYSTEM_PROMPT = `
 You are a concise, multilingual home-services assistant.
 Rules:
@@ -17,6 +27,7 @@ Rules:
 - If the user is asking anything else, answer briefly and helpfully in their language without pushing the quote flow.
 - Never ask for passwords, card numbers, or secrets. If a user shares secrets, warn and do not reuse them.
 - Keep replies short (1-3 sentences) and avoid promising prices; say the team will confirm.
+- If the topic is outside home services, respond once with a brief apology and list of services we offer, then wait.
 `;
 
 const redactText = (text = '') =>
@@ -26,10 +37,69 @@ const redactText = (text = '') =>
     .replace(/\b\d{16,}\b/g, '[redacted-number]')
     .slice(0, 2000);
 
+const isAllowedLanguage = (lang = '') => {
+  if (!LANG_WHITELIST.length) return true;
+  const norm = lang.toLowerCase().split('-')[0];
+  return LANG_WHITELIST.includes(norm);
+};
+
+const detectLanguage = (req, messages) => {
+  const headerLang = (req.headers['accept-language'] || '').split(',')[0] || '';
+  if (headerLang) return headerLang;
+  const last = [...messages].reverse().find((m) => m.role === 'user' && m.content);
+  if (!last) return 'en';
+  // naive: detect Turkish chars, Spanish accents, etc.
+  const txt = last.content || '';
+  if (/[çğıöşü]/i.test(txt)) return 'tr';
+  if (/[áéíóúñü]/i.test(txt)) return 'es';
+  if (/[àâçéèêëîïôûùüÿœ]/i.test(txt)) return 'fr';
+  return 'en';
+};
+
+const SERVICE_KEYWORDS = [
+  'repair', 'install', 'service', 'quote', 'plumb', 'roof', 'hvac', 'electric', 'clean', 'remodel', 'paint',
+  'landscap', 'door', 'window', 'fence', 'floor', 'garage', 'concrete', 'tile', 'handyman', 'yard', 'water leak',
+  'air conditioning', 'heat', 'cool', 'furnace', 'carpentry', 'drywall', 'pest', 'gate', 'concrete', 'fence',
+  // Turkish roots
+  'tamir', 'onar', 'usta', 'tesisat', 'klima', 'çatı', 'boya', 'temiz', 'inşaat', 'tadilat', 'bahçe', 'kapı', 'pencere',
+];
+
+const serviceListMessage = 'I can help with: Plumbing, Electrical, HVAC, Roofing, Flooring, Fencing, Concrete, Handyman, Cleaning, Remodeling, Painting, Landscaping, Garage Door, Pest Control.';
+
+const looksLikeService = (text = '') => {
+  const lower = text.toLowerCase();
+  return SERVICE_KEYWORDS.some((k) => lower.includes(k));
+};
+
+const hasPII = (text = '') => {
+  const email = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i.test(text);
+  const phone = /(\+?\d[\d\-\s]{8,}\d)/.test(text);
+  const card = /\b\d{13,19}\b/.test(text);
+  return email || phone || card;
+};
+
+const rateCheck = (key) => {
+  const now = Date.now();
+  const arr = rateBuckets.get(key) || [];
+  const filtered = arr.filter((t) => now - t < RATE_WINDOW_MS);
+  if (filtered.length >= RATE_MAX_REQUESTS) {
+    rateBuckets.set(key, filtered);
+    return false;
+  }
+  filtered.push(now);
+  rateBuckets.set(key, filtered);
+  return true;
+};
+
 router.post('/chat', async (req, res) => {
   const apiKey = process.env.CHAT_API_KEY || process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return res.status(503).json({ reply: 'AI is not configured right now. Please try again later.' });
+  }
+
+  const ipKey = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+  if (!rateCheck(ipKey)) {
+    return res.status(429).json({ reply: 'Please slow down (too many messages).' });
   }
 
   const incoming = Array.isArray(req.body?.messages) ? req.body.messages : [];
@@ -40,6 +110,29 @@ router.post('/chat', async (req, res) => {
       content: redactText(m.content || ''),
     }))
     .slice(-40);
+
+  const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+  const text = lastUser?.content || '';
+
+  if (text.length > MAX_CHARS) {
+    return res.status(413).json({ reply: `Message too long (max ${MAX_CHARS} chars).` });
+  }
+
+  if (hasPII(text)) {
+    return res.status(400).json({ reply: 'Sensitive info detected. Please remove personal data.' });
+  }
+
+  const lang = detectLanguage(req, messages);
+  if (!isAllowedLanguage(lang)) {
+    return res.status(400).json({ reply: 'Language not allowed for chat.' });
+  }
+
+  if (text && !looksLikeService(text)) {
+    console.warn('Non-service chat', { lang, ip: ipKey });
+    return res.json({
+      reply: `Üzgünüm, bu sohbet yalnızca ev hizmetleri için. ${serviceListMessage}`,
+    });
+  }
 
   if (!messages.length) {
     return res.json({
@@ -86,7 +179,7 @@ router.post('/chat', async (req, res) => {
 
     return res.json({ reply: reply.trim() });
   } catch (err) {
-    console.error('AI chat error:', err);
+    console.error('AI chat error:', { err, lang, ip: ipKey });
     return res.status(200).json({ reply: 'I hit an error. Please try again.' });
   }
 });
@@ -185,7 +278,8 @@ Rules:
 - Use ONLY what you see; do not request clarification.
 - Mention the object/area and the visible issue (e.g., hole in wooden door at bottom, scuff on drywall, leaking pipe, broken tile).
 - If multiple possibilities, pick the top one and mark confidence low/medium/high.
-- Never invent prices.`;
+- Never invent prices.
+- If you see IDs, faces, children, or sensitive documents, do NOT summarize the content. Instead return: {"serviceType":"","summary":"Cannot process sensitive content."}`;
 
   try {
     const ai = await fetch(OPENAI_URL, {
