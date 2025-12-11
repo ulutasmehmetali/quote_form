@@ -17,12 +17,13 @@ const LANG_WHITELIST = (process.env.CHAT_LANGS_WHITELIST || '')
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
 
-const rateBuckets = new Map(); // key -> array of timestamps
+const rateBuckets = new Map(); // ip -> timestamps
 
 const SYSTEM_PROMPT = `
 You are a concise, multilingual home-services assistant.
 Rules:
 - Detect the user's language (for example: English, Turkish, Spanish, French) and always reply in that language. Never force English.
+- We only handle home services: Plumbing, Electrical, HVAC, Roofing, Flooring, Fencing, Concrete, Handyman, Cleaning, Remodeling, Painting, Landscaping, Garage Door, Pest Control, Carpentry, Drywall, Tile.
 - If the user clearly wants a home-service/quote, ask only 1-2 short questions at a time to gather: name, phone, email, service needed, city/ZIP, urgency, short description. Ask only missing fields when the user is ready.
 - If the user is asking anything else, answer briefly and helpfully in their language without pushing the quote flow.
 - Never ask for passwords, card numbers, or secrets. If a user shares secrets, warn and do not reuse them.
@@ -48,7 +49,6 @@ const detectLanguage = (req, messages) => {
   if (headerLang) return headerLang;
   const last = [...messages].reverse().find((m) => m.role === 'user' && m.content);
   if (!last) return 'en';
-  // naive: detect Turkish chars, Spanish accents, etc.
   const txt = last.content || '';
   if (/[çğıöşü]/i.test(txt)) return 'tr';
   if (/[áéíóúñü]/i.test(txt)) return 'es';
@@ -59,12 +59,13 @@ const detectLanguage = (req, messages) => {
 const SERVICE_KEYWORDS = [
   'repair', 'install', 'service', 'quote', 'plumb', 'roof', 'hvac', 'electric', 'clean', 'remodel', 'paint',
   'landscap', 'door', 'window', 'fence', 'floor', 'garage', 'concrete', 'tile', 'handyman', 'yard', 'water leak',
-  'air conditioning', 'heat', 'cool', 'furnace', 'carpentry', 'drywall', 'pest', 'gate', 'concrete', 'fence',
+  'air conditioning', 'heat', 'cool', 'furnace', 'carpentry', 'drywall', 'pest', 'gate', 'fence',
   // Turkish roots
-  'tamir', 'onar', 'usta', 'tesisat', 'klima', 'çatı', 'boya', 'temiz', 'inşaat', 'tadilat', 'bahçe', 'kapı', 'pencere',
+  'tamir', 'onar', 'usta', 'tesisat', 'klima', 'cati', 'boya', 'temiz', 'insaat', 'tadilat', 'bahce', 'kapi', 'pencere',
 ];
 
-const serviceListMessage = 'I can help with: Plumbing, Electrical, HVAC, Roofing, Flooring, Fencing, Concrete, Handyman, Cleaning, Remodeling, Painting, Landscaping, Garage Door, Pest Control.';
+const serviceListMessage =
+  'I can help with: Plumbing, Electrical, HVAC, Roofing, Flooring, Fencing, Concrete, Handyman, Cleaning, Remodeling, Painting, Landscaping, Garage Door, Pest Control.';
 
 const looksLikeService = (text = '') => {
   const lower = text.toLowerCase();
@@ -99,7 +100,8 @@ router.post('/chat', async (req, res) => {
 
   const ipKey = req.ip || req.headers['x-forwarded-for'] || 'unknown';
   if (!rateCheck(ipKey)) {
-    return res.status(429).json({ reply: 'Please slow down (too many messages).' });
+    console.warn(JSON.stringify({ event: 'chat_rate_limit', ip: ipKey, reason: 'too_many', lang: 'unknown' }));
+    return res.status(429).json({ reply: 'Lütfen yavaş yazın' });
   }
 
   const incoming = Array.isArray(req.body?.messages) ? req.body.messages : [];
@@ -113,24 +115,27 @@ router.post('/chat', async (req, res) => {
 
   const lastUser = [...messages].reverse().find((m) => m.role === 'user');
   const text = lastUser?.content || '';
+  const lang = detectLanguage(req, messages);
 
   if (text.length > MAX_CHARS) {
-    return res.status(413).json({ reply: `Message too long (max ${MAX_CHARS} chars).` });
+    console.warn(JSON.stringify({ event: 'chat_too_long', ip: ipKey, lang, len: text.length }));
+    return res.status(413).json({ reply: 'Mesaj çok uzun' });
   }
 
   if (hasPII(text)) {
-    return res.status(400).json({ reply: 'Sensitive info detected. Please remove personal data.' });
+    console.warn(JSON.stringify({ event: 'chat_pii_block', ip: ipKey, lang, reason: 'pii_detected' }));
+    return res.status(400).json({ reply: 'Kişisel veri tespit edildi' });
   }
 
-  const lang = detectLanguage(req, messages);
   if (!isAllowedLanguage(lang)) {
-    return res.status(400).json({ reply: 'Language not allowed for chat.' });
+    console.warn(JSON.stringify({ event: 'chat_lang_block', ip: ipKey, lang, reason: 'lang_not_allowed' }));
+    return res.status(400).json({ reply: 'Kişisel veri tespit edildi' });
   }
 
   if (text && !looksLikeService(text)) {
-    console.warn('Non-service chat', { lang, ip: ipKey });
+    console.warn(JSON.stringify({ event: 'chat_non_service', ip: ipKey, lang, reason: 'not_service' }));
     return res.json({
-      reply: `Üzgünüm, bu sohbet yalnızca ev hizmetleri için. ${serviceListMessage}`,
+      reply: `Bu sohbet sadece ev hizmetleri için. ${serviceListMessage}`,
     });
   }
 

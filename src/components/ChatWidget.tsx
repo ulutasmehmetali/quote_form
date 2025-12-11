@@ -16,6 +16,13 @@ const quickPrompts = [
   'I have another question',
 ];
 
+const MAX_CHARS = Number(import.meta.env.VITE_CHAT_MAX_CHARS || 1000);
+const SERVICE_KEYWORDS = [
+  'plumb', 'electric', 'hvac', 'roof', 'floor', 'fence', 'garage', 'door', 'gate', 'tile', 'drywall',
+  'clean', 'remodel', 'paint', 'landscap', 'pest', 'handyman', 'concrete', 'carpentry', 'ac', 'air',
+  'tesisat', 'elektrik', 'klima', 'çatı', 'boya', 'temiz', 'tadilat', 'bahçe', 'kapı', 'pencere',
+];
+
 export default function ChatWidget() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
@@ -37,6 +44,9 @@ export default function ChatWidget() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showPrompts, setShowPrompts] = useState(true);
+  const [uploadedCount, setUploadedCount] = useState(0);
+  const [rateLimited, setRateLimited] = useState(false);
+  const [lang, setLang] = useState<'en' | 'tr' | 'es'>('en');
   const listRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -45,6 +55,49 @@ export default function ChatWidget() {
       listRef.current.scrollTop = listRef.current.scrollHeight;
     }
   }, [messages, open]);
+
+  useEffect(() => {
+    const navLang = (navigator?.language || 'en').slice(0, 2).toLowerCase();
+    if (navLang === 'tr') setLang('tr');
+    else if (navLang === 'es') setLang('es');
+    else setLang('en');
+  }, []);
+
+  const t = (key: string) => {
+    const dict: Record<string, Record<string, string>> = {
+      en: {
+        tooLong: 'Message too long',
+        rate: 'Please slow down',
+        pii: 'Sensitive info detected',
+        newChat: 'New chat',
+        placeholder: 'Write your message...',
+        send: 'Send',
+        selectService: 'Pick a service',
+        goForm: 'Go to form',
+      },
+      tr: {
+        tooLong: 'Mesaj çok uzun',
+        rate: 'Lütfen yavaş yazın',
+        pii: 'Kişisel veri tespit edildi',
+        newChat: 'Yeni sohbet',
+        placeholder: 'Mesajını yaz...',
+        send: 'Gönder',
+        selectService: 'Servis Seç',
+        goForm: 'Formu doldur',
+      },
+      es: {
+        tooLong: 'Mensaje demasiado largo',
+        rate: 'Por favor, más despacio',
+        pii: 'Detecté datos sensibles',
+        newChat: 'Nuevo chat',
+        placeholder: 'Escribe tu mensaje...',
+        send: 'Enviar',
+        selectService: 'Elegir servicio',
+        goForm: 'Ir al formulario',
+      },
+    };
+    return dict[lang]?.[key] || dict.en[key] || key;
+  };
 
   const resetChat = () => {
     setMessages([{ role: 'assistant', content: initialAssistant }]);
@@ -64,44 +117,13 @@ export default function ChatWidget() {
     setShowPrompts(true);
   };
 
-  const saveLead = async (payload = lead) => {
-    if (submitting || submitted) return;
-    const ready =
-      payload.name &&
-      payload.phone &&
-      payload.email &&
-      payload.serviceType &&
-      payload.zipCode &&
-      payload.description;
-    if (!ready) return;
-
-    setSubmitting(true);
-    try {
-      const res = await fetch(apiUrl('/api/chat/submit'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok || data?.error) throw new Error(data?.error || 'Failed to save');
-      setSubmitted(true);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: 'Thanks! I saved your details. A service specialist will contact you shortly.',
-        },
-      ]);
-    } catch (err) {
-      setError('Could not save your details, please try again.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const runChat = async (userText: string) => {
     const trimmed = userText.trim();
-    if (!trimmed || loading) return;
+    if (!trimmed || loading || rateLimited) return;
+    if (trimmed.length > MAX_CHARS) {
+      setError(t('tooLong'));
+      return;
+    }
     setError(null);
     setShowPrompts(false);
 
@@ -116,7 +138,24 @@ export default function ChatWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: nextMessages }),
       });
-      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+
+      if (!res.ok) {
+        if (res.status === 429) {
+          setError(t('rate'));
+          setRateLimited(true);
+          setTimeout(() => setRateLimited(false), 3000);
+          return;
+        }
+        if (res.status === 413) {
+          setError(t('tooLong'));
+          return;
+        }
+        if (res.status === 400) {
+          setError(t('pii'));
+          return;
+        }
+        throw new Error(`Request failed (${res.status})`);
+      }
 
       const data = await res.json();
       const reply =
@@ -126,38 +165,8 @@ export default function ChatWidget() {
 
       const allMessages = [...nextMessages, { role: 'assistant', content: reply }];
       setMessages(allMessages);
-
-      // Extract lead fields and auto-save if ready
-      try {
-        const ex = await fetch(apiUrl('/api/chat/extract'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: allMessages }),
-        });
-        const exData = await ex.json();
-        if (exData?.lead) {
-          setLead((prev) => ({ ...prev, ...exData.lead }));
-          const ready =
-            exData.ready ||
-            (exData.lead?.name &&
-              exData.lead?.phone &&
-              exData.lead?.email &&
-              exData.lead?.serviceType &&
-              exData.lead?.zipCode &&
-              exData.lead?.description);
-          if (ready && !submitted) {
-            await saveLead({ ...lead, ...exData.lead });
-          }
-        }
-      } catch {
-        // ignore extract errors
-      }
     } catch (err) {
       setError('I had trouble answering. Please try again.');
-      setMessages([
-        ...nextMessages,
-        { role: 'assistant', content: 'Sorry, something went wrong. Please try again.' },
-      ]);
     } finally {
       setLoading(false);
     }
@@ -170,11 +179,11 @@ export default function ChatWidget() {
     }
   };
 
-  const [uploadedCount, setUploadedCount] = useState(0);
+  const [uploadedCountState, setUploadedCountState] = useState(0);
 
   const handleImageSelect = async (file?: File) => {
     if (!file) return;
-    if (uploadedCount >= 3) {
+    if (uploadedCountState >= 3) {
       setError('You can upload up to 3 images.');
       return;
     }
@@ -213,7 +222,7 @@ export default function ChatWidget() {
       const replyText = [summary, suggestion].filter(Boolean).join(' ');
 
       setMessages((prev) => [...prev, { role: 'assistant', content: replyText, image: undefined }]);
-      setUploadedCount((c) => c + 1);
+      setUploadedCountState((c) => c + 1);
       if (service) {
         setLead((prev) => ({ ...prev, serviceType: prev.serviceType || service }));
       }
@@ -227,6 +236,40 @@ export default function ChatWidget() {
   const wrapperClass = open
     ? 'fixed bottom-6 right-6 z-50 w-[22rem] max-w-[22rem] sm:max-w-[23rem]'
     : 'fixed bottom-6 right-6 z-50 w-[4.4rem] h-[4.4rem] sm:w-[4.8rem] sm:h-[4.8rem]';
+
+  const counterColor =
+    input.length > MAX_CHARS
+      ? 'text-red-600'
+      : input.length > 0.9 * MAX_CHARS
+      ? 'text-amber-600'
+      : 'text-slate-500';
+
+  const scrollToService = () => {
+    const el = document.getElementById('service-step') || document.getElementById('quote-form');
+    if (el) {
+      const top = el.getBoundingClientRect().top + window.scrollY - 20;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+    setOpen(false);
+  };
+
+  const scrollToForm = () => {
+    const el = document.getElementById('quote-form') || document.getElementById('service-step');
+    if (el) {
+      const top = el.getBoundingClientRect().top + window.scrollY - 10;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+    setOpen(false);
+  };
+
+  const isNonServiceMessage = (txt: string) =>
+    txt.toLowerCase().includes('sadece ev hizmetleri') ||
+    txt.toLowerCase().includes('only for home services');
+
+  const isServiceSuggestion = (txt: string) => {
+    const lower = txt.toLowerCase();
+    return SERVICE_KEYWORDS.some((k) => lower.includes(k));
+  };
 
   return (
     <>
@@ -295,31 +338,52 @@ export default function ChatWidget() {
             )}
 
             <div ref={listRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2 bg-white">
-              {messages.map((m, idx) => (
-                <div
-                  key={idx}
-                  className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
+              {messages.map((m, idx) => {
+                const showActions =
+                  m.role === 'assistant' &&
+                  (isNonServiceMessage(m.content) || isServiceSuggestion(m.content));
+                return (
                   <div
-                    className={`px-3 py-2 rounded-2xl text-sm max-w-[82%] whitespace-pre-wrap shadow ${
-                      m.role === 'user'
-                        ? 'bg-teal-600 text-white rounded-br-sm'
-                        : 'bg-slate-100 text-slate-900 rounded-bl-sm'
-                    }`}
+                    key={idx}
+                    className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    {m.content}
-                    {m.image && (
-                      <div className="mt-2">
-                        <img
-                          src={m.image}
-                          alt="Uploaded"
-                          className="max-w-full max-h-40 rounded-xl border border-slate-200 shadow-sm object-contain"
-                        />
-                      </div>
-                    )}
+                    <div
+                      className={`px-3 py-2 rounded-2xl text-sm max-w-[82%] whitespace-pre-wrap shadow ${
+                        m.role === 'user'
+                          ? 'bg-teal-600 text-white rounded-br-sm'
+                          : 'bg-slate-100 text-slate-900 rounded-bl-sm'
+                      }`}
+                    >
+                      {m.content}
+                      {m.image && (
+                        <div className="mt-2">
+                          <img
+                            src={m.image}
+                            alt="Uploaded"
+                            className="max-w-full max-h-40 rounded-xl border border-slate-200 shadow-sm object-contain"
+                          />
+                        </div>
+                      )}
+                      {showActions && (
+                        <div className="mt-2 flex gap-2 flex-wrap">
+                          <button
+                            onClick={scrollToService}
+                            className="text-[11px] px-2.5 py-1 rounded-full bg-sky-100 text-sky-700 border border-sky-200"
+                          >
+                            {t('selectService')}
+                          </button>
+                          <button
+                            onClick={scrollToForm}
+                            className="text-[11px] px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200"
+                          >
+                            {t('goForm')}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {loading && (
                 <div className="flex justify-start">
                   <div className="px-3 py-2 rounded-xl text-sm bg-slate-200 text-slate-700 border border-slate-200 flex items-center gap-2">
@@ -355,27 +419,39 @@ export default function ChatWidget() {
                 <input
                   type="text"
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value.slice(0, MAX_CHARS);
+                    setInput(val);
+                    if (val.length > MAX_CHARS) setError(t('tooLong'));
+                    else if (error === t('tooLong')) setError(null);
+                  }}
                   onKeyDown={handleKey}
-                  placeholder="Write your message..."
+                  placeholder={t('placeholder')}
                   className="flex-1 px-2 py-2 rounded-full bg-transparent text-slate-900 placeholder-slate-500 focus:outline-none"
                 />
+                <span className={`text-[11px] ${counterColor}`}>{input.length}/{MAX_CHARS}</span>
                 <button
                   onClick={() => runChat(input)}
-                  disabled={loading || uploadingImage || !input.trim()}
+                  disabled={loading || uploadingImage || !input.trim() || input.length > MAX_CHARS || rateLimited}
                   className="p-2 rounded-full bg-teal-600 text-white shadow-lg shadow-teal-500/40 disabled:opacity-50"
                   aria-label="Send message"
                 >
-                  ➤
+                  {t('send')}
                 </button>
               </div>
+              {rateLimited && (
+                <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1 inline-flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-amber-500 animate-ping" />
+                  {t('rate')}
+                </div>
+              )}
               <div className="flex items-center justify-end text-[11px] text-slate-500">
                 <button
                   onClick={resetChat}
                   className="text-slate-500 hover:text-slate-700 transition-colors"
                   disabled={loading}
                 >
-                  New chat
+                  {t('newChat')}
                 </button>
               </div>
             </div>
