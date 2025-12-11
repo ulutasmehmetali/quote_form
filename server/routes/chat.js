@@ -175,6 +175,7 @@ router.post('/chat', async (req, res) => {
   const lastUser = [...messages].reverse().find((m) => m.role === 'user');
   const text = lastUser?.content || '';
   const lang = detectLanguage(req, messages);
+  const serviceSeen = messages.some((m) => m.role === 'user' && looksLikeService(m.content || ''));
 
   const ipKey = req.ip || req.headers['x-forwarded-for'] || 'unknown';
   if (!rateCheck(ipKey)) {
@@ -197,7 +198,7 @@ router.post('/chat', async (req, res) => {
     return res.status(400).json({ reply: getMessage(lang, 'langBlocked') });
   }
 
-  if (text && !looksLikeService(text)) {
+  if (text && !looksLikeService(text) && !serviceSeen) {
     console.warn(JSON.stringify({ event: 'chat_non_service', ip: ipKey, lang, reason: 'not_service' }));
     return res.json({
       reply: getMessage(lang, 'nonService'),
