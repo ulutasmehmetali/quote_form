@@ -12,19 +12,20 @@ const MODEL = 'gpt-4o-mini';
 const MAX_CHARS = Number(process.env.CHAT_MAX_CHARS || '1000');
 const RATE_WINDOW_MS = Number(process.env.CHAT_RATE_WINDOW || '1000');
 const RATE_MAX_REQUESTS = Number(process.env.CHAT_MAX_REQUESTS || '4');
-const SHEETS_URL = process.env.SHEETS_URL || process.env.VITE_SHEETS_URL || '';
+const CHAT_SHEETS_URL =
+  process.env.CHAT_SHEETS_URL || process.env.SHEETS_URL || process.env.VITE_SHEETS_URL || '';
 const LANG_WHITELIST = (process.env.CHAT_LANGS_WHITELIST || '')
   .split(',')
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
 
 const rateBuckets = new Map(); // ip -> timestamps
-const sendToSheet = async (payload = {}) => {
-  if (!SHEETS_URL) return;
+const sendToSheet = async (payload = {}, url = CHAT_SHEETS_URL) => {
+  if (!url) return;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 5000);
   try {
-    const res = await fetch(SHEETS_URL, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload),
@@ -274,18 +275,45 @@ router.post('/chat/submit', async (req, res) => {
       .returning();
 
     const responses = { urgency, description };
+    const answers = [
+      { questionId: 'urgency', question: 'Urgency', answer: urgency },
+      { questionId: 'description', question: 'Description', answer: description },
+    ].filter((a) => a.answer);
+
+    const photos = [];
     const sheetPayload = {
+      // primary fields
       name,
+      full_name: name,
       email,
       phone,
       serviceType,
+      service_type: serviceType,
       zipCode,
+      zip_code: zipCode,
       responses,
-      raw_responses_json: JSON.stringify(responses),
-      response_summary: [urgency && `Urgency: ${urgency}`, description && `Desc: ${description}`]
-        .filter(Boolean)
-        .join(' | '),
+      raw_responses_json: JSON.stringify(responses || {}),
+      answers,
+      answers_json: JSON.stringify(answers || []),
+      responseSummary: answers.map((a) => `${a.question}: ${a.answer || 'n/a'}`).join(' | '),
+      response_summary: answers.map((a) => `${a.question}: ${a.answer || 'n/a'}`).join(' | '),
+      // photos (none from chat, but keep schema parity)
+      photos,
+      photoUrls: photos,
+      photoCount: photos.length,
+      linked_photo: '',
+      linked_photo2: '',
+      linked_photo3: '',
+      linked_photo4: '',
+      photo_url: '',
+      photo_url_2: '',
+      photo_url_3: '',
+      photo_url_4: '',
+      // metadata
       submittedAt: now.toISOString(),
+      submitted_at_utc: now.toISOString(),
+      submittedAtLocal: now.toLocaleString(),
+      submitted_at_local: now.toLocaleString(),
       source: 'chat',
       submissionId: submission.id,
     };
