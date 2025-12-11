@@ -579,7 +579,7 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
                   key={service}
                   type="button"
                   onClick={() => handleServiceSelect(service)}
-                  className={`group relative flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 ${
+                  className={`group relative flex min-w-0 items-center gap-3 px-3 py-3 rounded-xl text-left transition-all duration-200 ${
                     selectedService === service
                       ? 'bg-sky-500 text-white shadow-lg shadow-sky-200 ring-2 ring-sky-400 ring-offset-1'
                       : 'bg-white text-slate-900 border border-slate-200 hover:bg-sky-50 hover:border-sky-300 hover:shadow-md'
@@ -590,7 +590,9 @@ export default function ServiceSelection({ onSubmit, initialData }: ServiceSelec
                   }`}>
                     {SERVICE_ICONS[service]}
                   </div>
-                  <span className="text-[14px] font-semibold leading-tight">{SHORT_NAMES[service]}</span>
+                  <span className="text-sm font-semibold leading-tight whitespace-normal break-words text-left">
+                    {SHORT_NAMES[service]}
+                  </span>
                   {selectedService === service && (
                     <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 hover:bg-rose-600 flex items-center justify-center transition-colors shadow-md border-2 border-white">
                       <svg className="h-2.5 w-2.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
