@@ -15,20 +15,6 @@ import remodelingImg from '@assets/remodeling_1764336249973.webp';
 import roofingImg from '@assets/roofing services_1764336251048.webp';
 import airConditionerImg from '@assets/air conditioner_1764336252466.webp';
 
-const BrandLogo = ({ className = 'w-4.5 h-4.5 text-white' }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 64 64" fill="none">
-    <circle cx="32" cy="32" r="14" stroke="currentColor" strokeWidth="2.5" />
-    <path d="M32 18v28m-10-22h20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    <path d="M18 22c5.523-2 11-2 14 0 3 2 7.5 6 10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    <path d="M22 12c-5 4-6 10-5 18s4 12 6 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    <path d="M46 12c5 4 6 10 5 18s-4 12-6 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    <path d="M34 44l7.5 4-7.5 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M20 44l-7.5 4 7.5 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <circle cx="14" cy="44" r="4" fill="currentColor" />
-    <circle cx="50" cy="44" r="4" fill="currentColor" />
-  </svg>
-);
-
 const topRowServices = [
   { img: roofingImg, name: 'Roofing', color: 'bg-sky-500' },
   { img: electricianImg, name: 'Electrical', color: 'bg-amber-500' },
@@ -144,20 +130,18 @@ const scrollToServiceStep = () => {
 
 export default function HeroSection() {
   return (
-    <section className="relative overflow-visible page-shell">
+    <section className="relative overflow-visible w-full px-0 py-0 -mt-14 md:-mt-22">
       {/* Mobile: Two-row flowing card carousel */}
       <div className="lg:hidden">
-        <div className="relative space-y-5 pt-4">
+        <div className="relative space-y-3 p-0 m-0">
           {/* Brand Logo - Premium */}
-          <div className="flex justify-center animate-fadeIn">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-sky-400 via-cyan-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-sky-500/25">
-                <BrandLogo className="w-4.5 h-4.5 text-white" />
-              </div>
-              <span className="text-2xl font-black tracking-tight bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 bg-clip-text text-transparent">
-                MIYOMINT
-              </span>
-            </div>
+          <div className="flex justify-center animate-fadeIn p-0 m-0">
+            <img
+              src="/miyomint-logo.png"
+              alt="Miyomint Lead Generation"
+              className="h-72 w-auto drop-shadow-lg object-contain -mb-8"
+              loading="lazy"
+            />
           </div>
 
           {/* Hero text - Premium styling */}
@@ -331,16 +315,16 @@ export default function HeroSection() {
       </div>
 
       {/* Desktop: Side by side layout */}
-      <div className="hidden lg:grid relative z-10 grid-cols-2 gap-12 items-center max-w-6xl mx-auto px-6 xl:px-8 py-10">
-        <div className="space-y-6 animate-fadeIn">
+      <div className="hidden lg:grid relative z-10 grid-cols-2 gap-12 items-center max-w-6xl mx-auto px-2 xl:px-4 py-3">
+        <div className="space-y-6 animate-fadeIn lg:-ml-18">
           {/* Brand Logo - Premium with icon */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 via-cyan-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-sky-500/25">
-              <BrandLogo className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-3xl font-black tracking-tight bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 bg-clip-text text-transparent">
-              MIYOMINT
-            </span>
+          <div className="flex justify-start p-0 m-0 lg:-translate-x-12">
+            <img
+              src="/miyomint-logo.png"
+              alt="Miyomint Lead Generation"
+              className="h-96 w-auto drop-shadow-lg object-contain -mb-12"
+              loading="lazy"
+            />
           </div>
 
           <h1 className="text-5xl xl:text-6xl font-extrabold leading-tight tracking-tight">
