@@ -121,6 +121,13 @@ const ipBanCache = new Map();
 const IP_BAN_REASON = 'Exceeded admin login attempts';
 const regionNameFormatter = new Intl.DisplayNames(['en'], { type: 'region' });
 const mfaAttempts = new Map(); // key: ip:userId -> { count, lockoutUntil }
+const authLog = (stage, meta = {}) => {
+  try {
+    console.warn('[auth]', stage, JSON.stringify(meta));
+  } catch {
+    console.warn('[auth]', stage, meta);
+  }
+};
 
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
@@ -619,12 +626,15 @@ router.post('/login', async (req, res) => {
     let { username, password } = req.body;
     
     username = sanitizeInput(username);
+    authLog('login_start', { username, ip: clientIP });
     
     if (!username || !password) {
+      authLog('login_missing_fields', { username, ip: clientIP });
       return res.status(400).json({ error: 'Username and password are required' });
     }
     
     if (username.length > 50 || password.length > 100) {
+      authLog('login_invalid_lengths', { username, ip: clientIP });
       return res.status(400).json({ error: 'Invalid credentials' });
     }
     
@@ -665,6 +675,7 @@ router.post('/login', async (req, res) => {
     }
     
     if (!user) {
+      authLog('login_user_not_found', { username, ip: clientIP });
       const bannedNow = await recordFailedAttempt(clientIP);
       await logActivity('login_failed', 'admin', null, null, req, { username, reason: 'user_not_found' });
       if (bannedNow) {
@@ -678,6 +689,7 @@ router.post('/login', async (req, res) => {
     const isValid = await bcrypt.compare(password, user.passwordHash);
     
     if (!isValid) {
+      authLog('login_wrong_password', { username, ip: clientIP });
       const bannedNow = await recordFailedAttempt(clientIP);
       await logActivity('login_failed', 'admin', user.id, null, req, { username, reason: 'wrong_password' });
       if (bannedNow) {
@@ -694,18 +706,22 @@ router.post('/login', async (req, res) => {
     if (mfaEnabled) {
       const otp = (req.body?.otp || '').toString().trim();
       if (!otp) {
+        authLog('login_mfa_missing', { username, ip: clientIP });
         return res.status(401).json({ error: 'MFA code required', requiresMfa: true });
       }
       const mfaAttempt = recordMfaAttempt(user.id, clientIP);
       if (mfaAttempt.lockoutUntil && Date.now() < mfaAttempt.lockoutUntil) {
+        authLog('login_mfa_locked', { username, ip: clientIP });
         return res.status(429).json({ error: 'Too many MFA attempts. Try again later.', requiresMfa: true });
       }
       try {
         if (!user.mfaSecret || !verifyTotp(user.mfaSecret, otp)) {
+          authLog('login_mfa_invalid', { username, ip: clientIP });
           return res.status(401).json({ error: 'Invalid MFA code', requiresMfa: true });
         }
       } catch (e) {
         console.error('MFA verify exception:', e?.message || e);
+        authLog('login_mfa_exception', { username, ip: clientIP, error: e?.message });
         return res.status(401).json({ error: 'MFA validation failed', requiresMfa: true });
       }
       resetMfaAttempts(user.id, clientIP);
@@ -749,6 +765,7 @@ router.post('/login', async (req, res) => {
       .where(eq(adminUsers.id, user.id));
     
     await logActivity('login_success', 'admin', user.id, sessionUser, req, {});
+    authLog('login_success', { username, ip: clientIP, mfaEnabled });
     
     res.cookie('adminSession', sessionId, {
       httpOnly: true,
@@ -766,6 +783,7 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error.message);
+    authLog('login_exception', { error: error?.message });
     res.status(500).json({ error: 'Authentication failed' });
   }
 });
