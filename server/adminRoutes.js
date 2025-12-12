@@ -142,6 +142,7 @@ function base32Encode(buffer) {
 }
 
 function base32Decode(input) {
+  if (!input || typeof input !== 'string') return Buffer.alloc(0);
   const sanitized = input.replace(/=+$/, '').toUpperCase();
   let bits = '';
   for (const char of sanitized) {
@@ -689,7 +690,7 @@ router.post('/login', async (req, res) => {
     
     clearFailedAttempts(clientIP);
 
-    const mfaEnabled = Boolean(user.mfaEnabled);
+    const mfaEnabled = Boolean(user.mfaEnabled && user.mfaSecret);
     if (mfaEnabled) {
       const otp = (req.body?.otp || '').toString().trim();
       if (!otp) {
@@ -699,8 +700,13 @@ router.post('/login', async (req, res) => {
       if (mfaAttempt.lockoutUntil && Date.now() < mfaAttempt.lockoutUntil) {
         return res.status(429).json({ error: 'Too many MFA attempts. Try again later.', requiresMfa: true });
       }
-      if (!user.mfaSecret || !verifyTotp(user.mfaSecret, otp)) {
-        return res.status(401).json({ error: 'Invalid MFA code', requiresMfa: true });
+      try {
+        if (!user.mfaSecret || !verifyTotp(user.mfaSecret, otp)) {
+          return res.status(401).json({ error: 'Invalid MFA code', requiresMfa: true });
+        }
+      } catch (e) {
+        console.error('MFA verify exception:', e?.message || e);
+        return res.status(401).json({ error: 'MFA validation failed', requiresMfa: true });
       }
       resetMfaAttempts(user.id, clientIP);
     }
