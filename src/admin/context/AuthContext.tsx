@@ -5,6 +5,7 @@ interface AdminUser {
   id: number;
   username: string;
   role: string;
+  mfaEnabled?: boolean;
 }
 
 interface AuthContextType {
