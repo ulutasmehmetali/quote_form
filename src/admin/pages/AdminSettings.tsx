@@ -17,6 +17,11 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showPasswords, setShowPasswords] = useState(false);
+  const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [mfaSecret, setMfaSecret] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [mfaMessage, setMfaMessage] = useState<{ type: 'info' | 'error' | 'success'; text: string } | null>(null);
+  const [mfaLoading, setMfaLoading] = useState(false);
   const [sessions, setSessions] = useState<Array<{ sessionId: string; createdAt: number; lastActivity: number; ipAddress: string; userAgent?: string; current: boolean }>>([]);
   const [sessionLoading, setSessionLoading] = useState(false);
 
@@ -96,8 +101,105 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
     }
   };
 
+  const loadMfaStatus = async () => {
+    try {
+      const res = await fetch(apiUrl('/api/admin/mfa/status'), {
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMfaEnabled(Boolean(data.enabled));
+      } else {
+        setMfaEnabled(false);
+      }
+    } catch {
+      setMfaEnabled(false);
+    }
+  };
+
+  const startMfaEnroll = async () => {
+    setMfaLoading(true);
+    setMfaMessage(null);
+    try {
+      const res = await fetch(apiUrl('/api/admin/mfa/enroll'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMfaSecret(data.secret);
+        setMfaEnabled(false);
+        setMfaMessage({ type: 'info', text: 'Scan or enter the secret in your authenticator app, then enter a 6-digit code to verify.' });
+      } else {
+        setMfaMessage({ type: 'error', text: data.error || 'Could not start MFA enrollment.' });
+      }
+    } catch {
+      setMfaMessage({ type: 'error', text: 'Could not start MFA enrollment.' });
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const verifyMfa = async () => {
+    if (otpCode.trim().length !== 6) {
+      setMfaMessage({ type: 'error', text: 'Enter a 6-digit code from your authenticator app.' });
+      return;
+    }
+    setMfaLoading(true);
+    setMfaMessage(null);
+    try {
+      const res = await fetch(apiUrl('/api/admin/mfa/verify'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        credentials: 'include',
+        body: JSON.stringify({ otp: otpCode }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMfaEnabled(true);
+        setMfaSecret('');
+        setOtpCode('');
+        setMfaMessage({ type: 'success', text: 'MFA enabled successfully.' });
+      } else {
+        setMfaMessage({ type: 'error', text: data.error || 'Verification failed.' });
+      }
+    } catch {
+      setMfaMessage({ type: 'error', text: 'Verification failed.' });
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const disableMfa = async () => {
+    setMfaLoading(true);
+    setMfaMessage(null);
+    try {
+      const res = await fetch(apiUrl('/api/admin/mfa/disable'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMfaEnabled(false);
+        setMfaSecret('');
+        setOtpCode('');
+        setMfaMessage({ type: 'success', text: 'MFA disabled.' });
+      } else {
+        setMfaMessage({ type: 'error', text: data.error || 'Failed to disable MFA.' });
+      }
+    } catch {
+      setMfaMessage({ type: 'error', text: 'Failed to disable MFA.' });
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadSessions();
+    loadMfaStatus();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -295,43 +397,119 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h4 className="font-semibold text-white flex items-center gap-2">Security</h4>
-                <p className="text-xs text-slate-400">Active sessions only. MFA is not used.</p>
+                <p className="text-xs text-slate-400">Multi-factor auth (TOTP) and active sessions</p>
               </div>
-              <button onClick={loadSessions} className="text-xs px-3 py-1 rounded-lg bg-slate-700 text-slate-200 border border-white/10 hover:bg-slate-600">
-                Refresh
-              </button>
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${mfaEnabled ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-700/60 text-slate-200 border border-white/10'}`}>
+                {mfaEnabled ? 'MFA Enabled' : 'MFA Off'}
+              </span>
             </div>
 
-            {sessionLoading ? (
-              <div className="text-slate-500 text-sm">Loading sessions...</div>
-            ) : sessions.length === 0 ? (
-              <div className="text-slate-500 text-sm">No sessions found.</div>
-            ) : (
-              <div className="space-y-2">
-                {sessions.map((s) => (
-                  <div key={s.sessionId} className="rounded-lg border border-white/10 bg-slate-800/70 p-3 text-xs text-slate-200 flex items-center justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded-full ${s.current ? 'bg-emerald-500/20 text-emerald-200' : 'bg-slate-700 text-slate-200'}`}>
-                          {s.current ? 'Current' : 'Active'}
-                        </span>
-                        <span className="text-slate-400">IP {s.ipAddress || 'unknown'}</span>
-                      </div>
-                      <div className="text-slate-400 truncate max-w-xs">{s.userAgent || 'n/a'}</div>
-                      <div className="text-slate-500">Last activity: {new Date(s.lastActivity).toLocaleString()}</div>
-                    </div>
-                    {!s.current && (
-                      <button
-                        onClick={() => revokeSession(s.sessionId)}
-                        className="text-red-300 hover:text-red-200 text-xs font-semibold"
-                      >
-                        Revoke
-                      </button>
-                    )}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="bg-slate-900/50 border border-white/5 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-300 font-semibold">MFA (TOTP)</p>
+                    <p className="text-xs text-slate-500">{mfaEnabled ? 'MFA is active for this account.' : 'Generate a secret, scan it, then verify with a 6-digit code.'}</p>
                   </div>
-                ))}
+                  <button
+                    onClick={disableMfa}
+                    disabled={!mfaEnabled || mfaLoading}
+                    className="text-xs px-3 py-1 rounded-lg bg-red-500/15 text-red-200 border border-red-500/30 hover:bg-red-500/25 disabled:opacity-50"
+                  >
+                    Disable
+                  </button>
+                </div>
+
+                {mfaMessage && (
+                  <div className={`p-3 rounded-lg text-xs ${mfaMessage.type === 'error' ? 'bg-red-500/10 text-red-300 border border-red-500/30' : mfaMessage.type === 'success' ? 'bg-emerald-500/10 text-emerald-200 border border-emerald-500/30' : 'bg-sky-500/10 text-sky-100 border border-sky-500/30'}`}>
+                    {mfaMessage.text}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={startMfaEnroll}
+                    disabled={mfaLoading}
+                    className="px-4 py-2 rounded-lg bg-slate-700 text-slate-200 border border-white/10 hover:bg-slate-600 disabled:opacity-50 text-sm"
+                  >
+                    {mfaLoading ? 'Working...' : 'Generate Secret'}
+                  </button>
+                  {!mfaEnabled && (
+                    <button
+                      onClick={verifyMfa}
+                      disabled={mfaLoading || (!mfaSecret && otpCode.length !== 6)}
+                      className="px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-100 border border-emerald-500/40 hover:bg-emerald-500/30 disabled:opacity-50 text-sm"
+                    >
+                      Verify
+                    </button>
+                  )}
+                </div>
+
+                {mfaSecret && (
+                  <div className="bg-slate-800/80 border border-white/10 rounded-lg p-3 text-xs text-slate-200 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Secret</span>
+                    </div>
+                    <code className="block text-sm break-all">{mfaSecret}</code>
+                    <p className="text-[11px] text-slate-500">Scan or type this in Authy / Google Authenticator, then enter the 6-digit code below.</p>
+                  </div>
+                )}
+
+                {!mfaEnabled && (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-slate-300">Authentication Code</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                      placeholder="Enter 6-digit code"
+                      className="w-full px-4 py-2 rounded-lg bg-slate-800 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50 transition-all"
+                    />
+                  </div>
+                )}
               </div>
-            )}
+
+              <div className="bg-slate-900/50 border border-white/5 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm text-slate-300 font-semibold">Active Sessions</p>
+                  <button onClick={loadSessions} className="text-xs px-3 py-1 rounded-lg bg-slate-700 text-slate-200 border border-white/10 hover:bg-slate-600">
+                    Refresh
+                  </button>
+                </div>
+                {sessionLoading ? (
+                  <div className="text-slate-500 text-sm">Loading sessions...</div>
+                ) : sessions.length === 0 ? (
+                  <div className="text-slate-500 text-sm">No sessions found.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {sessions.map((s) => (
+                      <div key={s.sessionId} className="rounded-lg border border-white/10 bg-slate-800/70 p-3 text-xs text-slate-200 flex items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded-full ${s.current ? 'bg-emerald-500/20 text-emerald-200' : 'bg-slate-700 text-slate-200'}`}>
+                              {s.current ? 'Current' : 'Active'}
+                            </span>
+                            <span className="text-slate-400">IP {s.ipAddress || 'unknown'}</span>
+                          </div>
+                          <div className="text-slate-400 truncate max-w-xs">{s.userAgent || 'n/a'}</div>
+                          <div className="text-slate-500">Last activity: {new Date(s.lastActivity).toLocaleString()}</div>
+                        </div>
+                        {!s.current && (
+                          <button
+                            onClick={() => revokeSession(s.sessionId)}
+                            className="text-red-300 hover:text-red-200 text-xs font-semibold"
+                          >
+                            Revoke
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="bg-slate-800/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6">

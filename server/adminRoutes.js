@@ -122,6 +122,10 @@ const ipBanCache = new Map();
 const IP_BAN_REASON = 'Exceeded admin login attempts';
 const regionNameFormatter = new Intl.DisplayNames(['en'], { type: 'region' });
 const DEBUG_AUTH = process.env.DEBUG_AUTH === 'true';
+const mfaAttempts = new Map(); // key: userId:ip -> { count, lockoutUntil }
+const MAX_MFA_ATTEMPTS = 5;
+const MFA_LOCK_MS = 5 * 60 * 1000;
+let mfaSupported = true;
 let partnerColumnSupported = true;
 const authLog = (stage, meta = {}) => {
   try {
@@ -150,6 +154,124 @@ async function ensurePartnerColumnSupport() {
   return partnerColumnSupported;
 }
 
+async function ensureMfaColumnSupport() {
+  if (mfaSupported === false) return false;
+  try {
+    const result = await db.execute(sql`
+      SELECT COUNT(*) AS count
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'admin_users'
+        AND column_name IN ('mfa_secret', 'mfa_enabled')
+    `);
+    const columnCount = Number(result?.rows?.[0]?.count || 0);
+    const hasColumns = columnCount >= 2;
+    mfaSupported = hasColumns;
+  } catch (error) {
+    mfaSupported = false;
+    authLog('mfa_column_check_error', { error: error?.message });
+  }
+  return mfaSupported;
+}
+
+const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+function base32Encode(buffer) {
+  let bits = '';
+  let output = '';
+  buffer.forEach((byte) => {
+    bits += byte.toString(2).padStart(8, '0');
+    while (bits.length >= 5) {
+      const chunk = bits.slice(0, 5);
+      bits = bits.slice(5);
+      output += BASE32_ALPHABET[parseInt(chunk, 2)];
+    }
+  });
+  if (bits.length) {
+    output += BASE32_ALPHABET[parseInt(bits.padEnd(5, '0'), 2)];
+  }
+  return output;
+}
+
+function base32Decode(input) {
+  if (!input || typeof input !== 'string') return Buffer.alloc(0);
+  const sanitized = input.replace(/=+$/, '').toUpperCase();
+  let bits = '';
+  for (const char of sanitized) {
+    const idx = BASE32_ALPHABET.indexOf(char);
+    if (idx === -1) continue;
+    bits += idx.toString(2).padStart(5, '0');
+  }
+  const bytes = [];
+  for (let i = 0; i + 8 <= bits.length; i += 8) {
+    bytes.push(parseInt(bits.slice(i, i + 8), 2));
+  }
+  return Buffer.from(bytes);
+}
+
+function generateMfaSecret() {
+  return base32Encode(crypto.randomBytes(20));
+}
+
+function hotp(secret, counter) {
+  const key = base32Decode(secret);
+  const buf = Buffer.alloc(8);
+  buf.writeBigInt64BE(BigInt(counter));
+  const hmac = crypto.createHmac('sha1', key).update(buf).digest();
+  const offset = hmac[hmac.length - 1] & 0xf;
+  const code =
+    ((hmac[offset] & 0x7f) << 24) |
+    ((hmac[offset + 1] & 0xff) << 16) |
+    ((hmac[offset + 2] & 0xff) << 8) |
+    (hmac[offset + 3] & 0xff);
+  return (code % 1000000).toString().padStart(6, '0');
+}
+
+function totp(secret, timestamp = Date.now()) {
+  const step = 30;
+  const counter = Math.floor(timestamp / 1000 / step);
+  return hotp(secret, counter);
+}
+
+function verifyTotp(secret, token) {
+  const code = token?.toString().trim();
+  if (!code || code.length !== 6) return false;
+  const now = Date.now();
+  const windowMs = 30000;
+  const secrets = [0, -1, 1].map((offset) => totp(secret, now + offset * windowMs));
+  return secrets.includes(code);
+}
+
+function mfaKey(userId, ip) {
+  return `${userId || 'anon'}:${ip || 'unknown'}`;
+}
+
+function recordMfaAttempt(userId, ip) {
+  const key = mfaKey(userId, ip);
+  const entry = mfaAttempts.get(key) || { count: 0, lockoutUntil: 0 };
+  if (Date.now() < entry.lockoutUntil) return entry;
+  entry.count += 1;
+  if (entry.count >= MAX_MFA_ATTEMPTS) {
+    entry.lockoutUntil = Date.now() + MFA_LOCK_MS;
+  }
+  mfaAttempts.set(key, entry);
+  return entry;
+}
+
+function resetMfaAttempts(userId, ip) {
+  mfaAttempts.delete(mfaKey(userId, ip));
+}
+
+function updateSessionMfaFlag(userId, enabled) {
+  for (const [sid, session] of sessions.entries()) {
+    if (session.user.id === userId) {
+      session.user.mfaEnabled = enabled;
+      session.mfaEnabled = enabled;
+      sessions.set(sid, session);
+    }
+  }
+}
+
 async function fetchAdminUserSafe(username) {
   try {
     const selectFields = {
@@ -165,6 +287,10 @@ async function fetchAdminUserSafe(username) {
     if (await ensurePartnerColumnSupport()) {
       selectFields.partnerApiId = adminUsers.partnerApiId;
     }
+    if (await ensureMfaColumnSupport()) {
+      selectFields.mfaSecret = adminUsers.mfaSecret;
+      selectFields.mfaEnabled = adminUsers.mfaEnabled;
+    }
 
     const [user] = await db
       .select(selectFields)
@@ -174,11 +300,18 @@ async function fetchAdminUserSafe(username) {
     return {
       ...user,
       partnerApiId: user?.partnerApiId || null,
+      mfaSecret: user?.mfaSecret || null,
+      mfaEnabled: (user?.mfaEnabled && mfaSupported) || false,
     };
   } catch (error) {
     if (partnerColumnSupported && /partner_api_id/i.test(error?.message || '')) {
       partnerColumnSupported = false;
       authLog('login_partner_column_missing', { error: error?.message });
+      return fetchAdminUserSafe(username);
+    }
+    if (mfaSupported && /mfa_(secret|enabled)/i.test(error?.message || '')) {
+      mfaSupported = false;
+      authLog('login_mfa_column_missing', { error: error?.message });
       return fetchAdminUserSafe(username);
     }
     authLog('login_db_error', { error: error?.message });
@@ -609,6 +742,7 @@ router.post('/login', async (req, res) => {
     }
     
     await ensurePartnerColumnSupport();
+    await ensureMfaColumnSupport();
 
     let user = await fetchAdminUserSafe(username);
 
@@ -674,6 +808,35 @@ router.post('/login', async (req, res) => {
     
     clearFailedAttempts(clientIP);
 
+    const mfaEnabled = mfaSupported && user.mfaEnabled;
+    const otp = req.body?.otp;
+
+    if (mfaEnabled) {
+      const attempt = recordMfaAttempt(user.id, clientIP);
+      if (Date.now() < attempt.lockoutUntil) {
+        return res.status(429).json({
+          error: 'Too many MFA attempts. Please try again in a few minutes.',
+          requiresMfa: true,
+        });
+      }
+      if (!otp) {
+        authLog('login_mfa_required', { username, ip: clientIP });
+        return res.status(401).json({
+          error: 'Authentication code required',
+          requiresMfa: true,
+        });
+      }
+      if (!verifyTotp(user.mfaSecret, otp)) {
+        authLog('login_mfa_invalid', { username, ip: clientIP });
+        recordMfaAttempt(user.id, clientIP);
+        return res.status(401).json({
+          error: 'Invalid authentication code',
+          requiresMfa: true,
+        });
+      }
+      resetMfaAttempts(user.id, clientIP);
+    }
+
     let userSessionCount = 0;
     for (const [sid, session] of sessions.entries()) {
       if (session.user.id === user.id) {
@@ -693,6 +856,7 @@ router.post('/login', async (req, res) => {
       username: user.username,
       role: user.role,
       partnerApiId: user.partnerApiId || null,
+      mfaEnabled,
     };
 
     sessions.set(sessionId, {
@@ -1564,6 +1728,109 @@ router.post('/change-password', requireAuth, requireCSRF, async (req, res) => {
   } catch (error) {
     console.error('Change password error:', error.message);
     res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
+router.post('/mfa/enroll', requireAuth, requireCSRF, async (req, res) => {
+  try {
+    const supported = await ensureMfaColumnSupport();
+    if (!supported) {
+      return res.status(400).json({ error: 'MFA is not configured on the server. Add mfa_secret and mfa_enabled columns to admin_users.' });
+    }
+
+    const secret = generateMfaSecret();
+    await db.update(adminUsers)
+      .set({ mfaSecret: secret, mfaEnabled: false })
+      .where(eq(adminUsers.id, req.adminUser.id));
+
+    const otpAuthUrl = `otpauth://totp/MIYOMINT:${encodeURIComponent(req.adminUser.username)}?secret=${secret}&issuer=MIYOMINT`;
+    res.json({ secret, otpAuthUrl });
+  } catch (error) {
+    console.error('MFA enroll error:', error.message);
+    res.status(500).json({ error: 'Failed to start MFA enrollment' });
+  }
+});
+
+router.post('/mfa/verify', requireAuth, requireCSRF, async (req, res) => {
+  try {
+    const supported = await ensureMfaColumnSupport();
+    if (!supported) {
+      return res.status(400).json({ error: 'MFA is not configured on the server. Add mfa_secret and mfa_enabled columns to admin_users.' });
+    }
+
+    const code = (req.body?.otp || req.body?.code || '').toString().trim();
+    if (!code || code.length !== 6) {
+      return res.status(400).json({ error: 'Authentication code is required' });
+    }
+
+    const [user] = await db.select({
+      mfaSecret: adminUsers.mfaSecret,
+    }).from(adminUsers).where(eq(adminUsers.id, req.adminUser.id));
+
+    if (!user?.mfaSecret) {
+      return res.status(400).json({ error: 'Enroll MFA before verification' });
+    }
+
+    const attempt = recordMfaAttempt(req.adminUser.id, getClientIP(req));
+    if (Date.now() < attempt.lockoutUntil) {
+      return res.status(429).json({ error: 'Too many MFA attempts. Please try again later.' });
+    }
+
+    if (!verifyTotp(user.mfaSecret, code)) {
+      recordMfaAttempt(req.adminUser.id, getClientIP(req));
+      return res.status(401).json({ error: 'Invalid authentication code' });
+    }
+
+    resetMfaAttempts(req.adminUser.id, getClientIP(req));
+
+    await db.update(adminUsers)
+      .set({ mfaEnabled: true })
+      .where(eq(adminUsers.id, req.adminUser.id));
+
+    updateSessionMfaFlag(req.adminUser.id, true);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('MFA verify error:', error.message);
+    res.status(500).json({ error: 'Failed to verify MFA' });
+  }
+});
+
+router.post('/mfa/disable', requireAuth, requireCSRF, async (req, res) => {
+  try {
+    const supported = await ensureMfaColumnSupport();
+    if (!supported) {
+      updateSessionMfaFlag(req.adminUser.id, false);
+      return res.json({ success: true, supported: false });
+    }
+
+    await db.update(adminUsers)
+      .set({ mfaSecret: null, mfaEnabled: false })
+      .where(eq(adminUsers.id, req.adminUser.id));
+
+    resetMfaAttempts(req.adminUser.id, getClientIP(req));
+    updateSessionMfaFlag(req.adminUser.id, false);
+    res.json({ success: true, supported: true });
+  } catch (error) {
+    console.error('MFA disable error:', error.message);
+    res.status(500).json({ error: 'Failed to disable MFA' });
+  }
+});
+
+router.get('/mfa/status', requireAuth, async (req, res) => {
+  try {
+    const supported = await ensureMfaColumnSupport();
+    if (!supported) {
+      return res.json({ enabled: false, supported: false });
+    }
+
+    const [user] = await db.select({
+      enabled: adminUsers.mfaEnabled,
+    }).from(adminUsers).where(eq(adminUsers.id, req.adminUser.id));
+
+    res.json({ enabled: !!user?.enabled, supported: true });
+  } catch (error) {
+    console.error('MFA status error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch MFA status' });
   }
 });
 

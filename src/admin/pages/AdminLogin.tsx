@@ -9,21 +9,36 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
   const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [info, setInfo] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setInfo('');
 
-    const result = await login(username, password);
+    const result = await login(username, password, mfaRequired ? otp : undefined);
     
     if (result.success) {
       onLoginSuccess();
     } else {
-      setError(result.error || 'Invalid username or password');
+      if (result.requiresMfa) {
+        setMfaRequired(true);
+        setInfo('Please enter your authentication code.');
+        if (result.error && mfaRequired) {
+          setError(result.error);
+        } else {
+          setError('');
+        }
+      } else {
+        setError(result.error || 'Invalid username or password');
+      }
+      setMfaRequired(Boolean(result.requiresMfa));
     }
     
     setIsLoading(false);
@@ -53,12 +68,20 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {error && (
+            {error && !mfaRequired && (
               <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 flex items-center gap-3 text-red-400">
                 <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <span className="text-sm">{error}</span>
+              </div>
+            )}
+            {info && (
+              <div className="bg-sky-500/10 border border-sky-500/30 rounded-xl px-4 py-3 flex items-center gap-3 text-sky-200">
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
+                </svg>
+                <span className="text-sm">{info}</span>
               </div>
             )}
 
@@ -119,6 +142,33 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
                 </button>
               </div>
             </div>
+
+            {mfaRequired && (
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Authentication Code
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 11c.53 0 1.039-.211 1.414-.586A2 2 0 0014 9c0-.53-.211-1.039-.586-1.414A2 2 0 0012 7c-.53 0-1.039.211-1.414.586A2 2 0 0010 9c0 .53.211 1.039.586 1.414A2 2 0 0012 11z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 11v6m-6 0h12" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                    placeholder="Enter 6-digit code"
+                    className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-slate-700/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50 focus:ring-2 focus:ring-sky-500/20 transition-all"
+                    required
+                  />
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Check your authenticator app.</p>
+              </div>
+            )}
 
             <button
               type="submit"
