@@ -1738,7 +1738,7 @@ router.post('/mfa/enroll', requireAuth, requireCSRF, async (req, res) => {
     res.json({ secret, otpAuthUrl });
   } catch (error) {
     console.error('MFA enroll error:', error);
-    res.status(500).json({ error: 'Failed to start MFA enrollment' });
+    res.status(500).json({ error: 'Failed to start MFA enrollment', detail: error?.message || 'unknown' });
   }
 });
 
@@ -1781,8 +1781,8 @@ router.post('/mfa/verify', requireAuth, requireCSRF, async (req, res) => {
     updateSessionMfaFlag(req.adminUser.id, true);
     res.json({ success: true });
   } catch (error) {
-    console.error('MFA verify error:', error.message);
-    res.status(500).json({ error: 'Failed to verify MFA' });
+    console.error('MFA verify error:', error);
+    res.status(500).json({ error: 'Failed to verify MFA', detail: error?.message || 'unknown' });
   }
 });
 
