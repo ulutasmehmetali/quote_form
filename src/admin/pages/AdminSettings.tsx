@@ -290,7 +290,7 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
         </header>
       )}
 
-      <main className="max-w-3xl mx-auto px-6 py-8">
+      <main className="max-w-6xl mx-auto px-6 py-10">
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-white flex items-center gap-3">
             Settings
@@ -517,7 +517,7 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
             <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
               Admin Tools
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <button onClick={() => onNavigate('professionals')} className="p-4 rounded-xl bg-gradient-to-br from-sky-500/10 to-indigo-500/10 border border-sky-500/20 hover:border-sky-500/40 transition-all text-left group">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-sky-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">PR</div>
