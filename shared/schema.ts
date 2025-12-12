@@ -43,6 +43,8 @@ export const adminUsers = pgTable('admin_users', {
   partnerApiId: integer('partner_api_id'),
   lastLoginAt: timestamp('last_login_at'),
   lastLoginIp: varchar('last_login_ip', { length: 45 }),
+  mfaSecret: text('mfa_secret'),
+  mfaEnabled: boolean('mfa_enabled').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
