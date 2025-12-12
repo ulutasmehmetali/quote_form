@@ -121,6 +121,7 @@ const ipCountryCache = new Map();
 const ipBanCache = new Map();
 const IP_BAN_REASON = 'Exceeded admin login attempts';
 const regionNameFormatter = new Intl.DisplayNames(['en'], { type: 'region' });
+const DEBUG_AUTH = process.env.DEBUG_AUTH === 'true';
 const mfaAttempts = new Map(); // key: ip:userId -> { count, lockoutUntil }
 const authLog = (stage, meta = {}) => {
   try {
@@ -790,7 +791,11 @@ router.post('/login', async (req, res) => {
   } catch (error) {
     console.error('Login error:', error.message);
     authLog('login_exception', { error: error?.message, stack: error?.stack });
-    res.status(500).json({ error: 'Authentication failed' });
+    const payload = { error: 'Authentication failed' };
+    if (DEBUG_AUTH) {
+      payload.detail = error?.message || 'unknown';
+    }
+    res.status(500).json(payload);
   }
 });
 
