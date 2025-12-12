@@ -1737,7 +1737,7 @@ router.post('/mfa/enroll', requireAuth, requireCSRF, async (req, res) => {
     const otpAuthUrl = `otpauth://totp/MIYOMINT:${encodeURIComponent(req.adminUser.username)}?secret=${secret}&issuer=MIYOMINT`;
     res.json({ secret, otpAuthUrl });
   } catch (error) {
-    console.error('MFA enroll error:', error.message);
+    console.error('MFA enroll error:', error);
     res.status(500).json({ error: 'Failed to start MFA enrollment' });
   }
 });
