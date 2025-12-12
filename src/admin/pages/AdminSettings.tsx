@@ -25,6 +25,7 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
   const [mfaQr, setMfaQr] = useState<string | null>(null);
   const [sessions, setSessions] = useState<Array<{ sessionId: string; createdAt: number; lastActivity: number; ipAddress: string; userAgent?: string; current: boolean }>>([]);
   const [sessionLoading, setSessionLoading] = useState(false);
+  const [mfaStatusLoading, setMfaStatusLoading] = useState(false);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,6 +105,29 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
 
   useEffect(() => {
     loadSessions();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadMfaStatus = async () => {
+    setMfaStatusLoading(true);
+    try {
+      const res = await fetch(apiUrl('/api/admin/mfa/status'), {
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMfaEnabled(Boolean(data.enabled));
+      }
+    } catch {
+      // ignore
+    } finally {
+      setMfaStatusLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadMfaStatus();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -379,30 +403,30 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
           </div>
 
           <div className="bg-slate-800/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h4 className="font-semibold text-white flex items-center gap-2">Security</h4>
-                <p className="text-xs text-slate-400">Multi-factor auth (TOTP) and active sessions</p>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${mfaEnabled ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-700/60 text-slate-200 border border-white/10'}`}>
-                {mfaEnabled ? 'MFA Enabled' : 'MFA Off'}
-              </span>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="bg-slate-900/50 border border-white/5 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm text-slate-300 font-semibold">MFA (TOTP)</p>
-                  {mfaEnabled ? (
-                    <button onClick={disableMfa} className="text-xs px-3 py-1 rounded-lg bg-red-500/20 text-red-200 border border-red-500/40 hover:bg-red-500/30">
-                      Disable
-                    </button>
-                  ) : (
-                    <button onClick={enrollMfa} className="text-xs px-3 py-1 rounded-lg bg-sky-500/20 text-sky-200 border border-sky-500/40 hover:bg-sky-500/30">
-                      Generate Secret
-                    </button>
-                  )}
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h4 className="font-semibold text-white flex items-center gap-2">Security</h4>
+                  <p className="text-xs text-slate-400">Multi-factor auth (TOTP) and active sessions</p>
                 </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${mfaEnabled ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-700/60 text-slate-200 border border-white/10'}`}>
+                  {mfaEnabled ? 'MFA Enabled' : 'MFA Off'}
+                </span>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="bg-slate-900/50 border border-white/5 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm text-slate-300 font-semibold">MFA (TOTP)</p>
+                    {mfaEnabled ? (
+                      <button onClick={disableMfa} className="text-xs px-3 py-1 rounded-lg bg-red-500/20 text-red-200 border border-red-500/40 hover:bg-red-500/30">
+                        Disable
+                      </button>
+                    ) : (
+                      <button onClick={enrollMfa} className="text-xs px-3 py-1 rounded-lg bg-sky-500/20 text-sky-200 border border-sky-500/40 hover:bg-sky-500/30" disabled={mfaStatusLoading}>
+                        {mfaStatusLoading ? 'Loading...' : 'Generate Secret'}
+                      </button>
+                    )}
+                  </div>
                 {mfaSecret && (
                   <div className="space-y-3 text-sm">
                     {mfaQr && (

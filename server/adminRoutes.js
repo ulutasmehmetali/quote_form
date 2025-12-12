@@ -121,6 +121,7 @@ const ipBanCache = new Map();
 const IP_BAN_REASON = 'Exceeded admin login attempts';
 const regionNameFormatter = new Intl.DisplayNames(['en'], { type: 'region' });
 const mfaStore = new Map(); // userId -> { secret: string, enabled: boolean }
+const mfaAttempts = new Map(); // key: ip:userId -> { count, lockoutUntil }
 
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
@@ -187,6 +188,26 @@ function verifyTotp(secret, token) {
   const windowMs = 30000;
   const secrets = [0, -1, 1].map((offset) => totp(secret, now + offset * windowMs));
   return secrets.includes(code);
+}
+
+function mfaKey(userId, ip) {
+  return `${userId || 'anon'}:${ip || 'unknown'}`;
+}
+
+function recordMfaAttempt(userId, ip) {
+  const key = mfaKey(userId, ip);
+  const entry = mfaAttempts.get(key) || { count: 0, lockoutUntil: 0 };
+  if (Date.now() < entry.lockoutUntil) return entry;
+  entry.count += 1;
+  if (entry.count >= 5) {
+    entry.lockoutUntil = Date.now() + 5 * 60 * 1000; // 5 minutes
+  }
+  mfaAttempts.set(key, entry);
+  return entry;
+}
+
+function resetMfaAttempts(userId, ip) {
+  mfaAttempts.delete(mfaKey(userId, ip));
 }
 
 function formatRegionName(code) {
@@ -671,9 +692,14 @@ router.post('/login', async (req, res) => {
       if (!otp) {
         return res.status(401).json({ error: 'MFA code required', requiresMfa: true });
       }
+      const mfaAttempt = recordMfaAttempt(user.id, clientIP);
+      if (mfaAttempt.lockoutUntil && Date.now() < mfaAttempt.lockoutUntil) {
+        return res.status(429).json({ error: 'Too many MFA attempts. Try again later.', requiresMfa: true });
+      }
       if (!verifyTotp(mfaState.secret, otp)) {
         return res.status(401).json({ error: 'Invalid MFA code', requiresMfa: true });
       }
+      resetMfaAttempts(user.id, clientIP);
     }
     
     let userSessionCount = 0;
@@ -1576,16 +1602,26 @@ router.post('/mfa/verify', requireAuth, requireCSRF, (req, res) => {
   if (!record) {
     return res.status(400).json({ error: 'Enroll MFA before verifying' });
   }
+  const attempt = recordMfaAttempt(req.adminUser.id, getClientIP(req));
+  if (attempt.lockoutUntil && Date.now() < attempt.lockoutUntil) {
+    return res.status(429).json({ error: 'Too many MFA attempts. Try again later.' });
+  }
   if (!verifyTotp(record.secret, code)) {
     return res.status(401).json({ error: 'Invalid code' });
   }
   mfaStore.set(req.adminUser.id, { ...record, enabled: true });
+  resetMfaAttempts(req.adminUser.id, getClientIP(req));
   res.json({ success: true });
 });
 
 router.post('/mfa/disable', requireAuth, requireCSRF, (req, res) => {
   mfaStore.delete(req.adminUser.id);
   res.json({ success: true });
+});
+
+router.get('/mfa/status', requireAuth, (req, res) => {
+  const record = mfaStore.get(req.adminUser.id);
+  res.json({ enabled: Boolean(record?.enabled) });
 });
 
 router.get('/sessions', requireAuth, (req, res) => {

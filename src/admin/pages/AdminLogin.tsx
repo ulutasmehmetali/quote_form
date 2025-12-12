@@ -14,18 +14,25 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [mfaRequired, setMfaRequired] = useState(false);
+  const [info, setInfo] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setInfo('');
 
     const result = await login(username, password, mfaRequired ? otp : undefined);
     
     if (result.success) {
       onLoginSuccess();
     } else {
-      setError(result.error || 'Invalid username or password');
+      if (result.requiresMfa) {
+        setMfaRequired(true);
+        setInfo('Please enter your authentication code.');
+      } else {
+        setError(result.error || 'Invalid username or password');
+      }
       setMfaRequired(Boolean(result.requiresMfa));
     }
     
@@ -56,12 +63,20 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {error && (
+            {error && !mfaRequired && (
               <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 flex items-center gap-3 text-red-400">
                 <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <span className="text-sm">{error}</span>
+              </div>
+            )}
+            {info && (
+              <div className="bg-sky-500/10 border border-sky-500/30 rounded-xl px-4 py-3 flex items-center gap-3 text-sky-200">
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
+                </svg>
+                <span className="text-sm">{info}</span>
               </div>
             )}
 
