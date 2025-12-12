@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, varchar, integer, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, timestamp, varchar, integer, jsonb, boolean } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const submissions = pgTable('submissions', {
@@ -44,7 +44,7 @@ export const adminUsers = pgTable('admin_users', {
   lastLoginAt: timestamp('last_login_at'),
   lastLoginIp: varchar('last_login_ip', { length: 45 }),
   mfaSecret: text('mfa_secret'),
-  mfaEnabled: integer('mfa_enabled').default(0),
+  mfaEnabled: boolean('mfa_enabled').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

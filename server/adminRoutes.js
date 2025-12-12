@@ -1598,7 +1598,7 @@ router.post('/mfa/enroll', requireAuth, requireCSRF, (req, res) => {
   const secret = generateMfaSecret();
   const otpauth = `otpauth://totp/MIYOMINT:${encodeURIComponent(req.adminUser.username)}?secret=${secret}&issuer=MIYOMINT`;
   db.update(adminUsers)
-    .set({ mfaSecret: secret, mfaEnabled: 0 })
+    .set({ mfaSecret: secret, mfaEnabled: false })
     .where(eq(adminUsers.id, req.adminUser.id))
     .then(() => res.json({ secret, otpauth }))
     .catch((error) => {
@@ -1630,7 +1630,7 @@ router.post('/mfa/verify', requireAuth, requireCSRF, (req, res) => {
       }
       await db
         .update(adminUsers)
-        .set({ mfaEnabled: 1 })
+        .set({ mfaEnabled: true })
         .where(eq(adminUsers.id, req.adminUser.id));
       if (req.sessionId) {
         const session = sessions.get(req.sessionId);
@@ -1651,7 +1651,7 @@ router.post('/mfa/verify', requireAuth, requireCSRF, (req, res) => {
 
 router.post('/mfa/disable', requireAuth, requireCSRF, (req, res) => {
   db.update(adminUsers)
-    .set({ mfaSecret: null, mfaEnabled: 0 })
+    .set({ mfaSecret: null, mfaEnabled: false })
     .where(eq(adminUsers.id, req.adminUser.id))
     .then(() => {
       if (req.sessionId) {
