@@ -669,8 +669,27 @@ router.post('/login', async (req, res) => {
     `);
     const hasPartnerColumn = !!columnCheck.rows?.length;
 
-    const user = await fetchAdminUserSafe(username);
-    
+    let user = await fetchAdminUserSafe(username);
+
+    // Bootstrap admin if missing or missing password hash
+    const bootstrapUser = process.env.ADMIN_BOOTSTRAP_USER || 'admin';
+    const bootstrapPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD;
+    if (!user && bootstrapPassword && username === bootstrapUser) {
+      const hash = await bcrypt.hash(bootstrapPassword, 12);
+      const [created] = await db.insert(adminUsers).values({
+        username: bootstrapUser,
+        passwordHash: hash,
+        role: 'admin',
+      }).returning();
+      user = { ...created, mfaSecret: null, mfaEnabled: false };
+      authLog('login_bootstrap_created', { username, ip: clientIP });
+    } else if (user && !user.passwordHash && bootstrapPassword && username === bootstrapUser) {
+      const hash = await bcrypt.hash(bootstrapPassword, 12);
+      await db.update(adminUsers).set({ passwordHash: hash }).where(eq(adminUsers.id, user.id));
+      user.passwordHash = hash;
+      authLog('login_bootstrap_reset', { username, ip: clientIP });
+    }
+
     if (!user) {
       authLog('login_user_not_found', { username, ip: clientIP });
       const bannedNow = await recordFailedAttempt(clientIP);
