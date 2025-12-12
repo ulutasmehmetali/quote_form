@@ -50,6 +50,15 @@ export const adminUsers = pgTable('admin_users', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const adminDevices = pgTable('admin_devices', {
+  id: serial('id').primaryKey(),
+  adminId: integer('admin_id').notNull(),
+  fingerprint: varchar('fingerprint', { length: 255 }).notNull(),
+  deviceName: varchar('device_name', { length: 255 }).notNull(),
+  lastSeenAt: timestamp('last_seen_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 export const adminIpBlacklist = pgTable('admin_ip_blacklist', {
   id: serial('id').primaryKey(),
   ipAddress: varchar('ip_address', { length: 45 }).notNull().unique(),
