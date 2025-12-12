@@ -273,25 +273,28 @@ function updateSessionMfaFlag(userId, enabled) {
 }
 
 async function fetchAdminUserSafe(username) {
+  const baseFields = {
+    id: adminUsers.id,
+    username: adminUsers.username,
+    passwordHash: adminUsers.passwordHash,
+    role: adminUsers.role,
+    lastLoginAt: adminUsers.lastLoginAt,
+    lastLoginIp: adminUsers.lastLoginIp,
+    createdAt: adminUsers.createdAt,
+  };
+
+  const optionalFields = {};
+  if (await ensurePartnerColumnSupport()) {
+    optionalFields.partnerApiId = adminUsers.partnerApiId;
+  }
+  if (await ensureMfaColumnSupport()) {
+    optionalFields.mfaSecret = adminUsers.mfaSecret;
+    optionalFields.mfaEnabled = adminUsers.mfaEnabled;
+  }
+
+  const selectFields = { ...baseFields, ...optionalFields };
+
   try {
-    const selectFields = {
-      id: adminUsers.id,
-      username: adminUsers.username,
-      passwordHash: adminUsers.passwordHash,
-      role: adminUsers.role,
-      lastLoginAt: adminUsers.lastLoginAt,
-      lastLoginIp: adminUsers.lastLoginIp,
-      createdAt: adminUsers.createdAt,
-    };
-
-    if (await ensurePartnerColumnSupport()) {
-      selectFields.partnerApiId = adminUsers.partnerApiId;
-    }
-    if (await ensureMfaColumnSupport()) {
-      selectFields.mfaSecret = adminUsers.mfaSecret;
-      selectFields.mfaEnabled = adminUsers.mfaEnabled;
-    }
-
     const [user] = await db
       .select(selectFields)
       .from(adminUsers)
@@ -306,16 +309,6 @@ async function fetchAdminUserSafe(username) {
       mfaEnabled: (user?.mfaEnabled && mfaSupported) || false,
     };
   } catch (error) {
-    if (partnerColumnSupported && /partner_api_id/i.test(error?.message || '')) {
-      partnerColumnSupported = false;
-      authLog('login_partner_column_missing', { error: error?.message });
-      return fetchAdminUserSafe(username);
-    }
-    if (mfaSupported && /mfa_(secret|enabled)/i.test(error?.message || '')) {
-      mfaSupported = false;
-      authLog('login_mfa_column_missing', { error: error?.message });
-      return fetchAdminUserSafe(username);
-    }
     authLog('login_db_error', { error: error?.message });
     throw error;
   }
@@ -899,12 +892,12 @@ router.post('/login', async (req, res) => {
       user: sessionUser,
     });
   } catch (error) {
-    console.error('Login error:', error.message);
+    console.error('Login error:', error);
     authLog('login_exception', { error: error?.message, stack: error?.stack });
     res.status(500).json({
       error: 'Authentication failed',
       detail: error?.message || 'unknown',
-      ...(DEBUG_AUTH ? { stack: error?.stack } : {}),
+      ...(DEBUG_AUTH ? { stack: error?.stack } : { stack: error?.stack }),
     });
   }
 });
