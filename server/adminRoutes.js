@@ -112,6 +112,7 @@ const router = express.Router();
 const sessions = new Map();
 // Admin session süresi (30 dakika)
 const SESSION_DURATION = 30 * 60 * 1000;
+const SESSION_DURATION_MS = SESSION_DURATION;
 const MAX_SESSIONS_PER_USER = 3;
 const failedAttempts = new Map();
 const LOCKOUT_DURATION = 15 * 60 * 1000;
@@ -497,6 +498,7 @@ async function requireAuth(req, res, next) {
   const session = sessions.get(sessionId);
   
   if (!session || Date.now() > session.expiresAt) {
+    authLog('auth_fail_no_session', { path: req.path, sid: sessionId, hasSession: !!session });
     if (session) sessions.delete(sessionId);
     res.clearCookie('adminSession');
     return res.status(401).json({ error: 'Session expired or invalid' });
