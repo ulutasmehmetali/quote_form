@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toDataURL } from 'qrcode';
 import { useAuth } from '../context/AuthContext';
 import { apiUrl } from '../../lib/api';
 
@@ -21,6 +22,7 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
   const [mfaUri, setMfaUri] = useState<string | null>(null);
   const [mfaCode, setMfaCode] = useState('');
   const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [mfaQr, setMfaQr] = useState<string | null>(null);
   const [sessions, setSessions] = useState<Array<{ sessionId: string; createdAt: number; lastActivity: number; ipAddress: string; userAgent?: string; current: boolean }>>([]);
   const [sessionLoading, setSessionLoading] = useState(false);
 
@@ -105,6 +107,22 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    const generateQr = async () => {
+      if (!mfaUri) {
+        setMfaQr(null);
+        return;
+      }
+      try {
+        const url = await toDataURL(mfaUri);
+        setMfaQr(url);
+      } catch {
+        setMfaQr(null);
+      }
+    };
+    generateQr();
+  }, [mfaUri]);
+
   const enrollMfa = async () => {
     try {
       const res = await fetch(apiUrl('/api/admin/mfa/enroll'), {
@@ -117,6 +135,7 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
         setMfaSecret(data.secret);
         setMfaUri(data.otpauth);
         setMfaEnabled(false);
+        setMfaQr(null);
         setMessage({ type: 'success', text: 'MFA secret generated. Scan QR or copy code, then verify.' });
       } else {
         setMessage({ type: 'error', text: data.error || 'Could not start MFA enrollment' });
@@ -386,6 +405,12 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
                 </div>
                 {mfaSecret && (
                   <div className="space-y-3 text-sm">
+                    {mfaQr && (
+                      <div className="flex flex-col items-start gap-2 bg-slate-800/60 rounded-lg p-3 border border-white/5">
+                        <p className="text-slate-400 text-xs">Scan with Google Authenticator / Authy</p>
+                        <img src={mfaQr} alt="MFA QR" className="w-36 h-36 rounded-md border border-white/10" />
+                      </div>
+                    )}
                     <div className="bg-slate-800/60 rounded-lg p-3 border border-white/5">
                       <p className="text-slate-400 text-xs mb-1">Secret</p>
                       <p className="text-white font-mono break-all">{mfaSecret}</p>
