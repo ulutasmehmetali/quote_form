@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, varchar, integer, jsonb, uuid, inet } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, timestamp, varchar, integer, jsonb, uuid, inet, boolean } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
