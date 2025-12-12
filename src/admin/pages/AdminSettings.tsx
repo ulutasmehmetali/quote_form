@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import QRCode from 'qrcode';
 import { useAuth } from '../context/AuthContext';
 import { apiUrl } from '../../lib/api';
 
@@ -22,6 +23,7 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
   const [otpCode, setOtpCode] = useState('');
   const [mfaMessage, setMfaMessage] = useState<{ type: 'info' | 'error' | 'success'; text: string } | null>(null);
   const [mfaLoading, setMfaLoading] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState('');
   const [sessions, setSessions] = useState<Array<{ sessionId: string; createdAt: number; lastActivity: number; ipAddress: string; userAgent?: string; current: boolean }>>([]);
   const [sessionLoading, setSessionLoading] = useState(false);
 
@@ -132,11 +134,23 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
         setMfaSecret(data.secret);
         setMfaEnabled(false);
         setMfaMessage({ type: 'info', text: 'Scan or enter the secret in your authenticator app, then enter a 6-digit code to verify.' });
+        if (data.otpAuthUrl) {
+          try {
+            const url = await QRCode.toDataURL(data.otpAuthUrl, { width: 200, margin: 1 });
+            setQrDataUrl(url);
+          } catch {
+            setQrDataUrl('');
+          }
+        } else {
+          setQrDataUrl('');
+        }
       } else {
         setMfaMessage({ type: 'error', text: data.error || 'Could not start MFA enrollment.' });
+        setQrDataUrl('');
       }
     } catch {
       setMfaMessage({ type: 'error', text: 'Could not start MFA enrollment.' });
+      setQrDataUrl('');
     } finally {
       setMfaLoading(false);
     }
@@ -161,6 +175,7 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
         setMfaEnabled(true);
         setMfaSecret('');
         setOtpCode('');
+        setQrDataUrl('');
         setMfaMessage({ type: 'success', text: 'MFA enabled successfully.' });
       } else {
         setMfaMessage({ type: 'error', text: data.error || 'Verification failed.' });
@@ -186,6 +201,7 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
         setMfaEnabled(false);
         setMfaSecret('');
         setOtpCode('');
+        setQrDataUrl('');
         setMfaMessage({ type: 'success', text: 'MFA disabled.' });
       } else {
         setMfaMessage({ type: 'error', text: data.error || 'Failed to disable MFA.' });
@@ -439,14 +455,26 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
                   )}
                 </div>
 
-                {mfaSecret && (
-                  <div className="bg-slate-800/80 border border-white/10 rounded-lg p-3 text-xs text-slate-200 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Secret</span>
+                {qrDataUrl ? (
+                  <div className="bg-slate-800/80 border border-white/10 rounded-lg p-3 text-xs text-slate-200 space-y-2">
+                    <p className="text-slate-400">Scan this QR in your authenticator app, then enter the 6-digit code.</p>
+                    <div className="flex justify-center">
+                      <img src={qrDataUrl} alt="MFA QR Code" className="w-40 h-40 bg-white p-2 rounded-lg" />
                     </div>
-                    <code className="block text-sm break-all">{mfaSecret}</code>
-                    <p className="text-[11px] text-slate-500">Scan or type this in Authy / Google Authenticator, then enter the 6-digit code below.</p>
+                    {mfaSecret && (
+                      <p className="text-[11px] text-slate-500 break-all">Secret: {mfaSecret}</p>
+                    )}
                   </div>
+                ) : (
+                  mfaSecret && (
+                    <div className="bg-slate-800/80 border border-white/10 rounded-lg p-3 text-xs text-slate-200 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Secret</span>
+                      </div>
+                      <code className="block text-sm break-all">{mfaSecret}</code>
+                      <p className="text-[11px] text-slate-500">Scan or type this in Authy / Google Authenticator, then enter the 6-digit code below.</p>
+                    </div>
+                  )
                 )}
 
                 {!mfaEnabled && (
