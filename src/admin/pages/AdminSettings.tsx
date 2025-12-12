@@ -17,7 +17,6 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showPasswords, setShowPasswords] = useState(false);
-  const mfaEnabled = false;
   const [sessions, setSessions] = useState<Array<{ sessionId: string; createdAt: number; lastActivity: number; ipAddress: string; userAgent?: string; current: boolean }>>([]);
   const [sessionLoading, setSessionLoading] = useState(false);
 
@@ -293,61 +292,46 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
           </div>
 
           <div className="bg-slate-800/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h4 className="font-semibold text-white flex items-center gap-2">Security</h4>
-                  <p className="text-xs text-slate-400">Multi-factor auth (TOTP) and active sessions</p>
-                </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${mfaEnabled ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-700/60 text-slate-200 border border-white/10'}`}>
-                  {mfaEnabled ? 'MFA Enabled' : 'MFA Off'}
-                </span>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h4 className="font-semibold text-white flex items-center gap-2">Security</h4>
+                <p className="text-xs text-slate-400">Active sessions only. MFA is not used.</p>
               </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="bg-slate-900/50 border border-white/5 rounded-xl p-4">
-                <p className="text-sm text-slate-300 font-semibold mb-2">MFA</p>
-                <p className="text-xs text-slate-500">MFA is currently disabled. We will re-enable with a fresh setup later.</p>
-              </div>
-
-              <div className="bg-slate-900/50 border border-white/5 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm text-slate-300 font-semibold">Active Sessions</p>
-                  <button onClick={loadSessions} className="text-xs px-3 py-1 rounded-lg bg-slate-700 text-slate-200 border border-white/10 hover:bg-slate-600">
-                    Refresh
-                  </button>
-                </div>
-                {sessionLoading ? (
-                  <div className="text-slate-500 text-sm">Loading sessions...</div>
-                ) : sessions.length === 0 ? (
-                  <div className="text-slate-500 text-sm">No sessions found.</div>
-                ) : (
-                  <div className="space-y-2">
-                    {sessions.map((s) => (
-                      <div key={s.sessionId} className="rounded-lg border border-white/10 bg-slate-800/70 p-3 text-xs text-slate-200 flex items-center justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className={`px-2 py-0.5 rounded-full ${s.current ? 'bg-emerald-500/20 text-emerald-200' : 'bg-slate-700 text-slate-200'}`}>
-                              {s.current ? 'Current' : 'Active'}
-                            </span>
-                            <span className="text-slate-400">IP {s.ipAddress || 'unknown'}</span>
-                          </div>
-                          <div className="text-slate-400 truncate max-w-xs">{s.userAgent || 'n/a'}</div>
-                          <div className="text-slate-500">Last activity: {new Date(s.lastActivity).toLocaleString()}</div>
-                        </div>
-                        {!s.current && (
-                          <button
-                            onClick={() => revokeSession(s.sessionId)}
-                            className="text-red-300 hover:text-red-200 text-xs font-semibold"
-                          >
-                            Revoke
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <button onClick={loadSessions} className="text-xs px-3 py-1 rounded-lg bg-slate-700 text-slate-200 border border-white/10 hover:bg-slate-600">
+                Refresh
+              </button>
             </div>
+
+            {sessionLoading ? (
+              <div className="text-slate-500 text-sm">Loading sessions...</div>
+            ) : sessions.length === 0 ? (
+              <div className="text-slate-500 text-sm">No sessions found.</div>
+            ) : (
+              <div className="space-y-2">
+                {sessions.map((s) => (
+                  <div key={s.sessionId} className="rounded-lg border border-white/10 bg-slate-800/70 p-3 text-xs text-slate-200 flex items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded-full ${s.current ? 'bg-emerald-500/20 text-emerald-200' : 'bg-slate-700 text-slate-200'}`}>
+                          {s.current ? 'Current' : 'Active'}
+                        </span>
+                        <span className="text-slate-400">IP {s.ipAddress || 'unknown'}</span>
+                      </div>
+                      <div className="text-slate-400 truncate max-w-xs">{s.userAgent || 'n/a'}</div>
+                      <div className="text-slate-500">Last activity: {new Date(s.lastActivity).toLocaleString()}</div>
+                    </div>
+                    {!s.current && (
+                      <button
+                        onClick={() => revokeSession(s.sessionId)}
+                        className="text-red-300 hover:text-red-200 text-xs font-semibold"
+                      >
+                        Revoke
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="bg-slate-800/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6">

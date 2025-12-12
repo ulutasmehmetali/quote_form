@@ -122,8 +122,7 @@ const ipBanCache = new Map();
 const IP_BAN_REASON = 'Exceeded admin login attempts';
 const regionNameFormatter = new Intl.DisplayNames(['en'], { type: 'region' });
 const DEBUG_AUTH = process.env.DEBUG_AUTH === 'true';
-const mfaAttempts = new Map(); // key: ip:userId -> { count, lockoutUntil }
-const mfaSupported = false; // MFA disabled for now
+let partnerColumnSupported = true;
 const authLog = (stage, meta = {}) => {
   try {
     console.warn('[auth]', stage, JSON.stringify(meta));
@@ -131,112 +130,60 @@ const authLog = (stage, meta = {}) => {
     console.warn('[auth]', stage, meta);
   }
 };
-
-const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+ 
+async function ensurePartnerColumnSupport() {
+  if (partnerColumnSupported === false) return false;
+  try {
+    const result = await db.execute(sql`
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'admin_users'
+        AND column_name = 'partner_api_id'
+      LIMIT 1
+    `);
+    partnerColumnSupported = !!result?.rows?.length;
+  } catch (error) {
+    partnerColumnSupported = false;
+    authLog('partner_column_check_error', { error: error?.message });
+  }
+  return partnerColumnSupported;
+}
 
 async function fetchAdminUserSafe(username) {
   try {
-    const [user] = await db.select({
+    const selectFields = {
       id: adminUsers.id,
       username: adminUsers.username,
       passwordHash: adminUsers.passwordHash,
       role: adminUsers.role,
-      partnerApiId: adminUsers.partnerApiId,
       lastLoginAt: adminUsers.lastLoginAt,
       lastLoginIp: adminUsers.lastLoginIp,
       createdAt: adminUsers.createdAt,
-    }).from(adminUsers).where(eq(adminUsers.username, username));
-    return { ...user, mfaSecret: null, mfaEnabled: false };
+    };
+
+    if (await ensurePartnerColumnSupport()) {
+      selectFields.partnerApiId = adminUsers.partnerApiId;
+    }
+
+    const [user] = await db
+      .select(selectFields)
+      .from(adminUsers)
+      .where(eq(adminUsers.username, username));
+
+    return {
+      ...user,
+      partnerApiId: user?.partnerApiId || null,
+    };
   } catch (error) {
+    if (partnerColumnSupported && /partner_api_id/i.test(error?.message || '')) {
+      partnerColumnSupported = false;
+      authLog('login_partner_column_missing', { error: error?.message });
+      return fetchAdminUserSafe(username);
+    }
     authLog('login_db_error', { error: error?.message });
     throw error;
   }
-}
-
-function base32Encode(buffer) {
-  let bits = '';
-  let output = '';
-  buffer.forEach((byte) => {
-    bits += byte.toString(2).padStart(8, '0');
-    while (bits.length >= 5) {
-      const chunk = bits.slice(0, 5);
-      bits = bits.slice(5);
-      output += BASE32_ALPHABET[parseInt(chunk, 2)];
-    }
-  });
-  if (bits.length) {
-    output += BASE32_ALPHABET[parseInt(bits.padEnd(5, '0'), 2)];
-  }
-  return output;
-}
-
-function base32Decode(input) {
-  if (!input || typeof input !== 'string') return Buffer.alloc(0);
-  const sanitized = input.replace(/=+$/, '').toUpperCase();
-  let bits = '';
-  for (const char of sanitized) {
-    const idx = BASE32_ALPHABET.indexOf(char);
-    if (idx === -1) continue;
-    bits += idx.toString(2).padStart(5, '0');
-  }
-  const bytes = [];
-  for (let i = 0; i + 8 <= bits.length; i += 8) {
-    bytes.push(parseInt(bits.slice(i, i + 8), 2));
-  }
-  return Buffer.from(bytes);
-}
-
-function generateMfaSecret() {
-  return base32Encode(crypto.randomBytes(20)); // RFC-compliant base32 secret
-}
-
-function hotp(secret, counter) {
-  const key = base32Decode(secret);
-  const buf = Buffer.alloc(8);
-  buf.writeBigInt64BE(BigInt(counter));
-  const hmac = crypto.createHmac('sha1', key).update(buf).digest();
-  const offset = hmac[hmac.length - 1] & 0xf;
-  const code =
-    ((hmac[offset] & 0x7f) << 24) |
-    ((hmac[offset + 1] & 0xff) << 16) |
-    ((hmac[offset + 2] & 0xff) << 8) |
-    (hmac[offset + 3] & 0xff);
-  return (code % 1000000).toString().padStart(6, '0');
-}
-
-function totp(secret, timestamp = Date.now()) {
-  const step = 30;
-  const counter = Math.floor(timestamp / 1000 / step);
-  return hotp(secret, counter);
-}
-
-function verifyTotp(secret, token) {
-  const code = token?.toString().trim();
-  if (!code || code.length !== 6) return false;
-  const now = Date.now();
-  const windowMs = 30000;
-  const secrets = [0, -1, 1].map((offset) => totp(secret, now + offset * windowMs));
-  return secrets.includes(code);
-}
-
-function mfaKey(userId, ip) {
-  return `${userId || 'anon'}:${ip || 'unknown'}`;
-}
-
-function recordMfaAttempt(userId, ip) {
-  const key = mfaKey(userId, ip);
-  const entry = mfaAttempts.get(key) || { count: 0, lockoutUntil: 0 };
-  if (Date.now() < entry.lockoutUntil) return entry;
-  entry.count += 1;
-  if (entry.count >= 5) {
-    entry.lockoutUntil = Date.now() + 5 * 60 * 1000; // 5 minutes
-  }
-  mfaAttempts.set(key, entry);
-  return entry;
-}
-
-function resetMfaAttempts(userId, ip) {
-  mfaAttempts.delete(mfaKey(userId, ip));
 }
 
 function formatRegionName(code) {
@@ -661,13 +608,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
     
-    const columnCheck = await db.execute(sql`
-      SELECT 1
-      FROM information_schema.columns
-      WHERE table_name = 'admin_users' AND column_name = 'partner_api_id'
-      LIMIT 1
-    `);
-    const hasPartnerColumn = !!columnCheck.rows?.length;
+    await ensurePartnerColumnSupport();
 
     let user = await fetchAdminUserSafe(username);
 
@@ -681,7 +622,7 @@ router.post('/login', async (req, res) => {
         passwordHash: hash,
         role: 'admin',
       }).returning();
-      user = { ...created, mfaSecret: null, mfaEnabled: false };
+      user = { ...created };
       authLog('login_bootstrap_created', { username, ip: clientIP });
     } else if (user && !user.passwordHash && bootstrapPassword && username === bootstrapUser) {
       const hash = await bcrypt.hash(bootstrapPassword, 12);
@@ -733,8 +674,6 @@ router.post('/login', async (req, res) => {
     
     clearFailedAttempts(clientIP);
 
-    const mfaEnabled = false; // MFA disabled
-    
     let userSessionCount = 0;
     for (const [sid, session] of sessions.entries()) {
       if (session.user.id === user.id) {
@@ -754,7 +693,6 @@ router.post('/login', async (req, res) => {
       username: user.username,
       role: user.role,
       partnerApiId: user.partnerApiId || null,
-      mfaEnabled: false,
     };
 
     sessions.set(sessionId, {
@@ -765,7 +703,6 @@ router.post('/login', async (req, res) => {
       ipAddress: clientIP,
       userAgent: req.headers['user-agent']?.substring(0, 500),
       csrfToken,
-      mfaEnabled,
     });
     
     await db.update(adminUsers)
@@ -773,7 +710,7 @@ router.post('/login', async (req, res) => {
       .where(eq(adminUsers.id, user.id));
     
     await logActivity('login_success', 'admin', user.id, sessionUser, req, {});
-    authLog('login_success', { username, ip: clientIP, mfaEnabled });
+    authLog('login_success', { username, ip: clientIP });
     
     res.cookie('adminSession', sessionId, {
       httpOnly: true,
@@ -1630,22 +1567,6 @@ router.post('/change-password', requireAuth, requireCSRF, async (req, res) => {
   }
 });
 
-router.post('/mfa/enroll', requireAuth, requireCSRF, (req, res) => {
-  res.status(400).json({ error: 'MFA is disabled' });
-});
-
-router.post('/mfa/verify', requireAuth, requireCSRF, (req, res) => {
-  res.status(400).json({ error: 'MFA is disabled' });
-});
-
-router.post('/mfa/disable', requireAuth, requireCSRF, (req, res) => {
-  res.json({ success: true });
-});
-
-router.get('/mfa/status', requireAuth, (req, res) => {
-  res.json({ enabled: false });
-});
-
 router.get('/sessions', requireAuth, (req, res) => {
   const results = [];
   for (const [id, session] of sessions.entries()) {
@@ -2112,20 +2033,34 @@ router.post('/webhooks/:id/test', requireAuth, requireRole('admin'), requireCSRF
 
 router.get('/admin-users', requireAuth, requireRole('admin'), async (req, res) => {
   try {
-    const result = await db.execute(sql`
-      SELECT 
-        au.id,
-        au.username,
-        au.role,
-        au.created_at,
-        au.last_login_at,
-        au.last_login_ip,
-        au.partner_api_id,
-        pa.name as partner_name
-      FROM admin_users au
-      LEFT JOIN partner_apis pa ON au.partner_api_id = pa.id
-      ORDER BY au.created_at DESC
-    `);
+    await ensurePartnerColumnSupport();
+
+    const result = partnerColumnSupported
+      ? await db.execute(sql`
+        SELECT 
+          au.id,
+          au.username,
+          au.role,
+          au.created_at,
+          au.last_login_at,
+          au.last_login_ip,
+          au.partner_api_id,
+          pa.name as partner_name
+        FROM admin_users au
+        LEFT JOIN partner_apis pa ON au.partner_api_id = pa.id
+        ORDER BY au.created_at DESC
+      `)
+      : await db.execute(sql`
+        SELECT 
+          id,
+          username,
+          role,
+          created_at,
+          last_login_at,
+          last_login_ip
+        FROM admin_users
+        ORDER BY created_at DESC
+      `);
 
     const users = (result.rows || []).map((row) => ({
       id: row.id,
@@ -2134,8 +2069,8 @@ router.get('/admin-users', requireAuth, requireRole('admin'), async (req, res) =
       createdAt: row.created_at,
       lastLoginAt: row.last_login_at,
       lastLoginIp: row.last_login_ip,
-      partnerApiId: row.partner_api_id,
-      partnerName: row.partner_name,
+      partnerApiId: partnerColumnSupported ? row.partner_api_id : null,
+      partnerName: partnerColumnSupported ? row.partner_name : null,
     }));
 
     res.json({ users });
@@ -2175,8 +2110,13 @@ router.post('/admin-users', requireAuth, requireRole('admin'), requireCSRF, asyn
       role = 'viewer';
     }
 
+    await ensurePartnerColumnSupport();
+
     let assignedPartnerId = null;
     if (role === 'partner_owner') {
+      if (!partnerColumnSupported) {
+        return res.status(400).json({ error: 'Partner assignment is not configured on this deployment.' });
+      }
       const parsedPartnerId = Number.parseInt(partnerApiId, 10);
       if (!Number.isFinite(parsedPartnerId) || parsedPartnerId < 1) {
         return res.status(400).json({ error: 'Partner selection is required for partner owners' });
@@ -2192,23 +2132,27 @@ router.post('/admin-users', requireAuth, requireRole('admin'), requireCSRF, asyn
 
     const passwordHash = await bcrypt.hash(password, 12);
 
-    const [newUser] = await db.insert(adminUsers).values({
+    const insertData = {
       username,
       passwordHash,
       role,
-      partnerApiId: assignedPartnerId,
-    }).returning({
+      ...(partnerColumnSupported && assignedPartnerId ? { partnerApiId: assignedPartnerId } : {}),
+    };
+
+    const returningShape = {
       id: adminUsers.id,
       username: adminUsers.username,
       role: adminUsers.role,
       createdAt: adminUsers.createdAt,
-      partnerApiId: adminUsers.partnerApiId,
-    });
+      ...(partnerColumnSupported ? { partnerApiId: adminUsers.partnerApiId } : {}),
+    };
+
+    const [newUser] = await db.insert(adminUsers).values(insertData).returning(returningShape);
 
     await logActivity('create_admin_user', 'admin', newUser.id, req.adminUser, req, {
       username,
       role,
-      partnerApiId: assignedPartnerId,
+      partnerApiId: partnerColumnSupported ? assignedPartnerId : null,
     });
 
     res.json({ user: newUser });

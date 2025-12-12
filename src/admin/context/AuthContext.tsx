@@ -5,13 +5,12 @@ interface AdminUser {
   id: number;
   username: string;
   role: string;
-  mfaEnabled?: boolean;
 }
 
 interface AuthContextType {
   user: AdminUser | null;
   isLoading: boolean;
-  login: (username: string, password: string, otp?: string) => Promise<{ success: boolean; error?: string; requiresMfa?: boolean }>;
+  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   getAuthHeaders: () => Record<string, string>;
 }
@@ -61,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  const login = async (username: string, password: string, otp?: string): Promise<{ success: boolean; error?: string; requiresMfa?: boolean }> => {
+  const login = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const trimmedUsername = username.trim();
       
@@ -77,13 +76,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ username: trimmedUsername, password, otp }),
+        body: JSON.stringify({ username: trimmedUsername, password }),
       });
       
       const data = await res.json();
       
       if (!res.ok) {
-        return { success: false, error: data.error || 'Login failed', requiresMfa: data.requiresMfa };
+        return { success: false, error: data.error || 'Login failed' };
       }
       
       if (data.success) {
