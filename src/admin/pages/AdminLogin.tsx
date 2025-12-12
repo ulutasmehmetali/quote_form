@@ -56,15 +56,9 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
         <div className="absolute -inset-1 bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-500 rounded-3xl blur opacity-20"></div>
         
         <div className="relative bg-slate-800/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
-          <div className="text-center mb-8">
-            <div className="relative inline-flex mb-4">
-              <div className="absolute -inset-2 bg-gradient-to-r from-sky-500 to-indigo-500 rounded-2xl blur opacity-40"></div>
-              <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white font-bold text-3xl shadow-xl">
-                M
-              </div>
-            </div>
-            <h1 className="text-3xl font-bold text-white mb-2">MIYOMINT</h1>
-            <p className="text-slate-400 hidden sm:block">Admin Panel</p>
+          <div className="text-center mb-6">
+            <h1 className="text-3xl font-bold text-white mb-1">Admin Login</h1>
+            <p className="text-slate-400 hidden sm:block">Sign in to manage the dashboard</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">

@@ -238,15 +238,9 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
       {withChrome && (
         <header data-admin-page-chrome className="bg-slate-900/50 backdrop-blur-xl border-b border-white/5 px-6 py-4 sticky top-0 z-40">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-sky-500 to-indigo-500 rounded-xl blur opacity-40 group-hover:opacity-60 transition"></div>
-                <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">M</div>
-              </div>
-              <div className="hidden sm:block">
-                <h1 className="font-bold text-white text-lg">MIYOMINT</h1>
-                <p className="text-sm text-slate-400 hidden sm:block">Admin Panel</p>
-              </div>
+            <div className="hidden sm:block">
+              <h1 className="font-bold text-white text-lg">Admin Panel</h1>
+              <p className="text-sm text-slate-400 hidden sm:block">Settings</p>
             </div>
 
             <nav className="hidden md:flex items-center gap-1 bg-slate-800/50 rounded-2xl p-1">
