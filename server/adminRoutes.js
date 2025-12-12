@@ -132,6 +132,62 @@ const authLog = (stage, meta = {}) => {
 };
 
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+let mfaSupported = true;
+
+async function fetchAdminUserSafe(username) {
+  // Try select with MFA columns; fallback if columns missing
+  if (mfaSupported) {
+    try {
+      const columnCheck = await db.execute(sql`
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'admin_users' AND column_name IN ('mfa_secret','mfa_enabled')
+      `);
+      mfaSupported = columnCheck.rows?.length >= 2;
+    } catch (error) {
+      authLog('login_mfa_column_check_failed', { error: error?.message });
+      mfaSupported = false;
+    }
+  }
+
+  if (mfaSupported) {
+    try {
+      const [user] = await db.select({
+        id: adminUsers.id,
+        username: adminUsers.username,
+        passwordHash: adminUsers.passwordHash,
+        role: adminUsers.role,
+        partnerApiId: adminUsers.partnerApiId,
+        lastLoginAt: adminUsers.lastLoginAt,
+        lastLoginIp: adminUsers.lastLoginIp,
+        createdAt: adminUsers.createdAt,
+        mfaSecret: adminUsers.mfaSecret,
+        mfaEnabled: adminUsers.mfaEnabled,
+      }).from(adminUsers).where(eq(adminUsers.username, username));
+      return user;
+    } catch (error) {
+      const msg = error?.message || '';
+      if (/mfa_secret|mfa_enabled/.test(msg)) {
+        mfaSupported = false;
+        authLog('login_mfa_column_missing', { error: msg });
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  // Fallback select without MFA fields
+  const [user] = await db.select({
+    id: adminUsers.id,
+    username: adminUsers.username,
+    passwordHash: adminUsers.passwordHash,
+    role: adminUsers.role,
+    partnerApiId: adminUsers.partnerApiId,
+    lastLoginAt: adminUsers.lastLoginAt,
+    lastLoginIp: adminUsers.lastLoginIp,
+    createdAt: adminUsers.createdAt,
+  }).from(adminUsers).where(eq(adminUsers.username, username));
+  return { ...user, mfaSecret: null, mfaEnabled: false };
+}
 
 function base32Encode(buffer) {
   let bits = '';
@@ -649,33 +705,7 @@ router.post('/login', async (req, res) => {
     `);
     const hasPartnerColumn = !!columnCheck.rows?.length;
 
-    let user;
-    if (hasPartnerColumn) {
-      [user] = await db.select({
-        id: adminUsers.id,
-        username: adminUsers.username,
-        passwordHash: adminUsers.passwordHash,
-        role: adminUsers.role,
-        partnerApiId: adminUsers.partnerApiId,
-        lastLoginAt: adminUsers.lastLoginAt,
-        lastLoginIp: adminUsers.lastLoginIp,
-        createdAt: adminUsers.createdAt,
-        mfaSecret: adminUsers.mfaSecret,
-        mfaEnabled: adminUsers.mfaEnabled,
-      }).from(adminUsers).where(eq(adminUsers.username, username));
-    } else {
-      [user] = await db.select({
-        id: adminUsers.id,
-        username: adminUsers.username,
-        passwordHash: adminUsers.passwordHash,
-        role: adminUsers.role,
-        lastLoginAt: adminUsers.lastLoginAt,
-        lastLoginIp: adminUsers.lastLoginIp,
-        createdAt: adminUsers.createdAt,
-        mfaSecret: adminUsers.mfaSecret,
-        mfaEnabled: adminUsers.mfaEnabled,
-      }).from(adminUsers).where(eq(adminUsers.username, username));
-    }
+    const user = await fetchAdminUserSafe(username);
     
     if (!user) {
       authLog('login_user_not_found', { username, ip: clientIP });
@@ -1630,6 +1660,9 @@ router.post('/change-password', requireAuth, requireCSRF, async (req, res) => {
 });
 
 router.post('/mfa/enroll', requireAuth, requireCSRF, (req, res) => {
+  if (!mfaSupported) {
+    return res.status(400).json({ error: 'MFA not supported (columns missing)' });
+  }
   const secret = generateMfaSecret();
   const otpauth = `otpauth://totp/MIYOMINT:${encodeURIComponent(req.adminUser.username)}?secret=${secret}&issuer=MIYOMINT`;
   db.update(adminUsers)
@@ -1643,6 +1676,9 @@ router.post('/mfa/enroll', requireAuth, requireCSRF, (req, res) => {
 });
 
 router.post('/mfa/verify', requireAuth, requireCSRF, (req, res) => {
+  if (!mfaSupported) {
+    return res.status(400).json({ error: 'MFA not supported (columns missing)' });
+  }
   const code = (req.body?.code || '').toString().trim();
   const attempt = recordMfaAttempt(req.adminUser.id, getClientIP(req));
   if (attempt.lockoutUntil && Date.now() < attempt.lockoutUntil) {
@@ -1685,6 +1721,9 @@ router.post('/mfa/verify', requireAuth, requireCSRF, (req, res) => {
 });
 
 router.post('/mfa/disable', requireAuth, requireCSRF, (req, res) => {
+  if (!mfaSupported) {
+    return res.json({ success: true });
+  }
   db.update(adminUsers)
     .set({ mfaSecret: null, mfaEnabled: false })
     .where(eq(adminUsers.id, req.adminUser.id))
@@ -1706,6 +1745,9 @@ router.post('/mfa/disable', requireAuth, requireCSRF, (req, res) => {
 });
 
 router.get('/mfa/status', requireAuth, (req, res) => {
+  if (!mfaSupported) {
+    return res.json({ enabled: false });
+  }
   db.select({ enabled: adminUsers.mfaEnabled })
     .from(adminUsers)
     .where(eq(adminUsers.id, req.adminUser.id))
