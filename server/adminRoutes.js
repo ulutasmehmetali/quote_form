@@ -155,7 +155,6 @@ async function ensurePartnerColumnSupport() {
 }
 
 async function ensureMfaColumnSupport() {
-  if (mfaSupported === false) return false;
   try {
     const result = await db.execute(sql`
       SELECT COUNT(*) AS count
