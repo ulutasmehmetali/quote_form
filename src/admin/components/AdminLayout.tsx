@@ -5,11 +5,6 @@ const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'submissions', label: 'Submissions' },
   { id: 'logs', label: 'Logs' },
-  { id: 'professionals', label: 'Professionals' },
-  { id: 'partners', label: 'Partners' },
-  { id: 'webhooks', label: 'Webhooks' },
-  { id: 'automations', label: 'Automations' },
-  { id: 'users', label: 'Users' },
   { id: 'settings', label: 'Settings' },
   { id: 'distribution-logs', label: 'Distribution' },
 ];
@@ -32,7 +27,9 @@ export default function AdminLayout() {
           <div className="flex items-center gap-3 flex-shrink-0">
             <div className="relative group">
               <div className="absolute -inset-1 bg-gradient-to-r from-sky-500 to-indigo-500 rounded-xl blur opacity-40 group-hover:opacity-60 transition"></div>
-              <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">M</div>
+              <div className="relative px-4 h-12 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-lg whitespace-nowrap">
+                Admin Panel
+              </div>
             </div>
           </div>
 
