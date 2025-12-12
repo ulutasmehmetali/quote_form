@@ -273,38 +273,29 @@ function updateSessionMfaFlag(userId, enabled) {
 }
 
 async function fetchAdminUserSafe(username) {
-  const baseFields = {
-    id: adminUsers.id,
-    username: adminUsers.username,
-    passwordHash: adminUsers.passwordHash,
-    role: adminUsers.role,
-    lastLoginAt: adminUsers.lastLoginAt,
-    lastLoginIp: adminUsers.lastLoginIp,
-    createdAt: adminUsers.createdAt,
-  };
-
-  const optionalFields = {};
-  if (await ensurePartnerColumnSupport()) {
-    optionalFields.partnerApiId = adminUsers.partnerApiId;
-  }
-  if (await ensureMfaColumnSupport()) {
-    optionalFields.mfaSecret = adminUsers.mfaSecret;
-    optionalFields.mfaEnabled = adminUsers.mfaEnabled;
-  }
-
-  const selectFields = { ...baseFields, ...optionalFields };
-
   try {
-    const [user] = await db
-      .select(selectFields)
-      .from(adminUsers)
-      .where(eq(adminUsers.username, username));
+    // Use a minimal raw query to avoid column mismatch issues
+    const result = await db.execute(sql`
+      SELECT 
+        id,
+        username,
+        password_hash AS "passwordHash",
+        role,
+        last_login_at AS "lastLoginAt",
+        last_login_ip AS "lastLoginIp",
+        mfa_secret AS "mfaSecret",
+        mfa_enabled AS "mfaEnabled"
+      FROM admin_users
+      WHERE username = ${username}
+      LIMIT 1
+    `);
 
+    const user = result?.rows?.[0];
     if (!user) return null;
 
     return {
       ...user,
-      partnerApiId: user?.partnerApiId || null,
+      partnerApiId: null,
       mfaSecret: user?.mfaSecret || null,
       mfaEnabled: (user?.mfaEnabled && mfaSupported) || false,
     };
