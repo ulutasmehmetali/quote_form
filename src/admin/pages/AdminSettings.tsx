@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { toDataURL } from 'qrcode';
 import { useAuth } from '../context/AuthContext';
 import { apiUrl } from '../../lib/api';
 
@@ -18,14 +17,9 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showPasswords, setShowPasswords] = useState(false);
-  const [mfaSecret, setMfaSecret] = useState<string | null>(null);
-  const [mfaUri, setMfaUri] = useState<string | null>(null);
-  const [mfaCode, setMfaCode] = useState('');
-  const [mfaEnabled, setMfaEnabled] = useState(false);
-  const [mfaQr, setMfaQr] = useState<string | null>(null);
+  const mfaEnabled = false;
   const [sessions, setSessions] = useState<Array<{ sessionId: string; createdAt: number; lastActivity: number; ipAddress: string; userAgent?: string; current: boolean }>>([]);
   const [sessionLoading, setSessionLoading] = useState(false);
-  const [mfaStatusLoading, setMfaStatusLoading] = useState(false);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,110 +101,6 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
     loadSessions();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const loadMfaStatus = async () => {
-    setMfaStatusLoading(true);
-    try {
-      const res = await fetch(apiUrl('/api/admin/mfa/status'), {
-        headers: getAuthHeaders(),
-        credentials: 'include',
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setMfaEnabled(Boolean(data.enabled));
-      }
-    } catch {
-      // ignore
-    } finally {
-      setMfaStatusLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadMfaStatus();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const generateQr = async () => {
-      if (!mfaUri) {
-        setMfaQr(null);
-        return;
-      }
-      try {
-        const url = await toDataURL(mfaUri);
-        setMfaQr(url);
-      } catch {
-        setMfaQr(null);
-      }
-    };
-    generateQr();
-  }, [mfaUri]);
-
-  const enrollMfa = async () => {
-    try {
-      const res = await fetch(apiUrl('/api/admin/mfa/enroll'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-        credentials: 'include',
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setMfaSecret(data.secret);
-        setMfaUri(data.otpauth);
-        setMfaEnabled(false);
-        setMfaQr(null);
-        setMessage({ type: 'success', text: 'MFA secret generated. Scan QR or copy code, then verify.' });
-      } else {
-        setMessage({ type: 'error', text: data.error || 'Could not start MFA enrollment' });
-      }
-    } catch {
-      setMessage({ type: 'error', text: 'MFA enrollment failed' });
-    }
-  };
-
-  const verifyMfa = async () => {
-    if (!mfaCode) return;
-    try {
-      const res = await fetch(apiUrl('/api/admin/mfa/verify'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-        credentials: 'include',
-        body: JSON.stringify({ code: mfaCode }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setMfaEnabled(true);
-        setMessage({ type: 'success', text: 'MFA enabled for this account.' });
-      } else {
-        setMessage({ type: 'error', text: data.error || 'Invalid MFA code' });
-      }
-    } catch {
-      setMessage({ type: 'error', text: 'MFA verification failed' });
-    }
-  };
-
-  const disableMfa = async () => {
-    try {
-      const res = await fetch(apiUrl('/api/admin/mfa/disable'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-        credentials: 'include',
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setMfaEnabled(false);
-        setMfaSecret(null);
-        setMfaUri(null);
-        setMfaCode('');
-        setMessage({ type: 'success', text: 'MFA disabled.' });
-      } else {
-        setMessage({ type: 'error', text: data.error || 'Failed to disable MFA' });
-      }
-    } catch {
-      setMessage({ type: 'error', text: 'Disable MFA failed' });
-    }
-  };
 
   const revokeSession = async (sessionId: string) => {
     try {
@@ -413,63 +303,10 @@ export default function AdminSettings({ onNavigate, withChrome = true }: AdminSe
                 </span>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="bg-slate-900/50 border border-white/5 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm text-slate-300 font-semibold">MFA (TOTP)</p>
-                    {mfaEnabled ? (
-                      <button onClick={disableMfa} className="text-xs px-3 py-1 rounded-lg bg-red-500/20 text-red-200 border border-red-500/40 hover:bg-red-500/30">
-                        Disable
-                      </button>
-                    ) : (
-                      <button onClick={enrollMfa} className="text-xs px-3 py-1 rounded-lg bg-sky-500/20 text-sky-200 border border-sky-500/40 hover:bg-sky-500/30" disabled={mfaStatusLoading}>
-                        {mfaStatusLoading ? 'Loading...' : 'Generate Secret'}
-                      </button>
-                    )}
-                  </div>
-                {mfaSecret && (
-                  <div className="space-y-3 text-sm">
-                    {mfaQr && (
-                      <div className="flex flex-col items-start gap-2 bg-slate-800/60 rounded-lg p-3 border border-white/5">
-                        <p className="text-slate-400 text-xs">Scan with Google Authenticator / Authy</p>
-                        <img src={mfaQr} alt="MFA QR" className="w-36 h-36 rounded-md border border-white/10" />
-                      </div>
-                    )}
-                    <div className="bg-slate-800/60 rounded-lg p-3 border border-white/5">
-                      <p className="text-slate-400 text-xs mb-1">Secret</p>
-                      <p className="text-white font-mono break-all">{mfaSecret}</p>
-                    </div>
-                    {mfaUri && (
-                      <div className="bg-slate-800/60 rounded-lg p-3 border border-white/5">
-                        <p className="text-slate-400 text-xs mb-1">URI</p>
-                        <p className="text-white font-mono break-all text-xs">{mfaUri}</p>
-                      </div>
-                    )}
-                    <div className="flex gap-2 items-end">
-                      <div className="flex-1">
-                        <label className="text-xs text-slate-400">Verification Code</label>
-                        <input
-                          type="text"
-                          value={mfaCode}
-                          onChange={(e) => setMfaCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
-                          placeholder="123456"
-                          className="w-full mt-1 px-3 py-2 rounded-lg bg-slate-900/70 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50"
-                          maxLength={6}
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={verifyMfa}
-                        className="px-4 py-2 rounded-lg bg-emerald-500/80 text-white font-semibold hover:bg-emerald-500 transition"
-                      >
-                        Verify
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {!mfaSecret && !mfaEnabled && (
-                  <p className="text-xs text-slate-500">Generate a secret, scan it in an authenticator app, then verify with a 6-digit code.</p>
-                )}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="bg-slate-900/50 border border-white/5 rounded-xl p-4">
+                <p className="text-sm text-slate-300 font-semibold mb-2">MFA</p>
+                <p className="text-xs text-slate-500">MFA is currently disabled. We will re-enable with a fresh setup later.</p>
               </div>
 
               <div className="bg-slate-900/50 border border-white/5 rounded-xl p-4">

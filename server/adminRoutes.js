@@ -123,6 +123,7 @@ const IP_BAN_REASON = 'Exceeded admin login attempts';
 const regionNameFormatter = new Intl.DisplayNames(['en'], { type: 'region' });
 const DEBUG_AUTH = process.env.DEBUG_AUTH === 'true';
 const mfaAttempts = new Map(); // key: ip:userId -> { count, lockoutUntil }
+const mfaSupported = false; // MFA disabled for now
 const authLog = (stage, meta = {}) => {
   try {
     console.warn('[auth]', stage, JSON.stringify(meta));
@@ -132,50 +133,8 @@ const authLog = (stage, meta = {}) => {
 };
 
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-let mfaSupported = true;
 
 async function fetchAdminUserSafe(username) {
-  // Try select with MFA columns; fallback if columns missing
-  if (mfaSupported) {
-    try {
-      const columnCheck = await db.execute(sql`
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'admin_users' AND column_name IN ('mfa_secret','mfa_enabled')
-      `);
-      mfaSupported = columnCheck.rows?.length >= 2;
-    } catch (error) {
-      authLog('login_mfa_column_check_failed', { error: error?.message });
-      mfaSupported = false;
-    }
-  }
-
-  if (mfaSupported) {
-    try {
-      const [user] = await db.select({
-        id: adminUsers.id,
-        username: adminUsers.username,
-        passwordHash: adminUsers.passwordHash,
-        role: adminUsers.role,
-        partnerApiId: adminUsers.partnerApiId,
-        lastLoginAt: adminUsers.lastLoginAt,
-        lastLoginIp: adminUsers.lastLoginIp,
-        createdAt: adminUsers.createdAt,
-        mfaSecret: adminUsers.mfaSecret,
-        mfaEnabled: adminUsers.mfaEnabled,
-      }).from(adminUsers).where(eq(adminUsers.username, username));
-      return user;
-    } catch (error) {
-      const msg = error?.message || '';
-      if (/mfa_secret|mfa_enabled/.test(msg)) {
-        mfaSupported = false;
-        authLog('login_mfa_column_missing', { error: msg });
-      } else {
-        throw error;
-      }
-    }
-  }
-
-  // Fallback select without MFA fields
   const [user] = await db.select({
     id: adminUsers.id,
     username: adminUsers.username,
@@ -739,30 +698,7 @@ router.post('/login', async (req, res) => {
     
     clearFailedAttempts(clientIP);
 
-    const mfaEnabled = Boolean(user.mfaEnabled && user.mfaSecret);
-    if (mfaEnabled) {
-      const otp = (req.body?.otp || '').toString().trim();
-      if (!otp) {
-        authLog('login_mfa_missing', { username, ip: clientIP });
-        return res.status(401).json({ error: 'MFA code required', requiresMfa: true });
-      }
-      const mfaAttempt = recordMfaAttempt(user.id, clientIP);
-      if (mfaAttempt.lockoutUntil && Date.now() < mfaAttempt.lockoutUntil) {
-        authLog('login_mfa_locked', { username, ip: clientIP });
-        return res.status(429).json({ error: 'Too many MFA attempts. Try again later.', requiresMfa: true });
-      }
-      try {
-        if (!user.mfaSecret || !verifyTotp(user.mfaSecret, otp)) {
-          authLog('login_mfa_invalid', { username, ip: clientIP });
-          return res.status(401).json({ error: 'Invalid MFA code', requiresMfa: true });
-        }
-      } catch (e) {
-        console.error('MFA verify exception:', e?.message || e);
-        authLog('login_mfa_exception', { username, ip: clientIP, error: e?.message });
-        return res.status(401).json({ error: 'MFA validation failed', requiresMfa: true });
-      }
-      resetMfaAttempts(user.id, clientIP);
-    }
+    const mfaEnabled = false; // MFA disabled
     
     let userSessionCount = 0;
     for (const [sid, session] of sessions.entries()) {
@@ -783,7 +719,7 @@ router.post('/login', async (req, res) => {
       username: user.username,
       role: user.role,
       partnerApiId: user.partnerApiId || null,
-      mfaEnabled,
+      mfaEnabled: false,
     };
 
     sessions.set(sessionId, {
@@ -1660,105 +1596,19 @@ router.post('/change-password', requireAuth, requireCSRF, async (req, res) => {
 });
 
 router.post('/mfa/enroll', requireAuth, requireCSRF, (req, res) => {
-  if (!mfaSupported) {
-    return res.status(400).json({ error: 'MFA not supported (columns missing)' });
-  }
-  const secret = generateMfaSecret();
-  const otpauth = `otpauth://totp/MIYOMINT:${encodeURIComponent(req.adminUser.username)}?secret=${secret}&issuer=MIYOMINT`;
-  db.update(adminUsers)
-    .set({ mfaSecret: secret, mfaEnabled: false })
-    .where(eq(adminUsers.id, req.adminUser.id))
-    .then(() => res.json({ secret, otpauth }))
-    .catch((error) => {
-      console.error('MFA enroll error:', error?.message || error);
-      res.status(500).json({ error: 'Failed to enroll MFA' });
-    });
+  res.status(400).json({ error: 'MFA is disabled' });
 });
 
 router.post('/mfa/verify', requireAuth, requireCSRF, (req, res) => {
-  if (!mfaSupported) {
-    return res.status(400).json({ error: 'MFA not supported (columns missing)' });
-  }
-  const code = (req.body?.code || '').toString().trim();
-  const attempt = recordMfaAttempt(req.adminUser.id, getClientIP(req));
-  if (attempt.lockoutUntil && Date.now() < attempt.lockoutUntil) {
-    return res.status(429).json({ error: 'Too many MFA attempts. Try again later.' });
-  }
-
-  db.select({
-    mfaSecret: adminUsers.mfaSecret,
-  })
-    .from(adminUsers)
-    .where(eq(adminUsers.id, req.adminUser.id))
-    .limit(1)
-    .then(async ([row]) => {
-      const secret = row?.mfaSecret;
-      if (!secret) {
-        return res.status(400).json({ error: 'Enroll MFA before verifying' });
-      }
-      if (!verifyTotp(secret, code)) {
-        return res.status(401).json({ error: 'Invalid code' });
-      }
-      await db
-        .update(adminUsers)
-        .set({ mfaEnabled: true })
-        .where(eq(adminUsers.id, req.adminUser.id));
-      if (req.sessionId) {
-        const session = sessions.get(req.sessionId);
-        if (session) {
-          session.mfaEnabled = true;
-          session.user = { ...session.user, mfaEnabled: true };
-          sessions.set(req.sessionId, session);
-        }
-      }
-      resetMfaAttempts(req.adminUser.id, getClientIP(req));
-      return res.json({ success: true });
-    })
-    .catch((error) => {
-      console.error('MFA verify error:', error?.message || error);
-      res.status(500).json({ error: 'Failed to verify MFA' });
-    });
+  res.status(400).json({ error: 'MFA is disabled' });
 });
 
 router.post('/mfa/disable', requireAuth, requireCSRF, (req, res) => {
-  if (!mfaSupported) {
-    return res.json({ success: true });
-  }
-  db.update(adminUsers)
-    .set({ mfaSecret: null, mfaEnabled: false })
-    .where(eq(adminUsers.id, req.adminUser.id))
-    .then(() => {
-      if (req.sessionId) {
-        const session = sessions.get(req.sessionId);
-        if (session) {
-          session.mfaEnabled = false;
-          session.user = { ...session.user, mfaEnabled: false };
-          sessions.set(req.sessionId, session);
-        }
-      }
-      res.json({ success: true });
-    })
-    .catch((error) => {
-      console.error('MFA disable error:', error?.message || error);
-      res.status(500).json({ error: 'Failed to disable MFA' });
-    });
+  res.json({ success: true });
 });
 
 router.get('/mfa/status', requireAuth, (req, res) => {
-  if (!mfaSupported) {
-    return res.json({ enabled: false });
-  }
-  db.select({ enabled: adminUsers.mfaEnabled })
-    .from(adminUsers)
-    .where(eq(adminUsers.id, req.adminUser.id))
-    .limit(1)
-    .then(([row]) => {
-      res.json({ enabled: Boolean(row?.enabled) || Boolean(req.adminUser?.mfaEnabled) });
-    })
-    .catch((error) => {
-      console.error('MFA status error:', error?.message || error);
-      res.status(500).json({ error: 'Failed to load MFA status' });
-    });
+  res.json({ enabled: false });
 });
 
 router.get('/sessions', requireAuth, (req, res) => {
