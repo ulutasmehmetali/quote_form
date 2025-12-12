@@ -706,7 +706,18 @@ router.post('/login', async (req, res) => {
       authLog('login_missing_hash', { username, ip: clientIP });
       return res.status(500).json({ error: 'Authentication failed' });
     }
-    const isValid = await bcrypt.compare(password, user.passwordHash);
+    if (!user.passwordHash) {
+      authLog('login_missing_hash', { username, ip: clientIP });
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    let isValid = false;
+    try {
+      isValid = await bcrypt.compare(password, user.passwordHash);
+    } catch (err) {
+      authLog('login_hash_error', { username, ip: clientIP, error: err?.message });
+      return res.status(500).json({ error: 'Authentication failed' });
+    }
     
     if (!isValid) {
       authLog('login_wrong_password', { username, ip: clientIP });
