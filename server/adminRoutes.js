@@ -728,7 +728,13 @@ router.post('/login', async (req, res) => {
       });
     }
     
+    if (!req.body || typeof req.body !== 'object') {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+
     let { username, password } = req.body;
+    username = typeof username === 'string' ? username : '';
+    password = typeof password === 'string' ? password : '';
     
     username = sanitizeInput(username);
     authLog('login_start', { username, ip: clientIP });
