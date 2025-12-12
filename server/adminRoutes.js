@@ -297,6 +297,8 @@ async function fetchAdminUserSafe(username) {
       .from(adminUsers)
       .where(eq(adminUsers.username, username));
 
+    if (!user) return null;
+
     return {
       ...user,
       partnerApiId: user?.partnerApiId || null,
