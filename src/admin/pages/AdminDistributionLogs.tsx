@@ -494,3 +494,4 @@ export default function AdminDistributionLogs({ onNavigate }: AdminDistributionL
     </div>
   );
 }
+

@@ -4,17 +4,17 @@ A modern, mobile-first platform connecting homeowners with certified local profe
 
 ![MIYOMINT Platform](https://img.shields.io/badge/React-19-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue) ![Vite](https://img.shields.io/badge/Vite-7-purple) ![TailwindCSS](https://img.shields.io/badge/Tailwind-4-cyan)
 
-## ✨ Features
+## Features
 
-- 🤖 **AI-Powered Search** - OpenAI GPT-4o-mini powered service suggestions
-- 📸 **Photo Upload** - Upload up to 6 project photos with drag & drop
-- 📱 **Mobile-First Design** - Optimized for all screen sizes
-- 🎨 **Modern UI** - Frosted glass cards, smooth animations, dark navy theme
-- ⚡ **Fast** - Built with Vite for lightning-fast performance
-- 🔒 **Secure** - Form validation, ZIP code verification
-- 🌟 **20+ Services** - Complete range of home service categories
+- **AI-Powered Search** - GPT-4o-mini suggestions for matching services
+- **Photo Upload** - Drag & drop up to 6 project photos
+- **Mobile-First Design** - Optimized for all screen sizes
+- **Modern UI** - Frosted glass cards, smooth animations, dark navy theme
+- **Fast** - Built with Vite for quick builds and HMR
+- **Secure** - Form validation, ZIP code verification
+- **20+ Services** - Broad catalog of home services
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - Node.js 20+
@@ -52,7 +52,7 @@ npm run server
 5. **Open browser**
 Navigate to `http://localhost:5000`
 
-## 📦 Deployment to Vercel
+## Deployment to Vercel
 
 ### One-Click Deploy
 
@@ -75,11 +75,11 @@ git push origin main
 
 3. **Enable Vercel Blob Storage**
    - Go to **Storage** tab in your project
-   - Click **"Create Database"** → **"Blob"**
+   - Click **"Create Database"** > **"Blob"**
    - Vercel automatically creates `BLOB_READ_WRITE_TOKEN`
 
 4. **Configure Environment Variables**
-   - Go to Project Settings → Environment Variables
+   - Go to Project Settings > Environment Variables
    - Add the following:
 
 | Key | Value | Description |
@@ -90,32 +90,24 @@ git push origin main
 5. **Redeploy**
    - After adding env vars, trigger a new deployment
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 miyomint/
-├── api/                    # Vercel Edge Functions
-│   └── suggest.ts         # AI service suggestions endpoint
-├── src/
-│   ├── components/        # React components
-│   │   ├── QuoteForm.tsx         # Main wizard
-│   │   ├── ServiceSelection.tsx  # AI search + service picker
-│   │   ├── PhotoUpload.tsx       # Photo upload step
-│   │   ├── ContactInfo.tsx       # Contact form
-│   │   └── ...
-│   ├── lib/
-│   │   ├── aiSuggest.ts   # AI API client
-│   │   └── cn.ts          # Utility functions
-│   └── types/
-│       └── quote.ts       # TypeScript types
-├── server/                # Express backend (Replit only)
-├── public/                # Static assets
-├── vercel.json           # Vercel configuration
-└── package.json
-
+├─ api/                    # Vercel Edge Functions
+│  └─ suggest.ts           # AI service suggestions endpoint
+├─ src/
+│  ├─ components/          # React components
+│  ├─ lib/                 # Helpers
+│  ├─ admin/               # Admin UI
+│  └─ types/               # TypeScript types
+├─ server/                 # Express backend (local/dev)
+├─ public/                 # Static assets
+├─ vercel.json             # Vercel configuration
+└─ package.json
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Vercel Configuration (`vercel.json`)
 ```json
@@ -133,7 +125,7 @@ API endpoints are automatically detected from the `api/` directory.
 - Tailwind CSS integration
 - Asset path aliases
 
-## 🌐 API Endpoints
+## API Endpoints
 
 ### `POST /api/suggest`
 AI-powered service suggestions (Vercel Edge Function)
@@ -187,7 +179,7 @@ _Note: Conservative limits ensure reliable uploads on Vercel Edge runtime (which
 }
 ```
 
-## 🎨 Tech Stack
+## Tech Stack
 
 - **Frontend:** React 19, TypeScript, Vite 7
 - **Styling:** Tailwind CSS 4
@@ -195,14 +187,14 @@ _Note: Conservative limits ensure reliable uploads on Vercel Edge runtime (which
 - **Deployment:** Vercel (Edge Functions)
 - **Storage:** Vercel Blob (production) / Replit Object Storage (dev)
 
-## 📊 Performance
+## Performance
 
 - **Lighthouse Score:** 95+ (Performance, Accessibility, Best Practices, SEO)
 - **AI Response Time:** ~500ms average
 - **First Contentful Paint:** <1s
 - **Total Bundle Size:** ~150KB (gzipped)
 
-## 🔐 Environment Variables
+## Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
@@ -213,13 +205,13 @@ _Note: Conservative limits ensure reliable uploads on Vercel Edge runtime (which
 
 If you host the frontend and backend on different origins (e.g., frontend on Vercel, backend on a separate domain), set `VITE_API_BASE` to the backend base URL so the admin UI reaches the correct API. Leave it empty for same-origin deployments or when relying on the Vite dev proxy.
 
-## 💰 Cost Estimate
+## Cost Estimate
 
 - **OpenAI API:** ~$0.001 per search (~$5-10/month for 5,000 searches)
 - **Vercel Hosting:** Free tier sufficient for most use cases
 - **Vercel Blob Storage:** Free 100MB, then pay-as-you-go
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -227,17 +219,17 @@ If you host the frontend and backend on different origins (e.g., frontend on Ver
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📝 License
+## License
 
 This project is licensed under the MIT License.
 
-## 🆘 Support
+## Support
 
 For issues or questions:
 - Open an issue on GitHub
 - Check the [deployment guide](DEPLOYMENT.md)
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - OpenAI for GPT-4o-mini API
 - Vercel for hosting and edge functions
@@ -245,4 +237,4 @@ For issues or questions:
 
 ---
 
-**Built with ❤️ using React + Vite + Tailwind CSS + OpenAI**
+**Built with React + Vite + Tailwind CSS + OpenAI**

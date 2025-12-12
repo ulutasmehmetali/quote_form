@@ -9,21 +9,24 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
   const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [mfaRequired, setMfaRequired] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    const result = await login(username, password);
+    const result = await login(username, password, mfaRequired ? otp : undefined);
     
     if (result.success) {
       onLoginSuccess();
     } else {
       setError(result.error || 'Invalid username or password');
+      setMfaRequired(Boolean(result.requiresMfa));
     }
     
     setIsLoading(false);
@@ -119,6 +122,33 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
                 </button>
               </div>
             </div>
+
+            {mfaRequired && (
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  MFA Code
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 11c.53 0 1.039-.211 1.414-.586A2 2 0 0014 9c0-.53-.211-1.039-.586-1.414A2 2 0 0012 7c-.53 0-1.039.211-1.414.586A2 2 0 0010 9c0 .53.211 1.039.586 1.414A2 2 0 0012 11z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 11v6m-6 0h12" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                    placeholder="Enter 6-digit code"
+                    className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-slate-700/50 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50 focus:ring-2 focus:ring-sky-500/20 transition-all"
+                    required
+                  />
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Check your authenticator app.</p>
+              </div>
+            )}
 
             <button
               type="submit"

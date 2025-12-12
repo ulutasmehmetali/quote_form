@@ -628,3 +628,7 @@ input:focus, textarea:focus, select:focus {
   opacity: 0.35;
   animation: border-glow 1.4s ease-out;
 }
+
+.admin-routed header[data-admin-page-chrome] {
+  display: none;
+}

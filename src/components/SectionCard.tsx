@@ -1,4 +1,4 @@
-import type { ReactNode, ElementType } from 'react';
+import type { ReactNode, ElementType, CSSProperties } from 'react';
 import { cn } from '../lib/cn';
 
 type Surface = 'default' | 'frosted' | 'muted';
@@ -10,6 +10,7 @@ interface SectionCardProps {
   surface?: Surface;
   padding?: Padding;
   as?: ElementType;
+  style?: CSSProperties;
 }
 
 const surfaceStyles: Record<Surface, string> = {
@@ -32,6 +33,7 @@ export default function SectionCard({
   surface = 'default',
   padding = 'none',
   as: Tag = 'section',
+  style,
 }: SectionCardProps) {
   return (
     <Tag
@@ -41,6 +43,7 @@ export default function SectionCard({
         paddingScale[padding],
         className
       )}
+      style={style}
     >
       {children}
     </Tag>

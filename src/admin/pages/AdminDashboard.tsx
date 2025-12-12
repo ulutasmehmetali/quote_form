@@ -1290,7 +1290,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 
-      <header className="bg-slate-900/50 backdrop-blur-xl border-b border-white/5 px-6 py-4 sticky top-0 z-40">
+      <header data-admin-page-chrome className="bg-slate-900/50 backdrop-blur-xl border-b border-white/5 px-6 py-4 sticky top-0 z-40">
 
 
 
@@ -2895,6 +2895,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
 
 }
+
 
 
 

@@ -176,4 +176,76 @@ router.post('/:id/test', requireAdmin, async (req, res) => {
     });
   }
 });
+
+router.post('/:id/test/custom', requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const payload = req.body?.payload && typeof req.body.payload === 'object'
+    ? { ...req.body.payload, test: true, timestamp: new Date().toISOString() }
+    : { test: true, timestamp: new Date().toISOString(), message: 'Webhook custom test' };
+
+  const { data: hook, error } = await supabase
+    .from('webhooks')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error || !hook) {
+    return res.status(404).json({ error: 'Webhook not found' });
+  }
+
+  const signature = crypto
+    .createHmac('sha256', hook.secret_key)
+    .update(JSON.stringify(payload))
+    .digest('hex');
+
+  try {
+    const response = await fetch(hook.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Webhook-Signature': signature,
+      },
+      body: JSON.stringify(payload),
+    });
+    const responseText = await response.text();
+    await supabase.from('webhook_logs').insert([
+      {
+        webhook_id: id,
+        status: response.ok ? 'success' : 'failed',
+        response_code: response.status,
+        response_body: responseText,
+      },
+    ]);
+
+    return res.json({
+      success: response.ok,
+      status: response.status,
+      response: responseText,
+    });
+  } catch (err) {
+    await supabase.from('webhook_logs').insert([
+      {
+        webhook_id: id,
+        status: 'failed',
+        response_code: 0,
+        response_body: err.message,
+      },
+    ]);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.get('/logs', requireAdmin, async (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+  const status = req.query.status;
+  let query = supabase.from('webhook_logs').select('*').order('created_at', { ascending: false }).limit(limit);
+  if (status) {
+    query = query.eq('status', status);
+  }
+  const { data, error } = await query;
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+  res.json({ logs: data || [] });
+});
 export default router;

@@ -54,10 +54,14 @@ export default function ChatWidget() {
     }
   }, [open, messages.length, typing]);
 
+  const pushMessage = (msg: ChatMessage) => {
+    setMessages((prev) => [...prev, msg].slice(-40));
+  };
+
   const addAssistantMessage = (text: string) => {
     setTyping(true);
     setTimeout(() => {
-      setMessages((prev) => [...prev, { role: 'assistant', content: text }].slice(-40));
+      pushMessage({ role: 'assistant', content: text });
       setTyping(false);
     }, 1100);
   };
@@ -121,7 +125,8 @@ export default function ChatWidget() {
     }
     setError(null);
 
-    const nextMessages = [...messages, { role: 'user', content: trimmed }].slice(-40);
+    const userMsg: ChatMessage = { role: 'user', content: trimmed };
+    const nextMessages = [...messages, userMsg].slice(-40);
     setMessages(nextMessages);
     setInput('');
     setLoading(true);
@@ -267,7 +272,7 @@ export default function ChatWidget() {
     try {
       setLoading(true);
       const dataUrl = await toDataUrl(file);
-      setMessages((prev) => [...prev, { role: 'user', content: 'Uploaded an image', image: dataUrl }]);
+      pushMessage({ role: 'user', content: 'Uploaded an image', image: dataUrl });
 
       const context = messages.slice(-6).map((m) => ({ role: m.role, content: m.content }));
       const res = await fetch(apiUrl('/api/chat/image'), {
@@ -285,7 +290,7 @@ export default function ChatWidget() {
       const suggestion = service ? `Suggested service: ${service}.` : '';
       const replyText = [summary, suggestion].filter(Boolean).join(' ');
 
-      setMessages((prev) => [...prev, { role: 'assistant', content: replyText }]);
+      pushMessage({ role: 'assistant', content: replyText });
     } catch {
       setError('Could not analyze the image. Please try again.');
     } finally {

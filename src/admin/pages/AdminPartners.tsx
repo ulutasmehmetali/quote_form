@@ -748,3 +748,4 @@ export default function AdminPartners({ onNavigate }: AdminPartnersProps) {
     </div>
   );
 }
+

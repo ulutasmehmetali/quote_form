@@ -6,10 +6,15 @@ export const config = {
 const OPENAI_URL = "https://api.openai.com/v1/responses";
 const MODEL = "gpt-4o-mini";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
+const allowedOrigins = (process.env.SUGGEST_ALLOWED_ORIGINS || process.env.FRONTEND_URL || "")
+  .split(",")
+  .map((item) => item.trim())
+  .filter(Boolean);
+const allowAnyOrigin = allowedOrigins.length === 0;
+
+const CORS_BASE = {
   "Access-Control-Allow-Methods": "POST,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, x-vercel-protection-bypass",
+  "Access-Control-Allow-Headers": "Content-Type, x-vercel-protection-bypass, authorization, x-api-key",
 };
 
 const SERVICES = [
@@ -28,6 +33,46 @@ const isSpam = (text: string): boolean => {
   if (/fuck|sex|porno|casino|bitcoin/i.test(text)) return true;
   if (!/[a-zA-Z]/.test(text)) return true;
   return false;
+};
+
+const isOriginAllowed = (origin: string | null): boolean => {
+  if (allowAnyOrigin) return true;
+  if (!origin) return true; // server-to-server
+  return allowedOrigins.includes(origin);
+};
+
+const getCorsHeaders = (origin: string | null) => {
+  const headers: Record<string, string> = { ...CORS_BASE };
+  if (allowAnyOrigin) {
+    headers["Access-Control-Allow-Origin"] = "*";
+  } else if (origin && allowedOrigins.includes(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+  return headers;
+};
+
+const jsonResponse = (body: unknown, status: number, origin: string | null) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...getCorsHeaders(origin), "Content-Type": "application/json" },
+  });
+
+const authenticateRequest = (req: Request) => {
+  const expectedKey = process.env.SUGGEST_API_KEY;
+  if (!expectedKey) return { ok: true };
+
+  const authHeader = req.headers.get("authorization") || "";
+  const bearer = authHeader.toLowerCase().startsWith("bearer ")
+    ? authHeader.slice(7).trim()
+    : authHeader.trim();
+  const apiKeyHeader = req.headers.get("x-api-key")?.trim();
+  const candidate = apiKeyHeader || bearer;
+
+  if (candidate && candidate === expectedKey) {
+    return { ok: true };
+  }
+
+  return { ok: false, status: 401, message: "Unauthorized" };
 };
 
 const SYSTEM_PROMPT = `
@@ -83,15 +128,23 @@ const parseSuggestions = (raw: string): Suggestion[] => {
 };
 
 export default async function handler(req: Request): Promise<Response> {
+  const origin = req.headers.get("origin");
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
+    return new Response(null, { status: 204, headers: getCorsHeaders(origin) });
+  }
+
+  if (!isOriginAllowed(origin)) {
+    return jsonResponse({ error: "Origin not allowed" }, 403, origin);
   }
 
   if (req.method !== "POST") {
-    return new Response("Method not allowed", {
-      status: 405,
-      headers: CORS_HEADERS,
-    });
+    return jsonResponse({ error: "Method not allowed" }, 405, origin);
+  }
+
+  const authResult = authenticateRequest(req);
+  if (!authResult.ok) {
+    return jsonResponse({ error: authResult.message || "Unauthorized" }, authResult.status || 401, origin);
   }
 
   let query = "";
@@ -99,45 +152,31 @@ export default async function handler(req: Request): Promise<Response> {
     const body = await req.json();
     query = (body?.query || "").toString().trim();
   } catch {
-    return new Response(JSON.stringify({ suggestions: [] }), {
-      status: 400,
-      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ suggestions: [], error: "Invalid JSON payload" }, 400, origin);
   }
 
   if (!query) {
-    return new Response(JSON.stringify({ suggestions: [] }), {
-      status: 200,
-      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ suggestions: [] }, 200, origin);
   }
 
   if (isSpam(query)) {
-    return new Response(
-      JSON.stringify({
+    return jsonResponse(
+      {
         suggestions: [
           {
             service: "None",
             reason: "Your request looks invalid. Please describe a real home issue.",
           },
         ],
-      }),
-      {
-        status: 200,
-        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-      }
+      },
+      400,
+      origin
     );
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    return new Response(
-      JSON.stringify({ suggestions: [], error: "OpenAI API key not configured" }),
-      {
-        status: 200,
-        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-      }
-    );
+  const openAiKey = process.env.OPENAI_API_KEY;
+  if (!openAiKey) {
+    return jsonResponse({ suggestions: [], error: "OpenAI API key not configured" }, 503, origin);
   }
 
   try {
@@ -145,7 +184,7 @@ export default async function handler(req: Request): Promise<Response> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${openAiKey}`,
       },
       body: JSON.stringify({
         model: MODEL,
@@ -162,13 +201,7 @@ export default async function handler(req: Request): Promise<Response> {
     if (!ai.ok) {
       const message =
         json?.error?.message || json?.error?.code || ai.statusText || "AI request failed";
-      return new Response(
-        JSON.stringify({ suggestions: [], error: message, status: ai.status }),
-        {
-          status: 200,
-          headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-        }
-      );
+      return jsonResponse({ suggestions: [], error: message, status: ai.status }, 502, origin);
     }
 
     const raw =
@@ -179,20 +212,15 @@ export default async function handler(req: Request): Promise<Response> {
 
     const suggestions = parseSuggestions(raw);
 
-    return new Response(JSON.stringify({ suggestions }), {
-      status: 200,
-      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ suggestions }, 200, origin);
   } catch (error) {
-    return new Response(
-      JSON.stringify({
+    return jsonResponse(
+      {
         suggestions: [],
         error: "AI request failed",
-      }),
-      {
-        status: 200,
-        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-      }
+      },
+      500,
+      origin
     );
   }
 }

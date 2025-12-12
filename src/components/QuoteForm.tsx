@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import CryptoJS from 'crypto-js';
 import type { ServiceType, QuoteFormData, QuestionConfig, QuestionAnswer, UploadedPhoto } from '../types/quote';
 import { SERVICE_QUESTIONS } from '../types/quote';
 import ServiceSelection from './ServiceSelection';
@@ -15,6 +16,8 @@ const GOOGLE_SHEET_ENDPOINT =
   import.meta.env.VITE_SHEETS_URL ||
   'https://script.google.com/macros/s/AKfycbxF3byLylGeLSTZTsTmeVEUwz-rFhNrA0hhypaJrx-XxcW9pzg7EfYGmafEhsDPFF7YLA/exec';
 const STORAGE_KEY = 'miyomint_form_draft';
+const STORAGE_KEY_SECRET = 'miyomint_form_key';
+const DRAFT_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
 const DRAFT_ENDPOINT = apiUrl('/api/draft');
 const INCOMPLETE_ENDPOINT = apiUrl('/api/incomplete');
 
@@ -25,25 +28,54 @@ const createDraftId = () => {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
-const readStoredDraftId = () => {
-  if (typeof window === 'undefined') return '';
+const createDraftKey = () => {
+  if (typeof globalThis !== 'undefined' && typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+const readSavedDraft = () => {
+  if (typeof window === 'undefined') return null;
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return '';
+    const secret = sessionStorage.getItem(STORAGE_KEY_SECRET);
+    if (!saved || !secret) return null;
     const parsed: SavedFormState = JSON.parse(saved);
-    return parsed?.draftId || '';
+    if (!parsed.draftId || !parsed.expiresAt || parsed.expiresAt < Date.now() || !parsed.encrypted) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    const bytes = CryptoJS.AES.decrypt(parsed.encrypted, secret);
+    const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+    if (!decrypted) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    const payload = JSON.parse(decrypted) as SavedDraftPayload;
+    return { ...payload, draftId: parsed.draftId };
   } catch {
-    return '';
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+    return null;
   }
 };
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000;
 
 interface SavedFormState {
+  draftId: string;
+  encrypted: string;
+  expiresAt: number;
+}
+
+interface SavedDraftPayload {
   formData: Omit<QuoteFormData, 'uploadedPhotos'>;
   currentStep: number;
   savedAt: number;
-  draftId: string;
 }
 
 interface QuoteFormProps {
@@ -57,11 +89,16 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
     zipCode: '',
     responses: {},
   });
+  const [persistDrafts, setPersistDrafts] = useState(() => Boolean(readSavedDraft()));
+  const [draftKey, setDraftKey] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    return sessionStorage.getItem(STORAGE_KEY_SECRET) || '';
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [draftId, setDraftId] = useState(() => {
-    const stored = readStoredDraftId();
-    return stored || createDraftId();
+    const stored = readSavedDraft();
+    return stored?.draftId || createDraftId();
   });
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -82,19 +119,35 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
   const formShellRef = useRef<HTMLDivElement | null>(null);
 
   const saveToStorage = useCallback((data: QuoteFormData, step: number) => {
+    if (!persistDrafts) return;
+
+    let keyToUse = draftKey;
+    if (!keyToUse) {
+      keyToUse = createDraftKey();
+      setDraftKey(keyToUse);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(STORAGE_KEY_SECRET, keyToUse);
+      }
+    }
+
     try {
       const { uploadedPhotos, ...dataWithoutPhotos } = data;
-      const state: SavedFormState = {
+      const payload: SavedDraftPayload = {
         formData: dataWithoutPhotos,
         currentStep: step,
         savedAt: Date.now(),
+      };
+      const encrypted = CryptoJS.AES.encrypt(JSON.stringify(payload), keyToUse).toString();
+      const state: SavedFormState = {
         draftId,
+        encrypted,
+        expiresAt: Date.now() + DRAFT_TTL_MS,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (e) {
       console.warn('Could not save form draft:', e);
     }
-  }, [draftId]);
+  }, [draftId, draftKey, persistDrafts]);
 
   const deleteDraftOnServer = useCallback(async (id?: string) => {
     if (!id) return;
@@ -138,13 +191,12 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
 
   const sendIncompleteReport = useCallback(() => {
     if (typeof window === 'undefined') return;
+    if (!persistDrafts) return;
     if (!draftId || isComplete || currentStep === 0 || !formData.serviceType) return;
 
     const payload = {
       draftId,
       serviceType: formData.serviceType,
-      zipCode: formData.zipCode || null,
-      responses: formData.responses || {},
       progress: progressValue,
       meta: {
         step: currentStep,
@@ -164,42 +216,69 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
       headers: { 'Content-Type': 'application/json' },
       body: serialized,
     }).catch(() => {});
-  }, [currentStep, draftId, formData.responses, formData.serviceType, formData.zipCode, isComplete, progressValue]);
+  }, [currentStep, draftId, formData.serviceType, isComplete, persistDrafts, progressValue]);
 
   const clearStorage = useCallback(() => {
     try {
       localStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(STORAGE_KEY_SECRET);
     } catch (e) {
       console.warn('Could not clear form draft:', e);
     }
+    setDraftKey('');
     setDraftId(createDraftId());
   }, []);
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const state: SavedFormState = JSON.parse(saved);
-        const hoursSinceSave = (Date.now() - state.savedAt) / (1000 * 60 * 60);
-        if (hoursSinceSave < 24 && state.formData.serviceType) {
-          setFormData({ ...state.formData, uploadedPhotos: undefined });
-          setCurrentStep(state.currentStep);
-          if (state.draftId) {
-            setDraftId(state.draftId);
-          }
-          setShowDraftRestored(true);
-          setTimeout(() => setShowDraftRestored(false), 4000);
-        } else {
-          clearStorage();
-          void deleteDraftOnServer(state.draftId);
-        }
-      }
-    } catch (e) {
-      console.warn('Could not restore form draft:', e);
+  const handlePersistToggle = useCallback((checked: boolean) => {
+    setPersistDrafts(checked);
+
+    if (!checked) {
       clearStorage();
-      void deleteDraftOnServer(draftId);
+      return;
     }
-  }, [clearStorage, deleteDraftOnServer, draftId]);
+
+    const key = draftKey || createDraftKey();
+    setDraftKey(key);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(STORAGE_KEY_SECRET, key);
+    }
+
+    try {
+      const { uploadedPhotos, ...dataWithoutPhotos } = formData;
+      const payload: SavedDraftPayload = {
+        formData: dataWithoutPhotos,
+        currentStep,
+        savedAt: Date.now(),
+      };
+      const encrypted = CryptoJS.AES.encrypt(JSON.stringify(payload), key).toString();
+      const state: SavedFormState = {
+        draftId,
+        encrypted,
+        expiresAt: Date.now() + DRAFT_TTL_MS,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (error) {
+      console.warn('Could not persist draft:', error);
+    }
+  }, [clearStorage, currentStep, draftId, draftKey, formData]);
+
+  useEffect(() => {
+    const saved = readSavedDraft();
+    if (!saved) return;
+
+    const hoursSinceSave = (Date.now() - saved.savedAt) / (1000 * 60 * 60);
+    if (hoursSinceSave < DRAFT_TTL_MS / (1000 * 60 * 60) && saved.formData.serviceType) {
+      setFormData({ ...saved.formData, uploadedPhotos: undefined });
+      setCurrentStep(saved.currentStep);
+      setDraftId(saved.draftId);
+      setPersistDrafts(true);
+      setShowDraftRestored(true);
+      setTimeout(() => setShowDraftRestored(false), 4000);
+    } else {
+      clearStorage();
+      void deleteDraftOnServer(saved.draftId);
+    }
+  }, [clearStorage, deleteDraftOnServer]);
 
   // Listen for chat-selected service to auto-fill and skip service step
   useEffect(() => {
@@ -553,6 +632,27 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
             padding="lg"
             className="max-w-4xl mx-auto"
           >
+            {currentStep > 0 && !isComplete && (
+              <div className="mb-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 sm:flex-row sm:items-center sm:justify-between">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={persistDrafts}
+                    onChange={(e) => handlePersistToggle(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-sky-500 focus:ring-sky-500"
+                  />
+                  Save progress on this device (encrypted, clears after 12h)
+                </label>
+                <button
+                  type="button"
+                  onClick={() => handlePersistToggle(false)}
+                  className="text-xs font-semibold text-slate-600 underline underline-offset-4 hover:text-slate-800"
+                >
+                  Clear saved progress
+                </button>
+              </div>
+            )}
+
             {currentStep === 0 && (
               <ServiceSelection onSubmit={handleServiceAndZip} initialData={formData} />
             )}

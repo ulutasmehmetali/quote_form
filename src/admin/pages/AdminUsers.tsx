@@ -115,7 +115,7 @@ export default function AdminUsers({ onNavigate }: AdminUsersProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <header className="bg-slate-900/50 backdrop-blur-xl border-b border-white/5 px-6 py-4 sticky top-0 z-40">
+      <header data-admin-page-chrome className="bg-slate-900/50 backdrop-blur-xl border-b border-white/5 px-6 py-4 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button onClick={() => onNavigate('settings')} className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-all">
@@ -240,3 +240,4 @@ export default function AdminUsers({ onNavigate }: AdminUsersProps) {
     </div>
   );
 }
+

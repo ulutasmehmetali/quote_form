@@ -36,12 +36,12 @@ const ACCESS_LOG_COOKIE = 'access_session_id';
 const ACCESS_LOG_COOKIE_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
 let accessLogsReady = true;
 const forceSkipAccessLogs = process.env.FORCE_SKIP_ACCESS_LOGS === 'true';
-// Default: disable access_logs unless explicitly enabled to avoid startup noise on locked-down DBs.
-// Set ENABLE_ACCESS_LOGS=true to attempt schema sync.
+let accessLogNoticePrinted = false;
+// Default: enable access logs unless explicitly disabled.
 let skipAccessLogs =
   forceSkipAccessLogs ||
   process.env.SKIP_ACCESS_LOG_SCHEMA_SYNC === 'true' ||
-  process.env.ENABLE_ACCESS_LOGS !== 'true';
+  process.env.DISABLE_ACCESS_LOGS === 'true';
 const bypassAccessLogSchemaCheck =
   process.env.BYPASS_ACCESS_LOG_SCHEMA_CHECK === 'true';
 
@@ -121,13 +121,18 @@ const ACCESS_LOG_SCHEMA_STEPS = [
    HELMET / SECURITY
 ------------------------------------------- */
 
+const scriptSrc = isProduction ? ["'self'"] : ["'self'", "'unsafe-inline'", "'unsafe-eval'"];
+const styleSrc = isProduction
+  ? ["'self'", "https://fonts.googleapis.com"]
+  : ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"];
+
 app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        scriptSrc,
+        styleSrc,
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         imgSrc: ["'self'", "data:", "blob:", "https:"],
         connectSrc: ["'self'", "https://api.openai.com", "https://ipapi.co"],
@@ -190,6 +195,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use(async (req, res, next) => {
   if (skipAccessLogs || !accessLogsReady) {
+    if (!accessLogNoticePrinted) {
+      console.warn('[access_logs] Disabled (env flag or initialization failure).');
+      accessLogNoticePrinted = true;
+    }
     return next();
   }
 
@@ -1030,15 +1039,21 @@ function startServer() {
 }
 
 async function bootstrapServer() {
-  if (!skipAccessLogs && !bypassAccessLogSchemaCheck) {
-    await ensureAccessLogSchema().catch((error) => {
-      console.warn(
-        'Access log schema sync skipped (starting server without forcing schema updates):',
+  if (skipAccessLogs) {
+    accessLogsReady = false;
+    console.warn('[access_logs] Disabled via environment flags.');
+  } else if (bypassAccessLogSchemaCheck) {
+    console.warn('[access_logs] Schema check bypassed; writes may fail if table is missing.');
+  } else {
+    try {
+      await ensureAccessLogSchema({ forceSync: true });
+    } catch (error) {
+      accessLogsReady = false;
+      console.error(
+        '[access_logs] Initialization failed; disabling access log writes.',
         error?.message || error,
       );
-    });
-  } else {
-    accessLogsReady = false;
+    }
   }
   startServer();
 }

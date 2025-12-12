@@ -10,15 +10,27 @@ interface USMapProps {
   data: StateData[];
 }
 
-const statePaths: Record<string, string> = usaMap.locations.reduce((acc, location) => {
-  acc[location.id.toUpperCase()] = location.path;
-  return acc;
-}, {} as Record<string, string>);
+type UsaLocation = {
+  id: string;
+  name: string;
+  path: string;
+};
 
-const stateNames: Record<string, string> = usaMap.locations.reduce((acc, location) => {
-  acc[location.id.toUpperCase()] = location.name;
-  return acc;
-}, {} as Record<string, string>);
+const statePaths: Record<string, string> = usaMap.locations.reduce<Record<string, string>>(
+  (acc: Record<string, string>, location: UsaLocation) => {
+    acc[location.id.toUpperCase()] = location.path;
+    return acc;
+  },
+  {}
+);
+
+const stateNames: Record<string, string> = usaMap.locations.reduce<Record<string, string>>(
+  (acc: Record<string, string>, location: UsaLocation) => {
+    acc[location.id.toUpperCase()] = location.name;
+    return acc;
+  },
+  {}
+);
 
 export default function USMap({ data }: USMapProps) {
   const [hoveredState, setHoveredState] = useState<string | null>(null);

@@ -34,6 +34,9 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
   const [formData, setFormData] = useState({ name: '', url: '', events: [] as string[] });
   const [secretKey, setSecretKey] = useState<string | null>(null);
   const [testingId, setTestingId] = useState<number | null>(null);
+  const [testPayload, setTestPayload] = useState('{\n  \"ping\": \"hello\"\n}');
+  const [logs, setLogs] = useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
 
   const fetchWebhooks = useCallback(async () => {
     setLoading(true);
@@ -51,9 +54,26 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
     }
   }, [getAuthHeaders]);
 
+  const fetchLogs = useCallback(async () => {
+    setLogsLoading(true);
+    try {
+      const res = await fetch(apiUrl('/api/admin/webhooks/logs?status=failed&limit=10'), {
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (res.ok) setLogs(data.logs || []);
+    } catch {
+      // ignore
+    } finally {
+      setLogsLoading(false);
+    }
+  }, [getAuthHeaders]);
+
   useEffect(() => {
     fetchWebhooks();
-  }, [fetchWebhooks]);
+    fetchLogs();
+  }, [fetchWebhooks, fetchLogs]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,14 +136,23 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
   const handleTest = async (id: number) => {
     setTestingId(id);
     try {
+      let parsedPayload: any = undefined;
+      try {
+        parsedPayload = JSON.parse(testPayload);
+      } catch {
+        alert('Payload JSON parse error');
+        return;
+      }
       const res = await fetch(apiUrl(`/api/admin/webhooks/${id}/test`), {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         credentials: 'include',
+        body: JSON.stringify({ payload: parsedPayload }),
       });
       const data = await res.json();
       alert(data.success ? 'Test successful!' : `Test failed: ${data.error}`);
       fetchWebhooks();
+      fetchLogs();
     } catch (error) {
       alert('Error while sending test');
     } finally {
@@ -143,7 +172,7 @@ export default function AdminWebhooks({ onNavigate }: AdminWebhooksProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <header className="bg-slate-900/50 backdrop-blur-xl border-b border-white/5 px-6 py-4 sticky top-0 z-40">
+      <header data-admin-page-chrome className="bg-slate-900/50 backdrop-blur-xl border-b border-white/5 px-6 py-4 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button onClick={() => onNavigate('settings')} className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-all">

@@ -14,6 +14,7 @@ import ReactFlow, {
   type OnConnect,
   type OnEdgesChange,
   type OnNodesChange,
+  MarkerType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { apiUrl } from '../../lib/api';
@@ -386,7 +387,7 @@ function Editor() {
       edges.map((e) => {
         const status = (e.data as any)?.status || 'default';
         const color = edgeColor[status] || edgeColor.default;
-        return { ...e, style: { strokeWidth: 2, stroke: color }, markerEnd: { type: 'arrowclosed', color } };
+        return { ...e, style: { strokeWidth: 2, stroke: color }, markerEnd: { type: MarkerType.ArrowClosed, color } };
       }),
     [edges],
   );

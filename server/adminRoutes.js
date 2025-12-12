@@ -120,6 +120,74 @@ const ipCountryCache = new Map();
 const ipBanCache = new Map();
 const IP_BAN_REASON = 'Exceeded admin login attempts';
 const regionNameFormatter = new Intl.DisplayNames(['en'], { type: 'region' });
+const mfaStore = new Map(); // userId -> { secret: string, enabled: boolean }
+
+const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+function base32Encode(buffer) {
+  let bits = '';
+  let output = '';
+  buffer.forEach((byte) => {
+    bits += byte.toString(2).padStart(8, '0');
+    while (bits.length >= 5) {
+      const chunk = bits.slice(0, 5);
+      bits = bits.slice(5);
+      output += BASE32_ALPHABET[parseInt(chunk, 2)];
+    }
+  });
+  if (bits.length) {
+    output += BASE32_ALPHABET[parseInt(bits.padEnd(5, '0'), 2)];
+  }
+  return output;
+}
+
+function base32Decode(input) {
+  const sanitized = input.replace(/=+$/, '').toUpperCase();
+  let bits = '';
+  for (const char of sanitized) {
+    const idx = BASE32_ALPHABET.indexOf(char);
+    if (idx === -1) continue;
+    bits += idx.toString(2).padStart(5, '0');
+  }
+  const bytes = [];
+  for (let i = 0; i + 8 <= bits.length; i += 8) {
+    bytes.push(parseInt(bits.slice(i, i + 8), 2));
+  }
+  return Buffer.from(bytes);
+}
+
+function generateMfaSecret() {
+  return base32Encode(crypto.randomBytes(20)); // RFC-compliant base32 secret
+}
+
+function hotp(secret, counter) {
+  const key = base32Decode(secret);
+  const buf = Buffer.alloc(8);
+  buf.writeBigInt64BE(BigInt(counter));
+  const hmac = crypto.createHmac('sha1', key).update(buf).digest();
+  const offset = hmac[hmac.length - 1] & 0xf;
+  const code =
+    ((hmac[offset] & 0x7f) << 24) |
+    ((hmac[offset + 1] & 0xff) << 16) |
+    ((hmac[offset + 2] & 0xff) << 8) |
+    (hmac[offset + 3] & 0xff);
+  return (code % 1000000).toString().padStart(6, '0');
+}
+
+function totp(secret, timestamp = Date.now()) {
+  const step = 30;
+  const counter = Math.floor(timestamp / 1000 / step);
+  return hotp(secret, counter);
+}
+
+function verifyTotp(secret, token) {
+  const code = token?.toString().trim();
+  if (!code || code.length !== 6) return false;
+  const now = Date.now();
+  const windowMs = 30000;
+  const secrets = [0, -1, 1].map((offset) => totp(secret, now + offset * windowMs));
+  return secrets.includes(code);
+}
 
 function formatRegionName(code) {
   if (!code) return 'Unknown';
@@ -596,6 +664,17 @@ router.post('/login', async (req, res) => {
     }
     
     clearFailedAttempts(clientIP);
+
+    const mfaState = mfaStore.get(user.id);
+    if (mfaState?.enabled) {
+      const otp = (req.body?.otp || '').toString().trim();
+      if (!otp) {
+        return res.status(401).json({ error: 'MFA code required', requiresMfa: true });
+      }
+      if (!verifyTotp(mfaState.secret, otp)) {
+        return res.status(401).json({ error: 'Invalid MFA code', requiresMfa: true });
+      }
+    }
     
     let userSessionCount = 0;
     for (const [sid, session] of sessions.entries()) {
@@ -1482,6 +1561,59 @@ router.post('/change-password', requireAuth, requireCSRF, async (req, res) => {
     console.error('Change password error:', error.message);
     res.status(500).json({ error: 'Failed to change password' });
   }
+});
+
+router.post('/mfa/enroll', requireAuth, requireCSRF, (req, res) => {
+  const secret = generateMfaSecret();
+  mfaStore.set(req.adminUser.id, { secret, enabled: false });
+  const otpauth = `otpauth://totp/MIYOMINT:${encodeURIComponent(req.adminUser.username)}?secret=${secret}&issuer=MIYOMINT`;
+  res.json({ secret, otpauth });
+});
+
+router.post('/mfa/verify', requireAuth, requireCSRF, (req, res) => {
+  const code = (req.body?.code || '').toString().trim();
+  const record = mfaStore.get(req.adminUser.id);
+  if (!record) {
+    return res.status(400).json({ error: 'Enroll MFA before verifying' });
+  }
+  if (!verifyTotp(record.secret, code)) {
+    return res.status(401).json({ error: 'Invalid code' });
+  }
+  mfaStore.set(req.adminUser.id, { ...record, enabled: true });
+  res.json({ success: true });
+});
+
+router.post('/mfa/disable', requireAuth, requireCSRF, (req, res) => {
+  mfaStore.delete(req.adminUser.id);
+  res.json({ success: true });
+});
+
+router.get('/sessions', requireAuth, (req, res) => {
+  const results = [];
+  for (const [id, session] of sessions.entries()) {
+    if (session.user.id === req.adminUser.id) {
+      results.push({
+        sessionId: id,
+        createdAt: session.createdAt,
+        lastActivity: session.lastActivity,
+        ipAddress: session.ipAddress,
+        userAgent: session.userAgent,
+        current: id === req.sessionId,
+      });
+    }
+  }
+  res.json({ sessions: results });
+});
+
+router.post('/sessions/revoke', requireAuth, requireCSRF, (req, res) => {
+  const { sessionId } = req.body || {};
+  if (!sessionId) return res.status(400).json({ error: 'sessionId required' });
+  const session = sessions.get(sessionId);
+  if (!session || session.user.id !== req.adminUser.id) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+  sessions.delete(sessionId);
+  res.json({ success: true });
 });
 
 // ==================== PROFESSIONALS ROUTES ====================
