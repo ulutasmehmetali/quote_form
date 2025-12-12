@@ -3,9 +3,9 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import geoip from 'geoip-lite';
 import { db, pool } from './db.js';
-import { submissions, adminUsers, submissionNotes, activityLogs, partialForms, adminIpBlacklist, accessLogs } from '../shared/schema.js';
+import { submissions, adminUsers, submissionNotes, activityLogs, partialForms, adminIpBlacklist, accessLogs, adminDevices } from '../shared/schema.js';
 import { eq, desc, sql, count, gte, and, like, or, asc, lt } from 'drizzle-orm';
-import { getClientIP } from './utils/geoip.js';
+import { getClientIP, parseUserAgent } from './utils/geoip.js';
 import { getGeoFromIP } from './helpers/geo.js';
 import { supabase } from './helpers/supabase.js';
 
@@ -114,6 +114,8 @@ const sessions = new Map();
 const SESSION_DURATION = 30 * 60 * 1000;
 const SESSION_DURATION_MS = SESSION_DURATION;
 const MAX_SESSIONS_PER_USER = 3;
+const userSessionLimits = new Map(); // userId -> max sessions override
+const knownDeviceFingerprints = new Map(); // userId -> Set<string>
 const failedAttempts = new Map();
 const LOCKOUT_DURATION = 15 * 60 * 1000;
 const MAX_FAILED_ATTEMPTS = 3;
@@ -413,6 +415,62 @@ function generateSecureSessionId() {
 
 function generateCSRFToken() {
   return crypto.randomBytes(24).toString('hex');
+}
+
+function getMaxSessionsForUser(userId) {
+  return userSessionLimits.get(userId) || MAX_SESSIONS_PER_USER;
+}
+
+function buildDeviceLabel(parsedUA) {
+  const parts = [];
+  if (parsedUA?.device || parsedUA?.os) {
+    parts.push(parsedUA.device || parsedUA.os);
+  }
+  if (parsedUA?.browser) {
+    parts.push(parsedUA.browser);
+  }
+  return parts.join(' · ').trim() || 'Unknown device';
+}
+
+function createDeviceFingerprint(ip, parsedUA) {
+  const safeIP = ip || 'unknown-ip';
+  const devicePart = parsedUA?.device || parsedUA?.os || 'unknown-device';
+  const browserPart = parsedUA?.browser || 'unknown-browser';
+  return `${safeIP}|${devicePart}|${browserPart}`;
+}
+
+async function findDeviceRecord(adminId, fingerprint) {
+  if (!adminId || !fingerprint) return null;
+  const [row] = await db
+    .select({
+      id: adminDevices.id,
+      deviceName: adminDevices.deviceName,
+      fingerprint: adminDevices.fingerprint,
+    })
+    .from(adminDevices)
+    .where(and(eq(adminDevices.adminId, adminId), eq(adminDevices.fingerprint, fingerprint)))
+    .limit(1);
+  return row || null;
+}
+
+async function upsertDeviceRecord(adminId, fingerprint, deviceName) {
+  if (!adminId || !fingerprint) return null;
+  const safeName = sanitizeInput(deviceName || 'Device').slice(0, 255) || 'Device';
+  const existing = await findDeviceRecord(adminId, fingerprint);
+  if (existing) {
+    await db
+      .update(adminDevices)
+      .set({ deviceName: safeName, lastSeenAt: new Date() })
+      .where(and(eq(adminDevices.adminId, adminId), eq(adminDevices.fingerprint, fingerprint)));
+    return { ...existing, deviceName: safeName };
+  }
+  await db.insert(adminDevices).values({
+    adminId,
+    fingerprint,
+    deviceName: safeName,
+    lastSeenAt: new Date(),
+  });
+  return { deviceName: safeName, fingerprint };
 }
 
 function sanitizeInput(str) {
@@ -828,12 +886,32 @@ router.post('/login', async (req, res) => {
       resetMfaAttempts(user.id, clientIP);
     }
 
+    const parsedUA = parseUserAgent(req.headers['user-agent']?.substring(0, 500));
+    const deviceNameRaw = typeof req.body?.deviceName === 'string' ? req.body.deviceName : '';
+    const fingerprint = createDeviceFingerprint(clientIP, parsedUA);
+    const deviceSet = knownDeviceFingerprints.get(user.id) || new Set();
+    const existingDevice = await findDeviceRecord(user.id, fingerprint);
+    const isNewDevice = !existingDevice && !deviceSet.has(fingerprint);
+    const deviceName = sanitizeInput(deviceNameRaw || existingDevice?.deviceName || buildDeviceLabel(parsedUA));
+    deviceSet.add(fingerprint);
+    knownDeviceFingerprints.set(user.id, deviceSet);
+
     let userSessionCount = 0;
+    const maxSessions = getMaxSessionsForUser(user.id);
+    const userSessions = [];
     for (const [sid, session] of sessions.entries()) {
       if (session.user.id === user.id) {
         userSessionCount++;
-        if (userSessionCount >= MAX_SESSIONS_PER_USER) {
-          sessions.delete(sid);
+        userSessions.push({ sid, createdAt: session.createdAt });
+      }
+    }
+
+    if (userSessionCount >= maxSessions) {
+      const sorted = userSessions.sort((a, b) => a.createdAt - b.createdAt); // oldest first
+      while (sorted.length >= maxSessions) {
+        const victim = sorted.shift();
+        if (victim) {
+          sessions.delete(victim.sid);
           userSessionCount--;
         }
       }
@@ -850,6 +928,9 @@ router.post('/login', async (req, res) => {
       mfaEnabled,
     };
 
+    const sessionGeo = await getGeoForIP(clientIP);
+    await upsertDeviceRecord(user.id, fingerprint, deviceName);
+
     sessions.set(sessionId, {
       user: sessionUser,
       expiresAt: Date.now() + SESSION_DURATION,
@@ -857,15 +938,25 @@ router.post('/login', async (req, res) => {
       lastActivity: Date.now(),
       ipAddress: clientIP,
       userAgent: req.headers['user-agent']?.substring(0, 500),
+      deviceName,
+      deviceFingerprint: fingerprint,
+      newDevice: isNewDevice,
+      geo: sessionGeo,
       csrfToken,
     });
     
     await db.update(adminUsers)
       .set({ lastLoginAt: new Date(), lastLoginIp: clientIP })
       .where(eq(adminUsers.id, user.id));
-    
-    await logActivity('login_success', 'admin', user.id, sessionUser, req, {});
-    authLog('login_success', { username, ip: clientIP });
+    await logActivity('login_success', 'admin', user.id, sessionUser, req, { deviceName, newDevice: isNewDevice });
+    if (isNewDevice) {
+      await logActivity('new_device_login', 'security', user.id, sessionUser, req, {
+        deviceName,
+        ipAddress: clientIP,
+      });
+      authLog('login_new_device', { username, ip: clientIP, deviceName });
+    }
+    authLog('login_success', { username, ip: clientIP, deviceName });
     
     res.cookie('adminSession', sessionId, {
       httpOnly: true,
@@ -1825,21 +1916,61 @@ router.get('/mfa/status', requireAuth, async (req, res) => {
   }
 });
 
-router.get('/sessions', requireAuth, (req, res) => {
-  const results = [];
-  for (const [id, session] of sessions.entries()) {
-    if (session.user.id === req.adminUser.id) {
-      results.push({
-        sessionId: id,
-        createdAt: session.createdAt,
-        lastActivity: session.lastActivity,
-        ipAddress: session.ipAddress,
-        userAgent: session.userAgent,
-        current: id === req.sessionId,
-      });
+router.get('/sessions', requireAuth, async (req, res) => {
+  try {
+    const results = [];
+    const jobs = [];
+
+    for (const [id, session] of sessions.entries()) {
+      if (session.user.id !== req.adminUser.id) continue;
+
+      jobs.push((async () => {
+        if (!session.geo) {
+          session.geo = await getGeoForIP(session.ipAddress);
+        }
+        let storedDevice = null;
+        if (session.deviceFingerprint) {
+          storedDevice = await findDeviceRecord(req.adminUser.id, session.deviceFingerprint);
+          if (storedDevice?.deviceName) {
+            session.deviceName = storedDevice.deviceName;
+            session.newDevice = false;
+          }
+          if (storedDevice) {
+            await upsertDeviceRecord(req.adminUser.id, session.deviceFingerprint, session.deviceName || storedDevice.deviceName);
+          }
+        }
+        const location = session.geo
+          ? {
+              city: session.geo.city,
+              country: session.geo.country,
+              countryCode: session.geo.country_code || session.geo.countryCode,
+              region: session.geo.region,
+              timezone: session.geo.timezone,
+            }
+          : null;
+
+        results.push({
+          sessionId: id,
+          createdAt: session.createdAt,
+          lastActivity: session.lastActivity,
+          ipAddress: session.ipAddress,
+          userAgent: session.userAgent,
+          deviceName: session.deviceName,
+          deviceFingerprint: session.deviceFingerprint,
+          newDevice: !!session.newDevice,
+          location,
+          current: id === req.sessionId,
+        });
+      })());
     }
+
+    await Promise.all(jobs);
+
+    res.json({ sessions: results });
+  } catch (error) {
+    console.error('Session list error:', error?.message || error);
+    res.status(500).json({ error: 'Failed to load sessions' });
   }
-  res.json({ sessions: results });
 });
 
 router.post('/sessions/revoke', requireAuth, requireCSRF, (req, res) => {
@@ -1851,6 +1982,89 @@ router.post('/sessions/revoke', requireAuth, requireCSRF, (req, res) => {
   }
   sessions.delete(sessionId);
   res.json({ success: true });
+});
+
+router.post('/sessions/revoke-all', requireAuth, requireCSRF, (req, res) => {
+  let removed = 0;
+  let currentRevoked = false;
+  for (const [id, session] of sessions.entries()) {
+    if (session.user.id === req.adminUser.id) {
+      sessions.delete(id);
+      removed++;
+      if (id === req.sessionId) currentRevoked = true;
+    }
+  }
+  res.clearCookie('adminSession', { path: '/' });
+  res.json({ success: true, removed, currentRevoked });
+});
+
+router.post('/sessions/label', requireAuth, requireCSRF, (req, res) => {
+  const { sessionId, deviceName } = req.body || {};
+  if (!sessionId || typeof deviceName !== 'string') {
+    return res.status(400).json({ error: 'sessionId and deviceName required' });
+  }
+  const session = sessions.get(sessionId);
+  if (!session || session.user.id !== req.adminUser.id) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+  if (!session.deviceFingerprint) {
+    return res.status(400).json({ error: 'No device fingerprint on session' });
+  }
+  const safeName = sanitizeInput(deviceName).slice(0, 120) || 'Device';
+  session.deviceName = safeName;
+  session.newDevice = false;
+  const setForUser = knownDeviceFingerprints.get(req.adminUser.id) || new Set();
+  setForUser.add(session.deviceFingerprint);
+  knownDeviceFingerprints.set(req.adminUser.id, setForUser);
+  upsertDeviceRecord(req.adminUser.id, session.deviceFingerprint, safeName).catch(() => {});
+  res.json({ success: true, deviceName: safeName });
+});
+
+router.get('/session-policy', requireAuth, (req, res) => {
+  const maxSessions = getMaxSessionsForUser(req.adminUser.id);
+  res.json({ maxSessions, defaultMax: MAX_SESSIONS_PER_USER });
+});
+
+router.post('/session-policy', requireAuth, requireCSRF, (req, res) => {
+  const maxSessionsRaw = req.body?.maxSessions;
+  const parsed = parseInt(maxSessionsRaw, 10);
+  if (!Number.isFinite(parsed) || parsed < 1 || parsed > 10) {
+    return res.status(400).json({ error: 'maxSessions must be between 1 and 10' });
+  }
+  userSessionLimits.set(req.adminUser.id, parsed);
+  res.json({ success: true, maxSessions: parsed });
+});
+
+router.get('/security/signals', requireAuth, async (req, res) => {
+  const ip = getClientIP(req);
+  const attempts = failedAttempts.get(ip) || null;
+  const banned = await isIpBanned(ip);
+  const lockoutRemaining = attempts?.lockoutUntil ? Math.max(0, attempts.lockoutUntil - Date.now()) : 0;
+  res.json({
+    ip,
+    failedAttempts: attempts?.count || 0,
+    lockoutUntil: attempts?.lockoutUntil || null,
+    lockoutRemaining,
+    isBanned: !!banned,
+  });
+});
+
+router.get('/security/events', requireAuth, async (req, res) => {
+  try {
+    let { limit = 10 } = req.query;
+    limit = Math.max(1, Math.min(parseInt(limit, 10) || 10, 50));
+    const actions = ['login_success', 'logout', 'ip_banned', 'ip_unbanned', 'new_device_login', 'session_ip_mismatch', 'ip_banned_manual'];
+    const rows = await db
+      .select()
+      .from(activityLogs)
+      .where(and(eq(activityLogs.adminId, req.adminUser.id), or(...actions.map((a) => eq(activityLogs.action, a)))))
+      .orderBy(desc(activityLogs.createdAt))
+      .limit(limit);
+    res.json({ events: rows });
+  } catch (error) {
+    console.error('Security events error:', error?.message || error);
+    res.status(500).json({ error: 'Failed to load security events' });
+  }
 });
 
 // ==================== PROFESSIONALS ROUTES ====================
