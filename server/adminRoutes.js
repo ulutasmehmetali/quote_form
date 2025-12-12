@@ -135,17 +135,22 @@ const authLog = (stage, meta = {}) => {
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
 async function fetchAdminUserSafe(username) {
-  const [user] = await db.select({
-    id: adminUsers.id,
-    username: adminUsers.username,
-    passwordHash: adminUsers.passwordHash,
-    role: adminUsers.role,
-    partnerApiId: adminUsers.partnerApiId,
-    lastLoginAt: adminUsers.lastLoginAt,
-    lastLoginIp: adminUsers.lastLoginIp,
-    createdAt: adminUsers.createdAt,
-  }).from(adminUsers).where(eq(adminUsers.username, username));
-  return { ...user, mfaSecret: null, mfaEnabled: false };
+  try {
+    const [user] = await db.select({
+      id: adminUsers.id,
+      username: adminUsers.username,
+      passwordHash: adminUsers.passwordHash,
+      role: adminUsers.role,
+      partnerApiId: adminUsers.partnerApiId,
+      lastLoginAt: adminUsers.lastLoginAt,
+      lastLoginIp: adminUsers.lastLoginIp,
+      createdAt: adminUsers.createdAt,
+    }).from(adminUsers).where(eq(adminUsers.username, username));
+    return { ...user, mfaSecret: null, mfaEnabled: false };
+  } catch (error) {
+    authLog('login_db_error', { error: error?.message });
+    throw error;
+  }
 }
 
 function base32Encode(buffer) {
@@ -757,11 +762,11 @@ router.post('/login', async (req, res) => {
   } catch (error) {
     console.error('Login error:', error.message);
     authLog('login_exception', { error: error?.message, stack: error?.stack });
-    const payload = { error: 'Authentication failed' };
-    if (DEBUG_AUTH) {
-      payload.detail = error?.message || 'unknown';
-    }
-    res.status(500).json(payload);
+    res.status(500).json({
+      error: 'Authentication failed',
+      detail: error?.message || 'unknown',
+      ...(DEBUG_AUTH ? { stack: error?.stack } : {}),
+    });
   }
 });
 
