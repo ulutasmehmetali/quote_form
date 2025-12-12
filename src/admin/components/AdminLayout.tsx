@@ -28,38 +28,36 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <header className="bg-slate-900/50 backdrop-blur-xl border-b border-white/5 px-6 py-4 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto flex items-center gap-4">
+          <div className="flex items-center gap-3 flex-shrink-0">
             <div className="relative group">
               <div className="absolute -inset-1 bg-gradient-to-r from-sky-500 to-indigo-500 rounded-xl blur opacity-40 group-hover:opacity-60 transition"></div>
               <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">M</div>
             </div>
-            <div className="hidden sm:block">
-              <h1 className="font-bold text-white text-lg">MIYOMINT</h1>
-              <p className="text-sm text-slate-400 hidden sm:block">Admin Panel</p>
-            </div>
           </div>
 
-          <nav className="hidden md:flex items-center gap-1 bg-slate-800/50 rounded-2xl p-1">
-            {NAV_ITEMS.map((item) => {
-              const isActive = currentPage === item.id;
-              return (
-                <NavLink
-                  key={item.id}
-                  to={item.id === 'dashboard' ? '/dashboard' : `/${item.id}`}
-                  className={`px-5 py-2.5 rounded-xl font-medium transition-all ${
-                    isActive
-                      ? 'bg-gradient-to-r from-sky-500 to-indigo-500 text-white shadow-lg shadow-sky-500/20'
-                      : 'text-slate-300 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">{item.label}</span>
-                </NavLink>
-              );
-            })}
+          <nav className="hidden md:flex flex-1 min-w-0 overflow-x-auto bg-slate-800/50 rounded-2xl p-1">
+            <div className="flex items-center gap-2 pr-2 flex-nowrap min-w-max">
+              {NAV_ITEMS.map((item) => {
+                const isActive = currentPage === item.id;
+                return (
+                  <NavLink
+                    key={item.id}
+                    to={item.id === 'dashboard' ? '/dashboard' : `/${item.id}`}
+                    className={`px-4 py-2 rounded-xl font-medium whitespace-nowrap transition-all ${
+                      isActive
+                        ? 'bg-gradient-to-r from-sky-500 to-indigo-500 text-white shadow-lg shadow-sky-500/20'
+                        : 'text-slate-300 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">{item.label}</span>
+                  </NavLink>
+                );
+              })}
+            </div>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-shrink-0">
             <div className="flex items-center gap-3 bg-slate-800/50 rounded-xl px-4 py-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-white font-bold text-sm">
                 {user?.username?.charAt(0).toUpperCase()}
