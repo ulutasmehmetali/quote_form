@@ -1,0 +1,9 @@
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://miyomint.com/sitemap.xml
+
+# Crawl-delay for polite crawling
+Crawl-delay: 1
