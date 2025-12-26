@@ -16,8 +16,15 @@ import remodelingImg from '@assets/remodeling_1764336249973.webp';
 import roofingImg from '@assets/roofing services_1764336251048.webp';
 import airConditionerImg from '@assets/air conditioner_1764336252466.webp';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
-const apiUrl = (path: string) => `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
+if (!API_BASE) {
+  // eslint-disable-next-line no-console
+  console.error('[auth] VITE_API_BASE_URL is missing. Set it to your Railway backend URL.');
+}
+const apiUrl = (path: string) => {
+  const base = API_BASE ?? '';
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
+};
 
 const topRowServices = [
   { img: roofingImg, name: 'Roofing', color: 'bg-sky-500' },
