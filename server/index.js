@@ -38,6 +38,7 @@ const ACCESS_LOG_COOKIE_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
 let accessLogsReady = true;
 const forceSkipAccessLogs = process.env.FORCE_SKIP_ACCESS_LOGS === 'true';
 let accessLogNoticePrinted = false;
+let accessLogsHardDisabled = false;
 // Default: enable access logs unless explicitly disabled.
 let skipAccessLogs =
   forceSkipAccessLogs ||
@@ -208,7 +209,7 @@ app.use((req, res, next) => {
 });
 
 app.use(async (req, res, next) => {
-  if (skipAccessLogs || !accessLogsReady) {
+  if (skipAccessLogs || !accessLogsReady || accessLogsHardDisabled) {
     if (!accessLogNoticePrinted) {
       console.warn('[access_logs] Disabled (env flag or initialization failure).');
       accessLogNoticePrinted = true;
@@ -272,22 +273,33 @@ app.use(async (req, res, next) => {
     }
   } catch (error) {
     console.error('Access log middleware failed:', error);
+    // If DB connection is invalid, disable further access log writes to avoid noisy failures
+    if (String(error?.message || '').includes('Tenant or user not found') || error?.code === 'XX000') {
+      accessLogsHardDisabled = true;
+      console.warn('[access_logs] Disabling writes due to DB connection error (check DATABASE_URL credentials).');
+    }
   }
 
   const startTime = Date.now();
   res.once('finish', () => {
     const latencyMs = Date.now() - startTime;
-    void db
-      .update(accessLogs)
-      .set({
-        leftAt: new Date(),
-        statusCode: res.statusCode,
-        latencyMs,
-      })
-      .where(eq(accessLogs.sessionId, sessionId))
-      .catch((error) => {
-        console.error('Failed to update access log exit time:', error);
-      });
+    if (!accessLogsHardDisabled) {
+      void db
+        .update(accessLogs)
+        .set({
+          leftAt: new Date(),
+          statusCode: res.statusCode,
+          latencyMs,
+        })
+        .where(eq(accessLogs.sessionId, sessionId))
+        .catch((error) => {
+          console.error('Failed to update access log exit time:', error);
+          if (String(error?.message || '').includes('Tenant or user not found') || error?.code === 'XX000') {
+            accessLogsHardDisabled = true;
+            console.warn('[access_logs] Disabling writes due to DB connection error (check DATABASE_URL credentials).');
+          }
+        });
+    }
   });
 
   return next();
