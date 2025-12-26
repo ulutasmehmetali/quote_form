@@ -197,6 +197,7 @@ export default function HeroSection({ renderForm }: HeroSectionProps) {
   const email = authForm.email.trim();
   const name = authForm.name.trim();
   const companyName = authForm.companyName.trim();
+  const position = authForm.position.trim();
 
   const passwordCriteriaMet = {
     length: password.length >= 10,
@@ -259,7 +260,14 @@ export default function HeroSection({ renderForm }: HeroSectionProps) {
         throw new Error(data?.error || data?.raw || `Request failed (${res.status})`);
       }
 
-      setAuthStatus({ loading: false, error: '', success: authModal.mode === 'login' ? 'Logged in!' : 'Account created!' });
+      const successText =
+        data?.message ||
+        (authModal.mode === 'login' ? 'Logged in successfully.' : 'Signed up successfully.');
+      setAuthStatus({
+        loading: false,
+        error: '',
+        success: successText,
+      });
       setTimeout(() => closeAuthModal(), 900);
     } catch (err: any) {
       setAuthStatus({

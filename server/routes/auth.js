@@ -1,7 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import { db } from '../db.js';
-import { users } from '../../shared/schema.js';
+import { users, companyProfiles, proProfiles } from '../../shared/schema.js';
 import { eq } from 'drizzle-orm';
 
 const router = express.Router();
@@ -80,7 +80,18 @@ router.post('/signup', async (req, res) => {
       })
       .returning();
 
-    return res.status(201).json({ user: formatUser(created) });
+    // Create profile rows to keep role-specific data handy
+    if (role === 'company') {
+      await db
+        .insert(companyProfiles)
+        .values({ userId: created.id, companyName, position: position || null });
+    } else {
+      await db.insert(proProfiles).values({ userId: created.id, title: position || null });
+    }
+
+    return res
+      .status(201)
+      .json({ message: 'Signed up successfully.', user: formatUser(created) });
   } catch (err) {
     console.error('[auth/signup] error', err);
     return res.status(500).json({ error: 'Signup failed.' });
@@ -110,7 +121,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
 
-    return res.json({ user: formatUser(user) });
+    return res.json({ message: 'Logged in successfully.', user: formatUser(user) });
   } catch (err) {
     console.error('[auth/login] error', err);
     return res.status(500).json({ error: 'Login failed.' });
