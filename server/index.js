@@ -46,6 +46,9 @@ let skipAccessLogs =
   process.env.DISABLE_ACCESS_LOGS === 'true';
 const bypassAccessLogSchemaCheck =
   process.env.BYPASS_ACCESS_LOG_SCHEMA_CHECK === 'true';
+if (process.env.ENABLE_ACCESS_LOGS !== 'true') {
+  skipAccessLogs = true;
+}
 
 const ACCESS_LOG_COLUMNS = [
   { name: 'user_agent', definition: 'TEXT' },
