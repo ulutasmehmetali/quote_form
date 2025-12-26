@@ -240,7 +240,7 @@ export default function HeroSection({ renderForm }: HeroSectionProps) {
         }
       };
 
-      const res = await fetch(`/api/auth/${authModal.mode}`, {
+      const res = await fetch(targetUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
