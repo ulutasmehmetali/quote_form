@@ -565,8 +565,18 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
     return <ThankYou />;
   }
 
+  const containerClass =
+    currentStep === 0
+      ? 'relative w-screen min-h-screen bg-gradient-to-br from-slate-50 via-white to-sky-50'
+      : 'relative w-full min-h-screen bg-gradient-to-br from-slate-50 via-white to-sky-50';
+
+  const innerClass =
+    currentStep === 0
+      ? 'relative w-screen mx-auto px-0 pt-0 pb-8 space-y-6 sm:space-y-12'
+      : 'relative w-full mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 sm:py-12 lg:py-16 pb-8 space-y-6 sm:space-y-12';
+
   return (
-    <div className="relative w-full min-h-screen bg-gradient-to-br from-slate-50 via-white to-sky-50">
+    <div className={containerClass}>
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(14,165,233,0.08),transparent),radial-gradient(ellipse_60%_40%_at_100%_100%,rgba(99,102,241,0.05),transparent),radial-gradient(ellipse_40%_30%_at_0%_80%,rgba(16,185,129,0.04),transparent)] pointer-events-none" aria-hidden />
 
       {showDraftRestored && (
@@ -613,84 +623,82 @@ export default function QuoteForm({ onWizardModeChange }: QuoteFormProps) {
         </div>
       )}
 
-      <div className="relative w-full mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 sm:py-12 lg:py-16 pb-8 space-y-6 sm:space-y-12">
-        {currentStep === 0 && (
-          <HeroSection />
+      <div className={innerClass}>
+        {currentStep === 0 ? (
+          <HeroSection
+            renderForm={
+              <SectionCard
+                surface="frosted"
+                padding="lg"
+                className="max-w-4xl mx-auto"
+              >
+                <ServiceSelection onSubmit={handleServiceAndZip} initialData={formData} />
+              </SectionCard>
+            }
+          />
+        ) : (
+          <div ref={formShellRef} className="space-y-6">
+            <SectionCard
+              surface="frosted"
+              padding="lg"
+              className="max-w-4xl mx-auto"
+            >
+              {currentStep > 0 && !isComplete && (
+                <div className="mb-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 sm:flex-row sm:items-center sm:justify-between">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={persistDrafts}
+                      onChange={(e) => handlePersistToggle(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-sky-500 focus:ring-sky-500"
+                    />
+                    Save progress on this device (encrypted, clears after 12h)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handlePersistToggle(false)}
+                    className="text-xs font-semibold text-slate-600 underline underline-offset-4 hover:text-slate-800"
+                  >
+                    Clear saved progress
+                  </button>
+                </div>
+              )}
+
+              {currentStep > 0 && currentStep <= questions.length && (
+                <QuestionStep
+                  question={questions[currentStep - 1]}
+                  answer={formData.responses[questions[currentStep - 1].id]}
+                  onAnswer={handleAnswer}
+                  onNext={handleNext}
+                  onBack={handleBack}
+                  currentStep={currentStep}
+                  totalSteps={totalSteps}
+                />
+              )}
+
+              {currentStep === questions.length + 1 && (
+                <PhotoUpload
+                  onSubmit={handlePhotos}
+                  onBack={handleBack}
+                  onNext={handleNext}
+                  currentStep={currentStep}
+                  totalSteps={totalSteps}
+                />
+              )}
+
+              {currentStep === questions.length + 2 && (
+                <ContactInfo
+                  onSubmit={handleContactInfo}
+                  onBack={handleBack}
+                  isSubmitting={isSubmitting}
+                  retryCount={retryCount}
+                  currentStep={currentStep}
+                  totalSteps={totalSteps}
+                />
+              )}
+            </SectionCard>
+          </div>
         )}
-
-        <div ref={formShellRef} className="space-y-6">
-          {isWizardActive && (
-            <div className="sticky top-4 z-20 py-4">
-              <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-slate-200 p-4 shadow-lg">
-                <StepIndicator currentStep={currentStep} totalSteps={totalSteps} />
-              </div>
-            </div>
-          )}
-
-          <SectionCard
-            surface="frosted"
-            padding="lg"
-            className="max-w-4xl mx-auto"
-          >
-            {currentStep > 0 && !isComplete && (
-              <div className="mb-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 sm:flex-row sm:items-center sm:justify-between">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={persistDrafts}
-                    onChange={(e) => handlePersistToggle(e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-sky-500 focus:ring-sky-500"
-                  />
-                  Save progress on this device (encrypted, clears after 12h)
-                </label>
-                <button
-                  type="button"
-                  onClick={() => handlePersistToggle(false)}
-                  className="text-xs font-semibold text-slate-600 underline underline-offset-4 hover:text-slate-800"
-                >
-                  Clear saved progress
-                </button>
-              </div>
-            )}
-
-            {currentStep === 0 && (
-              <ServiceSelection onSubmit={handleServiceAndZip} initialData={formData} />
-            )}
-
-            {currentStep > 0 && currentStep <= questions.length && (
-              <QuestionStep
-                question={questions[currentStep - 1]}
-                answer={formData.responses[questions[currentStep - 1].id]}
-                onAnswer={handleAnswer}
-                onNext={handleNext}
-                onBack={handleBack}
-                currentStep={currentStep}
-                totalSteps={totalSteps}
-              />
-            )}
-
-            {currentStep === questions.length + 1 && (
-              <PhotoUpload
-                onSubmit={handlePhotos}
-                onBack={handleBack}
-                onNext={handleNext}
-                currentStep={currentStep}
-                totalSteps={totalSteps}
-              />
-            )}
-
-            {currentStep === questions.length + 2 && (
-              <ContactInfo
-                onSubmit={handleContactInfo}
-                onBack={handleBack}
-                isSubmitting={isSubmitting}
-                retryCount={retryCount}
-                currentStep={currentStep}
-                totalSteps={totalSteps}
-              />
-            )}
-          </SectionCard>
-        </div>
       </div>
     </div>
   );

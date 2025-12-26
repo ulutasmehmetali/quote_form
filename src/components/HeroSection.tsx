@@ -1,3 +1,4 @@
+import { type ReactNode, useState } from 'react';
 import Button from './Button';
 import plumberImg from '@assets/roofing services_1764316007803.webp';
 import electricianImg from '@assets/electric_1764315995946.jpg';
@@ -128,22 +129,253 @@ const scrollToServiceStep = () => {
   window.scrollTo({ top, behavior: 'smooth' });
 };
 
-export default function HeroSection() {
+interface HeroSectionProps {
+  renderForm?: ReactNode;
+}
+
+export default function HeroSection({ renderForm }: HeroSectionProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [authModal, setAuthModal] = useState<{ open: boolean; mode: 'login' | 'signup' }>({ open: false, mode: 'login' });
+  const [authForm, setAuthForm] = useState<{
+    name: string;
+    companyName: string;
+    position: string;
+    email: string;
+    password: string;
+    confirm: string;
+    role: 'company' | 'pro';
+  }>({
+    name: '',
+    companyName: '',
+    position: '',
+    email: '',
+    password: '',
+    confirm: '',
+    role: 'company',
+  });
+  const [authStatus, setAuthStatus] = useState<{ loading: boolean; error: string; success: string }>({
+    loading: false,
+    error: '',
+    success: '',
+  });
+
+  const openAuthModal = (mode: 'login' | 'signup') => {
+    setMobileMenuOpen(false);
+    setAuthModal({ open: true, mode });
+    setAuthForm({
+      name: '',
+      companyName: '',
+      position: '',
+      email: '',
+      password: '',
+      confirm: '',
+      role: 'company',
+    });
+    setAuthStatus({ loading: false, error: '', success: '' });
+  };
+
+  const closeAuthModal = () => setAuthModal({ open: false, mode: 'login' });
+  const updateAuthForm = (field: keyof typeof authForm, value: string) =>
+    setAuthForm((prev) => ({ ...prev, [field]: value }));
+
+  const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{10,}$/;
+
+  const password = authForm.password.trim();
+  const confirm = authForm.confirm.trim();
+  const email = authForm.email.trim();
+  const name = authForm.name.trim();
+  const companyName = authForm.companyName.trim();
+
+  const passwordCriteriaMet = {
+    length: password.length >= 10,
+    upper: /[A-Z]/.test(password),
+    lower: /[a-z]/.test(password),
+    number: /\d/.test(password),
+    symbol: /[^\w\s]/.test(password),
+  };
+  const passwordStrengthPercent =
+    (['length', 'upper', 'lower', 'number', 'symbol'].filter((key) => (passwordCriteriaMet as any)[key]).length / 5) *
+    100;
+  const showPasswordHint =
+    authModal.mode === 'signup' && password.length >= 6 && !strongPassword.test(password);
+  const passwordHint = showPasswordHint
+    ? 'Password must be at least 10 characters and include uppercase, lowercase, number, and symbol.'
+    : '';
+  const confirmHint =
+    authModal.mode === 'signup' && confirm && confirm !== password ? 'Passwords do not match.' : '';
+  const missingRequired =
+    authModal.mode === 'signup'
+      ? !email || !password || !name || (authForm.role === 'company' && !companyName)
+      : !email || !password;
+  const submitDisabled =
+    authStatus.loading || missingRequired || Boolean(passwordHint) || Boolean(confirmHint);
+
+  const submitAuth = async () => {
+    setAuthStatus({ loading: true, error: '', success: '' });
+
+    try {
+      const parseResponse = async (res: Response) => {
+        const text = await res.text();
+        try {
+          return text ? JSON.parse(text) : {};
+        } catch {
+          return { raw: text };
+        }
+      };
+
+      const res = await fetch(`/api/auth/${authModal.mode}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          role: authForm.role,
+          email,
+          password,
+          name: authModal.mode === 'signup' ? name : undefined,
+          companyName: authModal.mode === 'signup' && authForm.role === 'company' ? companyName : undefined,
+          position: authModal.mode === 'signup' && authForm.role === 'company' ? position : undefined,
+        }),
+      });
+
+      const data = await parseResponse(res);
+      if (!res.ok) {
+        throw new Error(data?.error || 'Something went wrong.');
+      }
+
+      setAuthStatus({ loading: false, error: '', success: authModal.mode === 'login' ? 'Logged in!' : 'Account created!' });
+      setTimeout(() => closeAuthModal(), 900);
+    } catch (err: any) {
+      setAuthStatus({ loading: false, error: err?.message || 'Request failed.', success: '' });
+    }
+  };
+
   return (
-    <section className="relative overflow-visible w-full px-0 py-0 -mt-14 md:-mt-22">
+    <section className="relative overflow-visible w-full px-0 py-0 -mt-14 md:-mt-22 lg:pt-16 lg:pb-16 bg-[url('/hero-bg-4.jpg')] bg-cover bg-center">
+      <div className="absolute inset-0 bg-white/90 backdrop-blur-[2px] pointer-events-none" />
+      {/* Desktop header bar with centered logo and actions */}
+      <div className="hidden lg:flex fixed top-0 left-0 right-0 z-30 items-center justify-between bg-slate-900/80 backdrop-blur px-5 py-1.5 border-b border-white/10">
+        <div className="flex items-center gap-2 text-white">
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span className="text-sm font-semibold">Menu</span>
+        </div>
+        <div className="flex items-center justify-center">
+          <img
+            src="/logo.svg"
+            alt="Logo"
+            className="h-8 w-auto object-contain drop-shadow"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            className="rounded-lg border border-white/60 bg-transparent px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
+            onClick={() => openAuthModal('login')}
+          >
+            Login
+          </button>
+          <button
+            type="button"
+            className="rounded-lg border border-emerald-500 bg-white px-3 py-1.5 text-sm font-semibold text-emerald-600 shadow-sm hover:bg-emerald-50 transition-colors"
+            onClick={() => openAuthModal('signup')}
+          >
+            Offer Service
+          </button>
+        </div>
+      </div>
       {/* Mobile: Two-row flowing card carousel */}
       <div className="lg:hidden">
-        <div className="relative space-y-3 p-0 m-0">
-          {/* Brand Logo - Premium */}
-          <div className="flex justify-center animate-fadeIn p-0 m-0">
-            <img
-              src="/miyomint-logo.png"
-              alt="Miyomint Lead Generation"
-              className="h-72 w-auto drop-shadow-lg object-contain -mb-8"
-              loading="lazy"
-            />
+        <div className="relative space-y-3 p-0 m-0 pt-32">
+          {/* Mobile top bar: Menu left, centered logo, actions right */}
+          <div className="fixed top-0 inset-x-0 z-30 flex items-center justify-between bg-white/90 backdrop-blur px-4 pt-3 pb-2">
+            <button
+              className="flex items-center gap-2 text-sm font-semibold text-slate-800"
+              onClick={() => setMobileMenuOpen((v) => !v)}
+            >
+              <svg className="h-5 w-5 text-slate-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span>Menu</span>
+            </button>
+
+            <div className="absolute inset-x-0 flex justify-center pointer-events-none">
+              <img
+                src="/logo.svg"
+                alt="Logo"
+                className="h-9 w-auto object-contain"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                className="rounded-lg border border-emerald-500 bg-white px-3 py-1.5 text-sm font-semibold text-emerald-600 shadow-sm"
+                onClick={() => openAuthModal('signup')}
+              >
+                Offer Service
+              </button>
+            </div>
           </div>
 
+          {mobileMenuOpen && (
+            <div className="fixed inset-0 z-40 flex items-start">
+              <div
+                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+                onClick={() => setMobileMenuOpen(false)}
+              />
+              <div className="relative mt-4 ml-0 h-auto max-h-[75vh] w-72 max-w-[85%] flex flex-col bg-gradient-to-b from-emerald-50 via-white to-sky-50 shadow-2xl rounded-2xl translate-x-0 transition-transform overflow-hidden">
+                <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-emerald-700 uppercase tracking-[0.18em]">Menu</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="h-8 w-8 rounded-full bg-white/80 border border-slate-200 text-slate-700 flex items-center justify-center shadow-sm hover:bg-white transition"
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="p-4 space-y-3 overflow-y-auto">
+                  <button
+                    className="w-full text-left rounded-xl bg-white border border-emerald-200 text-emerald-700 font-semibold px-4 py-3 shadow-sm hover:shadow-md hover:border-emerald-300 transition"
+                    onClick={() => openAuthModal('signup')}
+                  >
+                    Sign Up
+                  </button>
+                  <button
+                    className="w-full text-left rounded-xl bg-white border border-slate-200 text-slate-800 font-semibold px-4 py-3 shadow-sm hover:shadow-md hover:border-slate-300 transition"
+                    onClick={() => openAuthModal('login')}
+                  >
+                    Login
+                  </button>
+                  <button
+                    className="w-full text-left rounded-xl bg-white border border-slate-200 text-slate-800 font-semibold px-4 py-3 shadow-sm hover:shadow-md hover:border-slate-300 transition"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Help
+                  </button>
+                </div>
+              </div>
+              <div className="mt-auto px-4 pb-4">
+                <div className="flex items-center gap-2 justify-center rounded-xl border border-slate-200 bg-white/90 px-4 py-2 shadow-sm">
+                  <img
+                    src="/logo.svg"
+                    alt="Logo"
+                    className="h-6 w-auto object-contain"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
           {/* Hero text - Premium styling */}
           <div className="text-center space-y-3 px-5 animate-fadeIn" style={{ animationDelay: '0.1s' }}>
             <h1 className="text-[30px] sm:text-4xl font-extrabold leading-[1.15] tracking-tight">
@@ -166,23 +398,11 @@ export default function HeroSection() {
             </p>
           </div>
 
-          <div className="px-5 space-y-2.5 animate-fadeIn" style={{ animationDelay: '0.2s' }}>
-            <div className="flex flex-col gap-2">
-              <Button
-                size="lg"
-                className="w-full h-12 text-base rounded-xl cta-glow shadow-lg shadow-sky-500/25"
-                onClick={scrollToServiceStep}
-              >
-                Get Free Quotes in 3 Steps
-              </Button>
-              <button
-                className="w-full h-11 rounded-xl border border-slate-200 bg-white/90 text-slate-700 text-sm font-semibold shadow-sm hover:border-slate-300 transition"
-                onClick={scrollToServiceStep}
-              >
-                View Local Pros
-              </button>
+          {renderForm && (
+            <div className="mt-4 px-4 lg:hidden">
+              {renderForm}
             </div>
-          </div>
+          )}
 
           {/* Two-row flowing carousel - seamless infinite with edge fade */}
           <div className="relative py-4 carousel-container">
@@ -206,13 +426,10 @@ export default function HeroSection() {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent pointer-events-none"></div>
                         <div className="absolute bottom-2 left-2 right-2">
-                          <div className="flex items-center gap-1.5">
-                            <div className={`w-5 h-5 rounded-md ${service.color} flex items-center justify-center shadow-sm`}>
-                              <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                              </svg>
-                            </div>
-                            <span className="text-white text-[11px] font-bold drop-shadow-lg">{service.name}</span>
+                          <div className="flex items-center">
+                            <span className="text-white text-[11px] font-bold drop-shadow-lg px-1.5 py-0.5 rounded-md bg-black/40">
+                              {service.name}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -236,13 +453,10 @@ export default function HeroSection() {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent pointer-events-none"></div>
                         <div className="absolute bottom-2 left-2 right-2">
-                          <div className="flex items-center gap-1.5">
-                            <div className={`w-5 h-5 rounded-md ${service.color} flex items-center justify-center shadow-sm`}>
-                              <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                              </svg>
-                            </div>
-                            <span className="text-white text-[11px] font-bold drop-shadow-lg">{service.name}</span>
+                          <div className="flex items-center">
+                            <span className="text-white text-[11px] font-bold drop-shadow-lg px-1.5 py-0.5 rounded-md bg-black/40">
+                              {service.name}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -315,155 +529,149 @@ export default function HeroSection() {
       </div>
 
       {/* Desktop: Side by side layout */}
-      <div className="hidden lg:grid relative z-10 grid-cols-2 gap-12 items-center max-w-6xl mx-auto px-2 xl:px-4 py-3">
-        <div className="space-y-6 animate-fadeIn lg:-ml-18">
-          {/* Brand Logo - Premium with icon */}
-          <div className="flex justify-start p-0 m-0 lg:-translate-x-12">
+      <div className="hidden lg:grid relative z-10 grid-cols-[1.05fr_0.95fr] gap-8 xl:gap-12 items-start max-w-6xl mx-auto px-6 xl:px-8 py-6 lg:min-h-[calc(100vh-128px)]">
+        <div className="flex flex-col gap-5 xl:gap-6 animate-fadeIn lg:-mt-[3px]">
+          <div className="flex items-center gap-3">
             <img
-              src="/miyomint-logo.png"
+              src="/logo.svg"
               alt="Miyomint Lead Generation"
-              className="h-96 w-auto drop-shadow-lg object-contain -mb-12"
+              className="h-12 w-auto drop-shadow-lg object-contain"
               loading="lazy"
             />
-          </div>
-
-          <h1 className="text-5xl xl:text-6xl font-extrabold leading-tight tracking-tight">
-            <span className="text-slate-800">Find Certified</span>
-            <br />
-            <span className="relative inline-block">
-              <span className="bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                Home Professionals
-              </span>
-              <svg className="absolute -bottom-2 left-0 w-full h-3 text-sky-400/30" viewBox="0 0 200 8" preserveAspectRatio="none">
-                <path d="M0 7 Q50 0 100 7 T200 7" stroke="currentColor" strokeWidth="3" fill="none" />
-              </svg>
+            <span className="px-3 py-1 rounded-full border border-sky-100 bg-sky-50 text-xs font-semibold text-sky-800">
+              Certified pros, fast quotes
             </span>
-            <br />
-            <span className="text-slate-800">in Minutes</span>
-          </h1>
-
-          <p className="text-xl text-slate-500 max-w-lg leading-relaxed">
-            Describe your project, get matched with certified local professionals, and receive quotes fast.
-          </p>
-
-          <div className="flex items-center gap-3">
-            <Button
-              size="lg"
-              className="h-12 px-7 text-base rounded-2xl cta-glow shadow-lg shadow-sky-500/25"
-              onClick={scrollToServiceStep}
-            >
-              Get Free Quotes in 3 Steps
-            </Button>
-            <Button
-              variant="secondary"
-              size="lg"
-              className="h-12 px-6 text-base rounded-2xl"
-              onClick={scrollToServiceStep}
-            >
-              View Local Pros
-            </Button>
           </div>
 
-          <StepsStrip />
+          <div className="space-y-3">
+            <h1 className="text-5xl xl:text-6xl font-extrabold leading-tight tracking-tight">
+              <span className="text-slate-800">Find Certified</span>
+              <br />
+              <span className="relative inline-block">
+                <span className="bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  Home Professionals
+                </span>
+                <svg className="absolute -bottom-2 left-0 w-full h-3 text-sky-400/30" viewBox="0 0 200 8" preserveAspectRatio="none">
+                  <path d="M0 7 Q50 0 100 7 T200 7" stroke="currentColor" strokeWidth="3" fill="none" />
+                </svg>
+              </span>
+              <br />
+              <span className="text-slate-800">in Minutes</span>
+            </h1>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {trustBadges.map((badge, index) => (
-              <div
-                key={badge.label}
-                className="group flex items-center gap-3 rounded-2xl border border-slate-100 bg-white/90 backdrop-blur shadow-[0_16px_48px_rgba(15,23,42,0.12)] hover:shadow-[0_20px_60px_rgba(59,130,246,0.18)] hover:-translate-y-0.5 transition-all duration-200 px-4 py-4"
-                style={{ animationDelay: `${index * 0.08}s` }}
-              >
-                <div className="relative flex h-11 w-11 items-center justify-center">
-                  <div className="relative">{badge.icon}</div>
-                </div>
-                <div className="leading-tight">
-                  <p className="text-sm font-semibold text-slate-900">{badge.label}</p>
-                  <p className="text-xs text-slate-500">{badge.desc}</p>
-                </div>
-              </div>
-            ))}
+            <p className="text-lg xl:text-xl text-slate-500 max-w-xl leading-relaxed">
+              Describe your project, get matched with certified local professionals, and receive quotes fast.
+            </p>
           </div>
 
-          <div className="flex items-center gap-3 pt-2">
-            <div className="flex -space-x-2">
-              {[plumberImg, electricianImg, hvacImg].map((img, i) => (
-                <div
-                  key={i}
-                  className="w-8 h-8 rounded-full border-2 border-white overflow-hidden shadow-md"
-                >
+          {renderForm && (
+            <div className="hidden lg:block w-full max-w-xl">
+              {renderForm}
+            </div>
+          )}
+        </div>
+
+        <div className="relative h-full flex flex-col items-start lg:mt-16 xl:mt-18 gap-6 w-full">
+          <div className="relative w-full">
+            <div className="absolute -inset-2 lg:-inset-4 bg-gradient-to-r from-sky-100 via-indigo-100 to-emerald-100 rounded-2xl lg:rounded-3xl blur-2xl lg:blur-3xl opacity-60"></div>
+            <div className="relative grid grid-cols-2 gap-1.5 sm:gap-2 lg:gap-4">
+              <div className="space-y-1.5 sm:space-y-2 lg:space-y-4">
+                <div className="relative rounded-lg lg:rounded-2xl overflow-hidden aspect-[4/3] shadow-lg lg:shadow-2xl">
                   <img
-                    src={img}
-                    alt=""
+                    src={plumberImg}
+                    alt="Professional plumber"
+                    className="w-full h-full object-cover"
+                    decoding="async"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
+                  <div className="absolute bottom-1.5 left-1.5 lg:bottom-3 lg:left-3 lg:right-3">
+                    <span className="px-1.5 py-0.5 lg:px-2 lg:py-1 bg-sky-500 text-white text-[10px] lg:text-xs font-semibold rounded lg:rounded-lg">Roofing</span>
+                  </div>
+                </div>
+                <div className="relative rounded-lg lg:rounded-2xl overflow-hidden aspect-square shadow-lg lg:shadow-2xl">
+                  <img
+                    src={hvacImg}
+                    alt="HVAC technician"
                     className="w-full h-full object-cover"
                     loading="lazy"
                     decoding="async"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
+                  <div className="absolute bottom-1.5 left-1.5 lg:bottom-3 lg:left-3 lg:right-3">
+                    <span className="px-1.5 py-0.5 lg:px-2 lg:py-1 bg-emerald-500 text-white text-[10px] lg:text-xs font-semibold rounded lg:rounded-lg">HVAC</span>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-1.5 sm:space-y-2 lg:space-y-4 pt-3 sm:pt-4 lg:pt-8">
+                <div className="relative rounded-lg lg:rounded-2xl overflow-hidden aspect-square shadow-lg lg:shadow-2xl">
+                  <img
+                    src={electricianImg}
+                    alt="Professional electrician"
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
+                  <div className="absolute bottom-1.5 left-1.5 lg:bottom-3 lg:left-3 lg:right-3">
+                    <span className="px-1.5 py-0.5 lg:px-2 lg:py-1 bg-amber-500 text-white text-[10px] lg:text-xs font-semibold rounded lg:rounded-lg">Electrical</span>
+                  </div>
+                </div>
+                <div className="relative rounded-lg lg:rounded-2xl overflow-hidden aspect-[4/3] shadow-lg lg:shadow-2xl">
+                  <img
+                    src={contractorImg}
+                    alt="Home contractor"
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
+                  <div className="absolute bottom-1.5 left-1.5 lg:bottom-3 lg:left-3 lg:right-3">
+                    <span className="px-1.5 py-0.5 lg:px-2 lg:py-1 bg-indigo-500 text-white text-[10px] lg:text-xs font-semibold rounded lg:rounded-lg">Remodeling</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="w-full space-y-3">
+            <StepsStrip />
+            <div className="grid grid-cols-3 gap-3">
+              {trustBadges.map((badge, index) => (
+                <div
+                  key={badge.label}
+                  className="group flex items-center gap-3 rounded-2xl border border-slate-100 bg-white/90 backdrop-blur shadow-[0_14px_36px_rgba(15,23,42,0.12)] hover:shadow-[0_18px_48px_rgba(59,130,246,0.16)] hover:-translate-y-0.5 transition-all duration-200 px-3.5 py-3.5"
+                  style={{ animationDelay: `${index * 0.08}s` }}
+                >
+                  <div className="relative flex h-11 w-11 items-center justify-center">
+                    <div className="relative">{badge.icon}</div>
+                  </div>
+                  <div className="leading-tight">
+                    <p className="text-sm font-semibold text-slate-900">{badge.label}</p>
+                    <p className="text-xs text-slate-500">{badge.desc}</p>
+                  </div>
                 </div>
               ))}
             </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-800">10,000+ projects completed</p>
-              <p className="text-[10px] text-slate-500">Join thousands of happy homeowners</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="relative">
-          <div className="absolute -inset-2 lg:-inset-4 bg-gradient-to-r from-sky-100 via-indigo-100 to-emerald-100 rounded-2xl lg:rounded-3xl blur-2xl lg:blur-3xl opacity-60"></div>
-          <div className="relative grid grid-cols-2 gap-1.5 sm:gap-2 lg:gap-4">
-            <div className="space-y-1.5 sm:space-y-2 lg:space-y-4">
-              <div className="relative rounded-lg lg:rounded-2xl overflow-hidden aspect-[4/3] shadow-lg lg:shadow-2xl">
-                <img
-                  src={plumberImg}
-                  alt="Professional plumber"
-                  className="w-full h-full object-cover"
-                  decoding="async"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
-                <div className="absolute bottom-1.5 left-1.5 lg:bottom-3 lg:left-3 lg:right-3">
-                  <span className="px-1.5 py-0.5 lg:px-2 lg:py-1 bg-sky-500 text-white text-[10px] lg:text-xs font-semibold rounded lg:rounded-lg">Roofing</span>
-                </div>
+            <div className="flex items-center gap-3 pt-1">
+              <div className="flex -space-x-2">
+                {[plumberImg, electricianImg, hvacImg].map((img, i) => (
+                  <div
+                    key={i}
+                    className="w-8 h-8 rounded-full border-2 border-white overflow-hidden shadow-md"
+                  >
+                    <img
+                      src={img}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
+                ))}
               </div>
-              <div className="relative rounded-lg lg:rounded-2xl overflow-hidden aspect-square shadow-lg lg:shadow-2xl">
-                <img
-                  src={hvacImg}
-                  alt="HVAC technician"
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  decoding="async"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
-                <div className="absolute bottom-1.5 left-1.5 lg:bottom-3 lg:left-3 lg:right-3">
-                  <span className="px-1.5 py-0.5 lg:px-2 lg:py-1 bg-emerald-500 text-white text-[10px] lg:text-xs font-semibold rounded lg:rounded-lg">HVAC</span>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-1.5 sm:space-y-2 lg:space-y-4 pt-3 sm:pt-4 lg:pt-8">
-              <div className="relative rounded-lg lg:rounded-2xl overflow-hidden aspect-square shadow-lg lg:shadow-2xl">
-                <img
-                  src={electricianImg}
-                  alt="Professional electrician"
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  decoding="async"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
-                <div className="absolute bottom-1.5 left-1.5 lg:bottom-3 lg:left-3 lg:right-3">
-                  <span className="px-1.5 py-0.5 lg:px-2 lg:py-1 bg-amber-500 text-white text-[10px] lg:text-xs font-semibold rounded lg:rounded-lg">Electrical</span>
-                </div>
-              </div>
-              <div className="relative rounded-lg lg:rounded-2xl overflow-hidden aspect-[4/3] shadow-lg lg:shadow-2xl">
-                <img
-                  src={contractorImg}
-                  alt="Home contractor"
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  decoding="async"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
-                <div className="absolute bottom-1.5 left-1.5 lg:bottom-3 lg:left-3 lg:right-3">
-                  <span className="px-1.5 py-0.5 lg:px-2 lg:py-1 bg-indigo-500 text-white text-[10px] lg:text-xs font-semibold rounded lg:rounded-lg">Remodeling</span>
-                </div>
+              <div className="leading-tight">
+                <p className="text-sm font-semibold text-slate-800">10,000+ projects completed</p>
+                <p className="text-xs text-slate-500">Join thousands of happy homeowners</p>
               </div>
             </div>
           </div>
@@ -471,6 +679,168 @@ export default function HeroSection() {
       </div>
 
       {/* Desktop-only testimonial block removed per request */}
+
+      {authModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div
+            className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm"
+            onClick={closeAuthModal}
+          />
+          <div className="relative w-full max-w-xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden animate-fadeIn">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <div>
+                <p className="text-xs uppercase tracking-[0.12em] text-slate-500 font-semibold">
+                  {authModal.mode === 'login' ? 'Login' : 'Sign Up'}
+                </p>
+                <p className="text-lg font-semibold text-slate-900">
+                  {authModal.mode === 'login' ? 'Welcome back' : 'Create your account'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeAuthModal}
+                className="h-8 w-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200 transition"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </div>
+            <div className="px-5 pt-4 pb-5 space-y-4">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => updateAuthForm('role', 'company')}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition ${authForm.role === 'company' ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'}`}
+                >
+                  Company / Firm
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateAuthForm('role', 'pro')}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition ${authForm.role === 'pro' ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'}`}
+                >
+                  Individual / Pro
+                </button>
+              </div>
+              {authModal.mode === 'signup' && (
+                <>
+                  {authForm.role === 'company' && (
+                    <input
+                      type="text"
+                      placeholder="Company name"
+                      value={authForm.companyName}
+                      onChange={(e) => updateAuthForm('companyName', e.target.value)}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition"
+                    />
+                  )}
+                  {authForm.role === 'company' && (
+                    <input
+                      type="text"
+                      placeholder="Company position"
+                      value={authForm.position}
+                      onChange={(e) => updateAuthForm('position', e.target.value)}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition"
+                    />
+                  )}
+                  <input
+                    type="text"
+                    placeholder="Full name"
+                    value={authForm.name}
+                    onChange={(e) => updateAuthForm('name', e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition"
+                  />
+                </>
+              )}
+              <input
+                type="email"
+                placeholder={authForm.role === 'company' ? 'Company email' : 'Email'}
+                value={authForm.email}
+                onChange={(e) => updateAuthForm('email', e.target.value)}
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition"
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={authForm.password}
+                onChange={(e) => {
+                  setAuthStatus({ loading: false, error: '', success: '' });
+                  updateAuthForm('password', e.target.value);
+                }}
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition"
+              />
+              <div className="flex items-center gap-2">
+                <div className="h-1 w-full rounded-full bg-slate-100 overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-200 ${
+                      passwordStrengthPercent >= 80 ? 'bg-emerald-500' : 'bg-amber-400'
+                    }`}
+                    style={{ width: `${passwordStrengthPercent}%` }}
+                  />
+                </div>
+                <span className="text-[10px] font-semibold text-slate-500">{Math.round(passwordStrengthPercent)}%</span>
+              </div>
+              {passwordHint && <p className="text-xs text-rose-600 -mt-1">{passwordHint}</p>}
+              {authModal.mode === 'signup' && (
+                <input
+                  type="password"
+                  placeholder="Confirm password"
+                  value={authForm.confirm}
+                  onChange={(e) => {
+                    setAuthStatus({ loading: false, error: '', success: '' });
+                    updateAuthForm('confirm', e.target.value);
+                  }}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition"
+                />
+              )}
+              {confirmHint && <p className="text-xs text-rose-600 -mt-2">{confirmHint}</p>}
+              <div className="flex items-center gap-3 pt-1">
+                <Button
+                  size="lg"
+                  className="flex-1 h-11 text-sm rounded-lg"
+                  onClick={submitAuth}
+                  disabled={submitDisabled}
+                >
+                  {authStatus.loading
+                    ? 'Working...'
+                    : authModal.mode === 'login'
+                    ? 'Login'
+                    : 'Create Account'}
+                </Button>
+              </div>
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <span>{authModal.mode === 'login' ? 'Need an account?' : 'Already have an account?'}</span>
+                <button
+                  type="button"
+                  className="text-emerald-600 font-semibold hover:text-emerald-700 transition"
+                  onClick={() => openAuthModal(authModal.mode === 'login' ? 'signup' : 'login')}
+                >
+                  {authModal.mode === 'login' ? 'Sign up instead' : 'Log in instead'}
+                </button>
+              </div>
+              {(authStatus.error || authStatus.success || passwordHint || confirmHint) && (
+                <div className="text-xs font-semibold space-y-1">
+                  {passwordHint && <p className="text-rose-600">{passwordHint}</p>}
+                  {confirmHint && <p className="text-rose-600">{confirmHint}</p>}
+                  {authStatus.error && <p className="text-rose-600">{authStatus.error}</p>}
+                  {authStatus.success && <p className="text-emerald-600">{authStatus.success}</p>}
+                </div>
+              )}
+            </div>
+            <div className="pb-5 flex justify-center">
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-4 py-2 shadow-sm">
+                <img
+                  src="/logo.svg"
+                  alt="Logo"
+                  className="h-7 w-auto object-contain"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

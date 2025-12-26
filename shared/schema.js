@@ -2,6 +2,33 @@ import { pgTable, serial, text, timestamp, varchar, integer, jsonb, uuid, inet, 
 import { relations } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  companyName: varchar('company_name', { length: 255 }),
+  position: varchar('position', { length: 255 }),
+  role: varchar('role', { length: 20 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const companyProfiles = pgTable('company_profiles', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull(),
+  companyName: varchar('company_name', { length: 255 }).notNull(),
+  position: varchar('position', { length: 255 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const proProfiles = pgTable('pro_profiles', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull(),
+  title: varchar('title', { length: 255 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 export const submissions = pgTable('submissions', {
   id: serial('id').primaryKey(),
   serviceType: varchar('service_type', { length: 100 }).notNull(),

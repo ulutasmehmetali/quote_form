@@ -1,6 +1,33 @@
 import { pgTable, serial, text, timestamp, varchar, integer, jsonb, boolean } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  companyName: varchar('company_name', { length: 255 }),
+  position: varchar('position', { length: 255 }),
+  role: varchar('role', { length: 20 }).notNull(), // 'company' | 'pro'
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const companyProfiles = pgTable('company_profiles', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull(),
+  companyName: varchar('company_name', { length: 255 }).notNull(),
+  position: varchar('position', { length: 255 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const proProfiles = pgTable('pro_profiles', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull(),
+  title: varchar('title', { length: 255 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 export const submissions = pgTable('submissions', {
   id: serial('id').primaryKey(),
   serviceType: varchar('service_type', { length: 100 }).notNull(),
@@ -126,3 +153,5 @@ export type AdminUser = typeof adminUsers.$inferSelect;
 export type InsertAdminUser = typeof adminUsers.$inferInsert;
 export type SubmissionNote = typeof submissionNotes.$inferSelect;
 export type ActivityLog = typeof activityLogs.$inferSelect;
+export type User = typeof users.$inferSelect;
+export type InsertUser = typeof users.$inferInsert;

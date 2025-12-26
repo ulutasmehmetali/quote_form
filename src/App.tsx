@@ -35,7 +35,7 @@ function App() {
 
   return (
     <ToastProvider>
-      <div className="flex flex-col min-h-screen">
+      <div className="flex flex-col min-h-screen overflow-x-hidden">
         <div className="flex-1">
           <QuoteForm onWizardModeChange={(active) => setAppMode(active ? 'wizard' : 'normal')} />
           {appMode === 'normal' && (
