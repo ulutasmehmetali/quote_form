@@ -8,21 +8,22 @@ if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL must be set. Did you forget to provision a database?');
 }
 
-// Vercel/Railway behind TLS: allow self-signed certs by default to avoid chain errors.
+// TLS seçimi: Varsayılan olarak SSL kapalı (Railway internal bağlantı için). SSL gerekliyse DB_SSL=true verilebilir.
 const sslMode = (process.env.PGSSLMODE || '').toLowerCase();
-const sslConfig =
-  sslMode === 'disable'
-    ? false
-    : {
-        rejectUnauthorized: false,
-      };
+const dbSslEnv = (process.env.DB_SSL || 'false').toLowerCase();
+const sslEnabled = dbSslEnv === 'true' && sslMode !== 'disable';
+const sslConfig = sslEnabled
+  ? { rejectUnauthorized: false }
+  : false; // No TLS
 
-// Explicitly relax TLS for downstream drivers too (matches ssl.rejectUnauthorized:false)
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+// SSL açıksa self-signed hatalarını önlemek için sertifika doğrulamayı kapatıyoruz.
+if (sslEnabled) {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: sslConfig,
+  ssl: sslMode === 'disable' ? false : sslConfig,
 });
 
 export const db = drizzle(pool, { schema });
