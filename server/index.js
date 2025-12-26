@@ -274,9 +274,15 @@ app.use(async (req, res, next) => {
   } catch (error) {
     console.error('Access log middleware failed:', error);
     // If DB connection is invalid, disable further access log writes to avoid noisy failures
-    if (String(error?.message || '').includes('Tenant or user not found') || error?.code === 'XX000') {
+    if (
+      String(error?.message || '').includes('Tenant or user not found') ||
+      error?.code === 'XX000' ||
+      error?.code === 'SELF_SIGNED_CERT_IN_CHAIN'
+    ) {
       accessLogsHardDisabled = true;
-      console.warn('[access_logs] Disabling writes due to DB connection error (check DATABASE_URL credentials).');
+      console.warn(
+        '[access_logs] Disabling writes due to DB connection/SSL error (check DATABASE_URL & SSL settings).',
+      );
     }
   }
 
@@ -294,9 +300,15 @@ app.use(async (req, res, next) => {
         .where(eq(accessLogs.sessionId, sessionId))
         .catch((error) => {
           console.error('Failed to update access log exit time:', error);
-          if (String(error?.message || '').includes('Tenant or user not found') || error?.code === 'XX000') {
+          if (
+            String(error?.message || '').includes('Tenant or user not found') ||
+            error?.code === 'XX000' ||
+            error?.code === 'SELF_SIGNED_CERT_IN_CHAIN'
+          ) {
             accessLogsHardDisabled = true;
-            console.warn('[access_logs] Disabling writes due to DB connection error (check DATABASE_URL credentials).');
+            console.warn(
+              '[access_logs] Disabling writes due to DB connection/SSL error (check DATABASE_URL & SSL settings).',
+            );
           }
         });
     }
