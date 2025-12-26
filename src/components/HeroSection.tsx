@@ -214,6 +214,10 @@ export default function HeroSection({ renderForm }: HeroSectionProps) {
     setAuthStatus({ loading: true, error: '', success: '' });
 
     try {
+      // Helpful console log to verify target URL from the browser (diagnose 405/host issues)
+      const targetUrl = apiUrl(`/api/auth/${authModal.mode}`);
+      console.info('[auth] submitting to', targetUrl, { role: authForm.role });
+
       const parseResponse = async (res: Response) => {
         const text = await res.text();
         try {
