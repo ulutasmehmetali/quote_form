@@ -194,6 +194,19 @@ app.options(/.*/, cors(corsOptions), (req, res) => res.sendStatus(200));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Request logger to diagnose host/method issues (e.g., 405)
+app.use((req, res, next) => {
+  console.info('[request]', {
+    method: req.method,
+    url: req.originalUrl,
+    host: req.headers.host,
+    origin: req.headers.origin,
+    referer: req.headers.referer,
+    ip: req.ip,
+  });
+  next();
+});
+
 app.use(async (req, res, next) => {
   if (skipAccessLogs || !accessLogsReady) {
     if (!accessLogNoticePrinted) {

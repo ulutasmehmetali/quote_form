@@ -6,6 +6,26 @@ import { eq } from 'drizzle-orm';
 
 const router = express.Router();
 
+router.use((req, res, next) => {
+  const { method, url, ip, headers, body } = req;
+  const safeBody = {
+    role: body?.role,
+    email: body?.email,
+    name: body?.name,
+    companyName: body?.companyName,
+    position: body?.position,
+  };
+  console.info('[auth] incoming', {
+    method,
+    url,
+    ip,
+    origin: headers?.origin,
+    referer: headers?.referer,
+    body: safeBody,
+  });
+  next();
+});
+
 const sanitize = (value = '') => value.trim();
 const VALID_ROLES = ['company', 'pro'];
 
