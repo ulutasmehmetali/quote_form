@@ -95,6 +95,7 @@ router.post('/signup', async (req, res) => {
   } catch (err) {
     console.error('[auth/signup] error', err);
     const msg = String(err?.message || '');
+    const cause = err?.cause?.message || err?.cause?.code || err?.code;
     if (
       err?.code === 'XX000' ||
       msg.includes('Tenant or user not found') ||
@@ -104,13 +105,12 @@ router.post('/signup', async (req, res) => {
       return res
         .status(500)
         .json({
-          error:
-            'Database connection error. Please verify DATABASE_URL and SSL settings (ALLOW_SELF_SIGNED/PGSSLMODE).',
+          error: 'Database connection/SSL error. Verify DATABASE_URL and SSL settings (PGSSLMODE).',
           code: err?.code,
-          detail: msg,
+          detail: cause || msg,
         });
     }
-    return res.status(500).json({ error: msg || 'Signup failed.' });
+    return res.status(500).json({ error: cause || msg || 'Signup failed.' });
   }
 });
 
@@ -141,6 +141,7 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     console.error('[auth/login] error', err);
     const msg = String(err?.message || '');
+    const cause = err?.cause?.message || err?.cause?.code || err?.code;
     if (
       err?.code === 'XX000' ||
       msg.includes('Tenant or user not found') ||
@@ -150,13 +151,12 @@ router.post('/login', async (req, res) => {
       return res
         .status(500)
         .json({
-          error:
-            'Database connection error. Please verify DATABASE_URL and SSL settings (ALLOW_SELF_SIGNED/PGSSLMODE).',
+          error: 'Database connection/SSL error. Verify DATABASE_URL and SSL settings (PGSSLMODE).',
           code: err?.code,
-          detail: msg,
+          detail: cause || msg,
         });
     }
-    return res.status(500).json({ error: msg || 'Login failed.' });
+    return res.status(500).json({ error: cause || msg || 'Login failed.' });
   }
 });
 
