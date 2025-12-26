@@ -17,7 +17,8 @@ import roofingImg from '@assets/roofing services_1764336251048.webp';
 import airConditionerImg from '@assets/air conditioner_1764336252466.webp';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
-if (!API_BASE) {
+const apiBaseMissing = !API_BASE;
+if (apiBaseMissing) {
   // eslint-disable-next-line no-console
   console.error('[auth] VITE_API_BASE_URL is missing. Set it to your Railway backend URL.');
 }
@@ -168,6 +169,7 @@ export default function HeroSection({ renderForm }: HeroSectionProps) {
     error: '',
     success: '',
   });
+  const [targetUrlPreview, setTargetUrlPreview] = useState<string>('');
 
   const openAuthModal = (mode: 'login' | 'signup') => {
     setMobileMenuOpen(false);
@@ -226,7 +228,8 @@ export default function HeroSection({ renderForm }: HeroSectionProps) {
     try {
       // Helpful console log to verify target URL from the browser (diagnose 405/host issues)
       const targetUrl = apiUrl(`/api/auth/${authModal.mode}`);
-      console.info('[auth] submitting to', targetUrl, { role: authForm.role });
+      setTargetUrlPreview(targetUrl);
+      console.info('[auth] submitting to', targetUrl, { role: authForm.role, apiBase: API_BASE ?? '<empty>' });
 
       const parseResponse = async (res: Response) => {
         const text = await res.text();
@@ -253,13 +256,17 @@ export default function HeroSection({ renderForm }: HeroSectionProps) {
 
       const data = await parseResponse(res);
       if (!res.ok) {
-        throw new Error(data?.error || 'Something went wrong.');
+        throw new Error(data?.error || data?.raw || `Request failed (${res.status})`);
       }
 
       setAuthStatus({ loading: false, error: '', success: authModal.mode === 'login' ? 'Logged in!' : 'Account created!' });
       setTimeout(() => closeAuthModal(), 900);
     } catch (err: any) {
-      setAuthStatus({ loading: false, error: err?.message || 'Request failed.', success: '' });
+      setAuthStatus({
+        loading: false,
+        error: err?.message || 'Request failed.',
+        success: '',
+      });
     }
   };
 
@@ -834,8 +841,10 @@ export default function HeroSection({ renderForm }: HeroSectionProps) {
                   {authModal.mode === 'login' ? 'Sign up instead' : 'Log in instead'}
                 </button>
               </div>
-              {(authStatus.error || authStatus.success || passwordHint || confirmHint) && (
+              {(authStatus.error || authStatus.success || passwordHint || confirmHint || apiBaseMissing) && (
                 <div className="text-xs font-semibold space-y-1">
+                  {apiBaseMissing && <p className="text-rose-600">VITE_API_BASE_URL is missing. Set it to your Railway backend URL.</p>}
+                  {targetUrlPreview && <p className="text-slate-500">Target: {targetUrlPreview}</p>}
                   {passwordHint && <p className="text-rose-600">{passwordHint}</p>}
                   {confirmHint && <p className="text-rose-600">{confirmHint}</p>}
                   {authStatus.error && <p className="text-rose-600">{authStatus.error}</p>}
