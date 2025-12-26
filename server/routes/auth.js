@@ -94,10 +94,23 @@ router.post('/signup', async (req, res) => {
       .json({ message: 'Signed up successfully.', user: formatUser(created) });
   } catch (err) {
     console.error('[auth/signup] error', err);
-    if (err?.code === 'XX000' || String(err?.message || '').includes('Tenant or user not found')) {
-      return res.status(500).json({ error: 'Database connection error. Please verify DATABASE_URL credentials.' });
+    const msg = String(err?.message || '');
+    if (
+      err?.code === 'XX000' ||
+      msg.includes('Tenant or user not found') ||
+      err?.code === 'SELF_SIGNED_CERT_IN_CHAIN' ||
+      msg.toLowerCase().includes('self-signed')
+    ) {
+      return res
+        .status(500)
+        .json({
+          error:
+            'Database connection error. Please verify DATABASE_URL and SSL settings (ALLOW_SELF_SIGNED/PGSSLMODE).',
+          code: err?.code,
+          detail: msg,
+        });
     }
-    return res.status(500).json({ error: 'Signup failed.' });
+    return res.status(500).json({ error: msg || 'Signup failed.' });
   }
 });
 
@@ -127,10 +140,23 @@ router.post('/login', async (req, res) => {
     return res.json({ message: 'Logged in successfully.', user: formatUser(user) });
   } catch (err) {
     console.error('[auth/login] error', err);
-    if (err?.code === 'XX000' || String(err?.message || '').includes('Tenant or user not found')) {
-      return res.status(500).json({ error: 'Database connection error. Please verify DATABASE_URL credentials.' });
+    const msg = String(err?.message || '');
+    if (
+      err?.code === 'XX000' ||
+      msg.includes('Tenant or user not found') ||
+      err?.code === 'SELF_SIGNED_CERT_IN_CHAIN' ||
+      msg.toLowerCase().includes('self-signed')
+    ) {
+      return res
+        .status(500)
+        .json({
+          error:
+            'Database connection error. Please verify DATABASE_URL and SSL settings (ALLOW_SELF_SIGNED/PGSSLMODE).',
+          code: err?.code,
+          detail: msg,
+        });
     }
-    return res.status(500).json({ error: 'Login failed.' });
+    return res.status(500).json({ error: msg || 'Login failed.' });
   }
 });
 
