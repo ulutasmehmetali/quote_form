@@ -16,6 +16,9 @@ import remodelingImg from '@assets/remodeling_1764336249973.webp';
 import roofingImg from '@assets/roofing services_1764336251048.webp';
 import airConditionerImg from '@assets/air conditioner_1764336252466.webp';
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+const apiUrl = (path: string) => `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
+
 const topRowServices = [
   { img: roofingImg, name: 'Roofing', color: 'bg-sky-500' },
   { img: electricianImg, name: 'Electrical', color: 'bg-amber-500' },
@@ -223,7 +226,7 @@ export default function HeroSection({ renderForm }: HeroSectionProps) {
         }
       };
 
-      const res = await fetch(`/api/auth/${authModal.mode}`, {
+      const res = await fetch(apiUrl(`/api/auth/${authModal.mode}`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
