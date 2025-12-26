@@ -100,7 +100,9 @@ router.post('/signup', async (req, res) => {
       err?.code === 'XX000' ||
       msg.includes('Tenant or user not found') ||
       err?.code === 'SELF_SIGNED_CERT_IN_CHAIN' ||
-      msg.toLowerCase().includes('self-signed')
+      msg.toLowerCase().includes('self-signed') ||
+      msg.toLowerCase().includes('certificate') ||
+      msg.toLowerCase().includes('tls')
     ) {
       return res
         .status(500)
@@ -146,7 +148,9 @@ router.post('/login', async (req, res) => {
       err?.code === 'XX000' ||
       msg.includes('Tenant or user not found') ||
       err?.code === 'SELF_SIGNED_CERT_IN_CHAIN' ||
-      msg.toLowerCase().includes('self-signed')
+      msg.toLowerCase().includes('self-signed') ||
+      msg.toLowerCase().includes('certificate') ||
+      msg.toLowerCase().includes('tls')
     ) {
       return res
         .status(500)
